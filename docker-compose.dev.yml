@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: parfume
+      POSTGRES_PASSWORD: parfume
+      POSTGRES_DB: parfume_dev
+    ports:
+      - '5432:5432'
+    volumes:
+      - parfume_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U parfume -d parfume_dev']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  parfume_pgdata:
