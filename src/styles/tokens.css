@@ -1,0 +1,27 @@
+/*
+ * Дизайн-токены — единственный источник цветов/радиусов/шрифтов проекта.
+ * Фаза 1: нейтральные плейсхолдер-значения (решение владельца, см. CHANGELOG).
+ * Фаза 6: сюда переносится брендовая палитра MON FLACON из BRAND.md §8 —
+ * компоненты и остальной CSS не меняются, меняется только этот файл.
+ *
+ * Важно: имена НЕ должны совпадать с автогенерируемыми переменными Tailwind
+ * v4 в неймспейсах --color-... и --radius-... (см. @theme inline в styles.css)
+ * — иначе коллизия имён переопределит значения. Поэтому здесь свои имена
+ * (surface/ink/line...), а не --color-background/--color-primary и т.п.
+ */
+
+:root {
+  --color-surface: oklch(1 0 0);
+  --color-surface-warm: oklch(0.97 0 0);
+  --color-ink: oklch(0.145 0 0);
+  --color-ink-muted: oklch(0.556 0 0);
+  --color-ink-on-dark: oklch(0.985 0 0);
+  --color-line: oklch(0.922 0 0);
+  --color-danger: oklch(0.577 0.245 27.325);
+
+  --font-sans: system-ui, sans-serif;
+  --tracking-display: 0.06em;
+
+  /* Единая база радиуса — Tailwind сам выводит из неё rounded-sm/md/lg/xl. */
+  --radius: 6px;
+}
