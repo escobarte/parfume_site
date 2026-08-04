@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MON FLACON — мокап главной (утверждено)</title>
+<!-- Референс-мокап. Структура и поведение: docs/WIREFRAMES.md. Токены и правила: docs/BRAND.md -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#16293D;--cream:#E8CFB0;--warm:#F6F0E4;--line:#E3DACA;--muted:#4A5A6B;--muted-d:#8FA0B2;--sub-d:#B9C4CF;--dim-d:#7488A0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter','Helvetica Neue',Arial,sans-serif;background:#EDEAE2;padding:28px 12px}
+.frame{max-width:960px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.bar{display:flex;align-items:center;gap:6px;padding:10px 14px;background:#F3F1EC;border-bottom:1px solid var(--line)}
+.dot{width:9px;height:9px;border-radius:50%;background:#C9C4B8}
+.url{flex:1;text-align:center;font-size:12px;color:#8A8578;letter-spacing:.04em}
+.cap{text-transform:uppercase;letter-spacing:.22em;font-weight:300}
+a{text-decoration:none}
+.nav{display:flex;gap:26px}
+.nav a{color:var(--cream);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+header{background:var(--navy);display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 34px;border-bottom:1px solid rgba(232,207,176,.25)}
+.hero{background:var(--navy);position:relative;overflow:hidden;padding:88px 34px 96px;text-align:center}
+.hero .mark{position:absolute;opacity:.06;pointer-events:none}
+.btn{display:inline-block;border:1px solid var(--cream);color:var(--cream);padding:13px 34px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;transition:all .2s}
+.btn:hover{background:var(--cream);color:var(--navy)}
+.cats{background:var(--warm);display:grid;grid-template-columns:repeat(4,1fr)}
+.cats a{padding:30px 10px;text-align:center;border-right:1px solid var(--line);transition:background .2s}
+.cats a:last-child{border-right:none}
+.cats a:hover{background:#fff}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.card{border:1px solid var(--line);background:#fff;display:block;transition:border-color .2s}
+.card:hover{border-color:var(--navy)}
+.chip{font-size:11px;color:var(--muted);border:1px solid var(--line);padding:2px 7px;letter-spacing:.06em}
+.edi{background:var(--navy);display:grid;grid-template-columns:1.4fr 1fr;align-items:stretch}
+.fgrid{display:grid;grid-template-columns:1.3fr 1fr 1fr 1.1fr;gap:22px;padding-bottom:36px;border-bottom:1px solid rgba(232,207,176,.2)}
+.flink{color:var(--sub-d);font-size:12.5px;display:block;padding:4px 0}
+a.flink:hover{color:var(--cream)}
+@media(max-width:640px){
+ .nav{display:none}
+ .hero h1{font-size:27px!important}
+ .cats{grid-template-columns:1fr 1fr}
+ .cats a:nth-child(2){border-right:none}
+ .cats a:nth-child(-n+2){border-bottom:1px solid var(--line)}
+ .cards{grid-template-columns:1fr 1fr}
+ .edi{grid-template-columns:1fr}
+ .fgrid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="frame">
+<div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">monflacon.md/ru</span></div>
+
+<header>
+  <div style="display:flex;align-items:center;gap:11px">
+    <svg width="26" height="31" viewBox="0 0 100 118" fill="none" aria-hidden="true"><rect x="44" y="6" width="12" height="9" rx="1.5" stroke="#E8CFB0" stroke-width="4"/><path d="M50 15v89M28 28h44" stroke="#E8CFB0" stroke-width="4"/><path d="M35.6 41.2A34 34 0 1 0 64.4 41.2" stroke="#E8CFB0" stroke-width="4"/></svg>
+    <div><div style="color:var(--cream);font-size:15px;letter-spacing:.3em;font-weight:300">MON FLACON</div><div style="color:var(--muted-d);font-size:9px;letter-spacing:.28em;margin-top:2px">PERFUMES FOR EVERYONE</div></div>
+  </div>
+  <nav class="nav"><a href="#">Каталог</a><a href="#">Бренды</a><a href="#">Новинки</a><a href="#">О нас</a></nav>
+  <div style="display:flex;align-items:center;gap:18px;color:var(--cream)">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E8CFB0" stroke-width="1.6" aria-label="Поиск"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></svg>
+    <span style="font-size:11px;letter-spacing:.12em;color:var(--dim-d)">RO · <span style="color:var(--cream);border-bottom:1px solid var(--cream);padding-bottom:1px">RU</span> · EN</span>
+    <span style="position:relative;display:inline-flex">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E8CFB0" stroke-width="1.6" aria-label="Корзина"><path d="M5.5 8h13l-1.2 12.5H6.7L5.5 8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>
+      <span style="position:absolute;top:-7px;right:-9px;background:var(--cream);color:var(--navy);font-size:10px;width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:500">2</span>
+    </span>
+  </div>
+</header>
+
+<section class="hero">
+  <svg class="mark" style="right:-160px;top:-70px" width="560" height="560" viewBox="0 0 100 118" fill="none" aria-hidden="true"><rect x="44" y="6" width="12" height="9" rx="1.5" stroke="#E8CFB0" stroke-width="2"/><path d="M50 15v89M28 28h44" stroke="#E8CFB0" stroke-width="2"/><path d="M35.6 41.2A34 34 0 1 0 64.4 41.2" stroke="#E8CFB0" stroke-width="2"/></svg>
+  <svg class="mark" style="left:-150px;bottom:-160px;opacity:.05" width="420" height="420" viewBox="0 0 100 118" fill="none" aria-hidden="true"><path d="M50 15v89M28 28h44" stroke="#E8CFB0" stroke-width="2"/><path d="M35.6 41.2A34 34 0 1 0 64.4 41.2" stroke="#E8CFB0" stroke-width="2"/></svg>
+  <div style="position:relative">
+    <div class="cap" style="color:var(--muted-d);font-size:11px;margin-bottom:26px">Perfumes for everyone</div>
+    <h1 class="cap" style="color:var(--cream);font-size:40px;line-height:1.25;letter-spacing:.14em">Find your<br>signature.</h1>
+    <div style="width:44px;height:1px;background:var(--cream);opacity:.45;margin:30px auto"></div>
+    <p style="color:var(--sub-d);font-size:14.5px;line-height:1.75;max-width:400px;margin:0 auto 40px;font-weight:300">Современная парфюмерная галерея в Кишинёве. Аромат — личный выбор: исследуйте, пробуйте, находите своё.</p>
+    <a class="btn" href="#">Открыть каталог</a>
+  </div>
+</section>
+
+<section class="cats">
+  <a href="#"><div class="cap" style="color:var(--navy);font-size:12.5px">Она</div><div style="color:var(--muted);font-size:11.5px;margin-top:7px">126 ароматов</div></a>
+  <a href="#"><div class="cap" style="color:var(--navy);font-size:12.5px">Он</div><div style="color:var(--muted);font-size:11.5px;margin-top:7px">98 ароматов</div></a>
+  <a href="#"><div class="cap" style="color:var(--navy);font-size:12.5px">Унисекс</div><div style="color:var(--muted);font-size:11.5px;margin-top:7px">74 аромата</div></a>
+  <a href="#"><div class="cap" style="color:var(--navy);font-size:12.5px">Наборы</div><div style="color:var(--muted);font-size:11.5px;margin-top:7px">18 идей</div></a>
+</section>
+
+<section style="background:#fff;padding:64px 34px 70px">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:34px">
+    <div class="cap" style="color:var(--navy);font-size:15px">Новинки</div>
+    <a href="#" style="color:var(--muted);font-size:12px;letter-spacing:.1em">СМОТРЕТЬ ВСЕ →</a>
+  </div>
+  <div class="cards">
+    <a class="card" href="#">
+      <div style="background:var(--warm);height:190px;display:flex;align-items:center;justify-content:center"><svg width="66" height="130" viewBox="0 0 60 120" fill="none" aria-hidden="true"><rect x="24" y="4" width="12" height="14" rx="2" stroke="#16293D" stroke-width="1.6"/><path d="M26 18h8v10h-8z" stroke="#16293D" stroke-width="1.6"/><rect x="10" y="28" width="40" height="86" rx="5" stroke="#16293D" stroke-width="1.6"/><line x1="10" y1="88" x2="50" y2="88" stroke="#16293D" stroke-width="1"/></svg></div>
+      <div style="padding:16px 16px 18px">
+        <div style="color:var(--muted);font-size:10.5px;letter-spacing:.2em;margin-bottom:6px">LE LABO</div>
+        <div style="color:var(--navy);font-size:14.5px;font-weight:500;margin-bottom:4px">Santal 33</div>
+        <div style="color:var(--muted);font-size:12px;margin-bottom:12px">древесный · сандал, кедр</div>
+        <div style="display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap"><span class="chip">5 ml</span><span class="chip">10 ml</span><span class="chip">30 ml</span></div>
+        <div style="color:var(--navy);font-size:14px;font-weight:500">от 195 MDL</div>
+      </div>
+    </a>
+    <a class="card" href="#">
+      <div style="background:var(--warm);height:190px;display:flex;align-items:center;justify-content:center"><svg width="72" height="126" viewBox="0 0 70 120" fill="none" aria-hidden="true"><rect x="29" y="4" width="12" height="10" rx="1.5" stroke="#16293D" stroke-width="1.6"/><path d="M31 14h8v12h-8z" stroke="#16293D" stroke-width="1.6"/><ellipse cx="35" cy="74" rx="30" ry="38" stroke="#16293D" stroke-width="1.6"/><line x1="35" y1="26" x2="35" y2="36" stroke="#16293D" stroke-width="1"/></svg></div>
+      <div style="padding:16px 16px 18px">
+        <div style="color:var(--muted);font-size:10.5px;letter-spacing:.2em;margin-bottom:6px">BYREDO</div>
+        <div style="color:var(--navy);font-size:14.5px;font-weight:500;margin-bottom:4px">Gypsy Water</div>
+        <div style="color:var(--muted);font-size:12px;margin-bottom:12px">древесно-акватический</div>
+        <div style="display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap"><span class="chip">5 ml</span><span class="chip">10 ml</span><span class="chip">30 ml</span></div>
+        <div style="color:var(--navy);font-size:14px;font-weight:500">от 240 MDL</div>
+      </div>
+    </a>
+    <a class="card" href="#">
+      <div style="background:var(--warm);height:190px;display:flex;align-items:center;justify-content:center"><svg width="60" height="130" viewBox="0 0 54 120" fill="none" aria-hidden="true"><rect x="21" y="4" width="12" height="16" rx="6" stroke="#16293D" stroke-width="1.6"/><path d="M23 20h8v8h-8z" stroke="#16293D" stroke-width="1.6"/><path d="M8 40c0-8 8-12 19-12s19 4 19 12v66a8 8 0 0 1-8 8H16a8 8 0 0 1-8-8z" stroke="#16293D" stroke-width="1.6"/></svg></div>
+      <div style="padding:16px 16px 18px">
+        <div style="color:var(--muted);font-size:10.5px;letter-spacing:.2em;margin-bottom:6px">XERJOFF</div>
+        <div style="color:var(--navy);font-size:14.5px;font-weight:500;margin-bottom:4px">Naxos</div>
+        <div style="color:var(--muted);font-size:12px;margin-bottom:12px">восточный · табак, мёд</div>
+        <div style="display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap"><span class="chip">5 ml</span><span class="chip">10 ml</span><span class="chip">30 ml</span></div>
+        <div style="color:var(--navy);font-size:14px;font-weight:500">от 310 MDL</div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section class="edi">
+  <div style="padding:64px 44px">
+    <div class="cap" style="color:var(--cream);font-size:22px;line-height:1.4;letter-spacing:.16em">A scent for<br>every story.</div>
+    <div style="width:36px;height:1px;background:var(--cream);opacity:.4;margin:24px 0"></div>
+    <p style="color:var(--sub-d);font-size:13.5px;line-height:1.75;font-weight:300;max-width:330px">Каждый аромат — часть вашей истории. Мы поможем найти тот, что станет вашей подписью.</p>
+    <a href="#" style="display:inline-block;margin-top:24px;color:var(--cream);font-size:11.5px;letter-spacing:.18em">ГИД ПО АРОМАТАМ →</a>
+  </div>
+  <div style="background:var(--cream);min-height:280px;display:flex;align-items:center;justify-content:center">
+    <svg width="120" height="142" viewBox="0 0 100 118" fill="none" aria-hidden="true"><rect x="44" y="6" width="12" height="9" rx="1.5" stroke="#16293D" stroke-width="3"/><path d="M50 15v89M28 28h44" stroke="#16293D" stroke-width="3"/><path d="M35.6 41.2A34 34 0 1 0 64.4 41.2" stroke="#16293D" stroke-width="3"/></svg>
+  </div>
+</section>
+
+<section style="background:#fff;padding:38px 34px;border-bottom:1px solid var(--line);text-align:center">
+  <div style="color:#9AA6B4;font-size:12px;letter-spacing:.26em;font-weight:300">DIOR&nbsp;&nbsp;·&nbsp;&nbsp;CHANEL&nbsp;&nbsp;·&nbsp;&nbsp;TOM FORD&nbsp;&nbsp;·&nbsp;&nbsp;LE LABO&nbsp;&nbsp;·&nbsp;&nbsp;BYREDO&nbsp;&nbsp;·&nbsp;&nbsp;XERJOFF</div>
+</section>
+
+<footer style="background:var(--navy);padding:52px 34px 30px">
+  <div class="fgrid">
+    <div>
+      <svg width="30" height="36" viewBox="0 0 100 118" fill="none" aria-hidden="true" style="margin-bottom:12px"><rect x="44" y="6" width="12" height="9" rx="1.5" stroke="#E8CFB0" stroke-width="4"/><path d="M50 15v89M28 28h44" stroke="#E8CFB0" stroke-width="4"/><path d="M35.6 41.2A34 34 0 1 0 64.4 41.2" stroke="#E8CFB0" stroke-width="4"/></svg>
+      <div style="color:var(--cream);font-size:13px;letter-spacing:.26em;font-weight:300">MON FLACON</div>
+      <p style="color:var(--dim-d);font-size:11.5px;line-height:1.7;margin-top:12px;max-width:180px;font-weight:300">Scents that feel like you.</p>
+    </div>
+    <div><div class="cap" style="color:var(--cream);font-size:11px;margin-bottom:14px">Каталог</div><a class="flink" href="#">Новинки</a><a class="flink" href="#">Бренды</a><a class="flink" href="#">Она</a><a class="flink" href="#">Он</a></div>
+    <div><div class="cap" style="color:var(--cream);font-size:11px;margin-bottom:14px">Покупателям</div><a class="flink" href="#">Доставка</a><a class="flink" href="#">Оплата</a><a class="flink" href="#">Возврат</a><a class="flink" href="#">Контакты</a></div>
+    <div><div class="cap" style="color:var(--cream);font-size:11px;margin-bottom:14px">Контакты</div><div class="flink">Кишинёв, ул. Пушкина 22</div><div class="flink">+373 60 000 000</div><div class="flink">Telegram · Viber · WhatsApp</div></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:22px;flex-wrap:wrap">
+    <div style="color:var(--dim-d);font-size:11px;letter-spacing:.06em">© 2026 MON FLACON · Perfumes for everyone</div>
+    <div style="color:var(--dim-d);font-size:11px;letter-spacing:.12em">RO · RU · EN&nbsp;&nbsp;&nbsp;MDL</div>
+  </div>
+</footer>
+</div>
+</body>
+</html>
