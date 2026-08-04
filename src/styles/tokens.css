@@ -1,8 +1,10 @@
 /*
- * Дизайн-токены — единственный источник цветов/радиусов/шрифтов проекта.
- * Фаза 1: нейтральные плейсхолдер-значения (решение владельца, см. CHANGELOG).
- * Фаза 6: сюда переносится брендовая палитра MON FLACON из BRAND.md §8 —
- * компоненты и остальной CSS не меняются, меняется только этот файл.
+ * Дизайн-токены MON FLACON — единственный источник цветов/радиусов/шрифтов/
+ * типографической шкалы проекта. Источник значений: docs/BRAND.md §2, §3, §5, §8
+ * и docs/WIREFRAMES.md (глобальные решения, размеры секций главной).
+ *
+ * Хардкод цветов/размеров в компонентах запрещён — только эти переменные
+ * (напрямую или через Tailwind-утилиты, объявленные в @theme inline в styles.css).
  *
  * Важно: имена НЕ должны совпадать с автогенерируемыми переменными Tailwind
  * v4 в неймспейсах --color-... и --radius-... (см. @theme inline в styles.css)
@@ -11,17 +13,68 @@
  */
 
 :root {
-  --color-surface: oklch(1 0 0);
-  --color-surface-warm: oklch(0.97 0 0);
-  --color-ink: oklch(0.145 0 0);
-  --color-ink-muted: oklch(0.556 0 0);
-  --color-ink-on-dark: oklch(0.985 0 0);
-  --color-line: oklch(0.922 0 0);
-  --color-danger: oklch(0.577 0.245 27.325);
+  /* ── Палитра (BRAND.md §2) ─────────────────────────────────────────── */
+  --color-navy: #16293d; /* Deep Navy — доминанта: рама, hero, промо, кнопки */
+  --color-cream: #e8cfb0; /* Warm Cream — акцент: лого/текст на тёмном, линии */
+  --color-surface: #ffffff; /* базовая поверхность контентных зон */
+  --color-surface-warm: #f6f0e4; /* тёплый нейтральный фон секций и фото-зон */
 
-  --font-sans: system-ui, sans-serif;
-  --tracking-display: 0.06em;
+  /* ── Роли текста ──────────────────────────────────────────────────── */
+  --color-ink: var(--color-navy); /* основной текст на светлом */
+  --color-ink-muted: #4a5a6b; /* вторичный текст на светлом (производный) */
+  --color-ink-subtle: #9aa6b4; /* третичный на светлом: бренд-строка */
+  --color-ink-on-dark: var(--color-cream); /* основной текст на navy */
+  --color-ink-on-dark-muted: #b9c4cf; /* подстроки и ссылки на navy */
+  --color-ink-on-dark-subtle: #8fa0b2; /* eyebrow, дескриптор на navy */
+  --color-ink-on-dark-faint: #7488a0; /* неактивные локали, подписи футера */
 
-  /* Единая база радиуса — Tailwind сам выводит из неё rounded-sm/md/lg/xl. */
-  --radius: 6px;
+  /* ── Линии (теней в бренде нет — только 1px линии, BRAND.md §5) ────── */
+  --color-line: #e3daca; /* 1px разделители на светлом */
+  --color-line-on-dark: rgb(232 207 176 / 0.25); /* 1px разделители на navy */
+  --color-line-on-dark-soft: rgb(232 207 176 / 0.2);
+
+  /* ── Служебные ────────────────────────────────────────────────────── */
+  --color-danger: #b3453c; /* вне брендбука — согласовать (BRAND.md §2) */
+  --color-pattern: rgb(232 207 176 / 0.06); /* фоновый знак-паттерн на navy */
+
+  /* ── Типографика (BRAND.md §3) ────────────────────────────────────── */
+  /* --font-inter приходит из next/font (src/lib/fonts.ts): latin + latin-ext
+     (диакритики ăâîșț для RO) + cyrillic (RU). Если клиент купит лицензию
+     Helvetica Neue — меняется только эта строка. */
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+
+  --weight-light: 300; /* заголовки; не использовать мельче ~18px */
+  --weight-regular: 400; /* основной текст */
+  --weight-medium: 500; /* кнопки, цены, названия товаров, акценты */
+
+  /* Шкала размеров (rem от 16px), имена — по ролям из WIREFRAMES.md */
+  --text-hero: 2.5rem; /* 40px — H1 hero, desktop */
+  --text-hero-mobile: 1.6875rem; /* 27px — H1 hero, <768 */
+  --text-display: 1.375rem; /* 22px — фраза editorial-блока */
+  --text-section: 0.9375rem; /* 15px — заголовок секции (НОВИНКИ) */
+  --text-body: 0.90625rem; /* 14.5px — основной текст, название товара */
+  --text-body-sm: 0.84375rem; /* 13.5px — вторичный текст */
+  --text-label: 0.75rem; /* 12px — навигация, ссылки, чипы, семейство нот */
+  --text-eyebrow: 0.6875rem; /* 11px — eyebrow, заголовки колонок футера */
+  --text-micro: 0.65625rem; /* 10.5px — бренд в карточке, дескриптор лого */
+
+  /* Трекинг: uppercase-заголовки бренда живут на увеличенном трекинге */
+  --tracking-wordmark: 0.3em; /* MON FLACON в шапке/футере */
+  --tracking-eyebrow: 0.22em; /* PERFUMES FOR EVERYONE */
+  --tracking-brandline: 0.26em; /* бренд-строка на главной */
+  --tracking-label: 0.2em; /* бренд в карточке товара, мелкие метки */
+  --tracking-link: 0.18em; /* текстовые ссылки-акценты */
+  --tracking-display: 0.14em; /* H1, заголовки секций, кнопки */
+  --tracking-body: 0; /* основной текст — без трекинга */
+
+  --leading-tight: 1.15; /* hero */
+  --leading-display: 1.3; /* заголовки секций, editorial */
+  --leading-body: 1.6; /* основной текст (BRAND.md §3) */
+
+  --measure-body: 68ch; /* длина строки 60–75 знаков */
+
+  /* ── Геометрия (BRAND.md §5: линия и геометрия, не «пилюли») ──────── */
+  /* Единая база радиуса — Tailwind выводит из неё rounded-sm/md/lg/xl
+     (см. @theme inline в styles.css): sm = 2px, остальные = 4px. */
+  --radius: 4px;
 }

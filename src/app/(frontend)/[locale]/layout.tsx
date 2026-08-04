@@ -2,6 +2,7 @@ import React from 'react'
 import { hasLocale, NextIntlClientProvider } from 'next-intl'
 import { setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
+import { inter } from '@/lib/fonts'
 import { routing } from '@/i18n/routing'
 import './styles.css'
 
@@ -28,7 +29,7 @@ export default async function LocaleLayout(props: {
   setRequestLocale(locale)
 
   return (
-    <html lang={locale}>
+    <html lang={locale} className={inter.variable}>
       <body>
         <NextIntlClientProvider>
           <main>{children}</main>

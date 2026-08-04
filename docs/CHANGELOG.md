@@ -2,6 +2,27 @@
 
 Журнал ведётся по CLAUDE.md. Новые записи — сверху.
 
+## [2026-08-04] Фаза 1.4 (доработка) — брендовая тема MON FLACON + Inter
+
+- Сделано:
+  - **CLAUDE.md:** git полностью выведен из процесса. Правило 1 раздела «Запрещено» переформулировано (git-операции вне зоны исполнителя, git-блоки/списки коммитов не печатаются); из ритуала завершения шага удалён шаг 4 «⎇ Git-блок» — ритуал теперь трёхшаговый (Резюме → Самопроверка → Changelog); из шаблона changelog убран «git-блок» из строки «Ждёт владельца».
+  - **`src/styles/tokens.css` переписан на брендовые значения** (BRAND.md §2/§3/§5/§8 + WIREFRAMES.md): палитра navy `#16293D` / cream `#E8CFB0` / surface `#FFFFFF` / surface-warm `#F6F0E4` / line `#E3DACA` / danger `#B3453C`; роли текста на светлом (`ink`, `ink-muted`, `ink-subtle`) и на navy (`ink-on-dark`, `-muted #B9C4CF`, `-subtle #8FA0B2`, `-faint #7488A0`); линии на тёмном `rgb(232 207 176 / .25)` и `.2`; веса 300/400/500; типографическая шкала по ролям из вайрфреймов (`--text-hero` 40px … `--text-micro` 10.5px), трекинги (`wordmark .3em`, `eyebrow .22em`, `brandline .26em`, `label .2em`, `link .18em`, `display .14em`), интерлиньяжи (1.15 / 1.3 / 1.6), `--measure-body: 68ch`, `--radius: 4px`.
+  - **Радиусы приведены к бренду:** в `@theme inline` цепочка `--radius-sm…4xl` больше не разгоняется до «пилюль» — `sm` = 2px, все остальные ступени = 4px (BRAND §5: минимальные радиусы, линия вместо elevation).
+  - **Брендовые токены заведены как Tailwind-утилиты** (`@theme inline` в `styles.css`): `bg-navy`, `text-cream`, `border-line`, `divide-line`, `text-hero`, `tracking-wordmark`, `leading-body`, `font-light/medium` и т.д. — чтобы в компонентах не появлялось ни одного хардкода и всё вело в `tokens.css`.
+  - **Семантика shadcn перепривязана к бренду:** `--primary` navy / `--primary-foreground` cream, `--accent` cream / `--accent-foreground` navy (ховер по BRAND §5 — заливка cream с navy-текстом), `--ring` navy, `--border`/`--input` line, chart-цвета — из палитры (нейтральных oklch-значений не осталось). В `@layer base` у `body` заданы базовые параметры основного текста (14.5px / 400 / 1.6).
+  - **Шрифт Inter через `next/font/google`** — `src/lib/fonts.ts`, `subsets: ['latin','latin-ext','cyrillic']`, `display: swap`, переменная `--font-inter` → `--font-sans`; класс `inter.variable` навешен на `<html>` во фронтовом layout.
+  - **QA-страница `/[locale]/ui-kit` переписана** под брендовую проверку: navy-шапка/hero/футер, свотчи палитры, образцы трёх сабсетов (`Ăă Ââ Îî Șș Țț`, кириллица, latin), типографическая шкала, компоненты shadcn, эталонная карточка товара по WIREFRAMES §3. Хардкод-цветов на странице нет — только утилиты токенов.
+- Файлы: `CLAUDE.md`, `src/styles/tokens.css`, `src/app/(frontend)/[locale]/styles.css`, `src/app/(frontend)/[locale]/layout.tsx`, `src/app/(frontend)/[locale]/ui-kit/page.tsx`, `src/lib/fonts.ts`, `src/lib/utils.ts`, `docs/screenshots/ui-kit-{360,768,1280}.png`
+- Зависимости: новых нет (`next/font` — часть Next).
+- Ждёт владельца:
+  - 👁 Сверить скриншоты `docs/screenshots/ui-kit-*.png` с ожиданием по брендбуку (палитра/воздух/типографика) до старта фазы 2.
+  - Открытые вопросы BRAND §9 без изменений: SVG лого/паттерна от дизайнера, решение Inter vs покупка Helvetica Neue, согласование `--color-danger` `#B3453C`.
+- Заметки:
+  - **Грабли: `tailwind-merge` съедал цвет текста.** Кастомные размеры вида `text-label`/`text-body` tailwind-merge относил к группе `text-color` и вычищал соседний `text-cream` — CTA в hero рендерился navy на navy (невидимо). Починено структурно: `src/lib/utils.ts` переведён на `extendTailwindMerge` с явным перечислением брендовых токенов по группам (`font-size`, `text-color`, `bg-color`, `border-color`, `divide-color`, `tracking`, `leading`). Правило на будущее: **новый токен в `tokens.css` из неоднозначного неймспейса → добавить его в списки в `utils.ts`**, иначе классы будут молча теряться внутри shadcn-компонентов.
+  - Имена токенов из BRAND §8 сохранены один-в-один, но добавлены роли, которых в §8 не было и которые требуют вайрфреймы (текст на navy трёх степеней приглушённости, линии на тёмном, `ink-subtle` для бренд-строки). Это расширение §8, а не отход от него.
+  - Inter self-hosted: в прод-образе отдаются три `woff2` с нашего origin (по одному на сабсет), запросов к Google в рантайме нет. CLS = 0 (замерено PerformanceObserver) — за счёт `size-adjust`-фолбэка «Inter Fallback», который next/font генерирует автоматически.
+  - Скриншоты сняты с временно скрытым дев-индикатором Next (`nextjs-portal`), чтобы он не попадал в кадр.
+
 ## [2026-08-04] Фаза 1 — Инициализация проекта (+ хвосты фазы 0)
 
 - Сделано:
