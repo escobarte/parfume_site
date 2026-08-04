@@ -5,8 +5,16 @@ import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import sharp from 'sharp'
 
-import { Users } from './collections/Users'
+import { Brands } from './collections/Brands'
+import { Categories } from './collections/Categories'
 import { Media } from './collections/Media'
+import { Notes } from './collections/Notes'
+import { Orders } from './collections/Orders'
+import { Products } from './collections/Products'
+import { Users } from './collections/Users'
+import { Homepage } from './globals/Homepage'
+import { Navigation } from './globals/Navigation'
+import { Settings } from './globals/Settings'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -18,7 +26,8 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media],
+  collections: [Products, Brands, Categories, Notes, Media, Orders, Users],
+  globals: [Homepage, Settings, Navigation],
   editor: lexicalEditor(),
   localization: {
     locales: ['ro', 'ru', 'en'],
@@ -33,6 +42,11 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URI || '',
     },
+    // Схема ведётся миграциями, а не drizzle-push: push задаёт интерактивные
+    // вопросы про переименование колонок и не воспроизводится на проде.
+    // Изменил схему → `pnpm payload migrate:create` + `pnpm payload migrate`.
+    push: false,
+    migrationDir: path.resolve(dirname, 'migrations'),
   }),
   sharp,
   plugins: [],

@@ -1,0 +1,56 @@
+import { KIND_LABELS } from './detect'
+import type { ImportResult } from './types'
+
+const list = (items: string[], limit = 12): string =>
+  items.length <= limit
+    ? items.join(', ')
+    : `${items.slice(0, limit).join(', ')} … и ещё ${items.length - limit}`
+
+/** Человекочитаемый отчёт для CLI — одинаковый для dry-run и боевого прогона. */
+export function formatReport(result: ImportResult): string {
+  const { plan, errors, dryRun, ok } = result
+  const lines: string[] = []
+
+  lines.push(`Формат файла: ${KIND_LABELS[plan.kind]}`)
+  lines.push(`Локаль контента: ${plan.locale}`)
+  lines.push(dryRun ? 'Режим: DRY-RUN, в базу ничего не пишется' : 'Режим: боевой импорт')
+  lines.push('')
+
+  if (errors.length) {
+    lines.push(`✘ Ошибок: ${errors.length} — импорт не выполнен (всё-или-ничего)`)
+    for (const error of errors.slice(0, 50)) {
+      const where = error.line ? `строка ${error.line}` : 'файл'
+      lines.push(`  ${where}${error.field ? ` · ${error.field}` : ''}: ${error.message}`)
+    }
+    if (errors.length > 50) lines.push(`  … и ещё ${errors.length - 50}`)
+    return lines.join('\n')
+  }
+
+  lines.push(ok ? '✔ Проверка пройдена' : '✘ Импорт не выполнен')
+  lines.push(
+    `Товаров создать: ${plan.create.length}${plan.create.length ? ` — ${list(plan.create)}` : ''}`,
+  )
+  lines.push(
+    `Товаров обновить: ${plan.update.length}${plan.update.length ? ` — ${list(plan.update)}` : ''}`,
+  )
+  lines.push(`Вариантов: создано ${plan.variants.created} · обновлено ${plan.variants.updated}`)
+
+  const auto = plan.autoCreate
+  const autoTotal = auto.brands.length + auto.categories.length + auto.notes.length
+  if (autoTotal) {
+    lines.push(`Справочники ${dryRun ? 'будут созданы' : 'созданы'} автоматически (${autoTotal}):`)
+    if (auto.brands.length) lines.push(`  бренды: ${list(auto.brands)}`)
+    if (auto.categories.length) lines.push(`  категории: ${list(auto.categories)}`)
+    if (auto.notes.length) lines.push(`  ноты: ${list(auto.notes)}`)
+    lines.push('  ⚠ проверьте, нет ли здесь опечаток в slug-ах')
+  }
+
+  if (plan.skipped.length) {
+    lines.push(`Пропущено строк: ${plan.skipped.length}`)
+    for (const skip of plan.skipped.slice(0, 20)) {
+      lines.push(`  строка ${skip.line}: ${skip.message}`)
+    }
+  }
+
+  return lines.join('\n')
+}

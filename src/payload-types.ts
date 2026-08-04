@@ -67,8 +67,13 @@ export interface Config {
   };
   blocks: {};
   collections: {
-    users: User;
+    products: Product;
+    brands: Brand;
+    categories: Category;
+    notes: Note;
     media: Media;
+    orders: Order;
+    users: User;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -76,8 +81,13 @@ export interface Config {
   };
   collectionsJoins: {};
   collectionsSelect: {
-    users: UsersSelect<false> | UsersSelect<true>;
+    products: ProductsSelect<false> | ProductsSelect<true>;
+    brands: BrandsSelect<false> | BrandsSelect<true>;
+    categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    notes: NotesSelect<false> | NotesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    orders: OrdersSelect<false> | OrdersSelect<true>;
+    users: UsersSelect<false> | UsersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -87,8 +97,16 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: ('false' | 'none' | 'null') | false | null | ('ro' | 'ru' | 'en') | ('ro' | 'ru' | 'en')[];
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    homepage: Homepage;
+    settings: Setting;
+    navigation: Navigation;
+  };
+  globalsSelect: {
+    homepage: HomepageSelect<false> | HomepageSelect<true>;
+    settings: SettingsSelect<false> | SettingsSelect<true>;
+    navigation: NavigationSelect<false> | NavigationSelect<true>;
+  };
   locale: 'ro' | 'ru' | 'en';
   widgets: {
     collections: CollectionsWidget;
@@ -119,10 +137,317 @@ export interface UserAuthOperations {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "products".
+ */
+export interface Product {
+  id: number;
+  title: string;
+  brand: number | Brand;
+  categories?: (number | Category)[] | null;
+  gender?: ('female' | 'male' | 'unisex') | null;
+  /**
+   * Ольфакторное семейство.
+   */
+  family?: ('floral' | 'woody' | 'oriental' | 'fresh' | 'fougere' | 'chypre') | null;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Первая картинка — обложка карточки.
+   */
+  images?: (number | Media)[] | null;
+  /**
+   * Объём, цена и остаток. Общие для всех локалей.
+   */
+  variants: {
+    /**
+     * мл
+     */
+    volume: number;
+    sku: string;
+    /**
+     * MDL
+     */
+    price: number;
+    /**
+     * MDL, до скидки
+     */
+    oldPrice?: number | null;
+    stock: number;
+    /**
+     * Показывать вариант на витрине.
+     */
+    isActive?: boolean | null;
+    id?: string | null;
+  }[];
+  /**
+   * Плоский список — по нему работают фильтры и карточка.
+   */
+  notes?: (number | Note)[] | null;
+  /**
+   * Необязательно. Для страницы товара.
+   */
+  pyramid?: {
+    top?: (number | Note)[] | null;
+    heart?: (number | Note)[] | null;
+    base?: (number | Note)[] | null;
+  };
+  /**
+   * Ключ строки прайса клиента. По нему идёт upsert при импорте.
+   */
+  handle: string;
+  /**
+   * Латиницей, один на все локали. Пусто — соберётся из названия.
+   */
+  slug: string;
+  isNew?: boolean | null;
+  isHit?: boolean | null;
+  isSale?: boolean | null;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  inStock?: boolean | null;
+  seo?: {
+    /**
+     * До ~60 знаков. Пусто — берётся название.
+     */
+    title?: string | null;
+    /**
+     * До ~160 знаков.
+     */
+    description?: string | null;
+    /**
+     * Картинка для OG-превью.
+     */
+    image?: (number | null) | Media;
+  };
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "brands".
+ */
+export interface Brand {
+  id: number;
+  title: string;
+  /**
+   * Латиницей, один на все локали. Пусто — соберётся из названия.
+   */
+  slug: string;
+  description?: string | null;
+  logo?: (number | null) | Media;
+  /**
+   * Страна бренда — для страницы бренда.
+   */
+  country?: string | null;
+  /**
+   * Показывать в бренд-строке на главной.
+   */
+  isFeatured?: boolean | null;
+  seo?: {
+    /**
+     * До ~60 знаков. Пусто — берётся название.
+     */
+    title?: string | null;
+    /**
+     * До ~160 знаков.
+     */
+    description?: string | null;
+    /**
+     * Картинка для OG-превью.
+     */
+    image?: (number | null) | Media;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: number;
+  /**
+   * Альтернативный текст — локализуется.
+   */
+  alt: string;
+  caption?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+  sizes?: {
+    thumb?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    card?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    full?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories".
+ */
+export interface Category {
+  id: number;
+  title: string;
+  /**
+   * Латиницей, один на все локали. Пусто — соберётся из названия.
+   */
+  slug: string;
+  description?: string | null;
+  /**
+   * Родительская категория (вложенность).
+   */
+  parent?: (number | null) | Category;
+  /**
+   * Картинка плитки в ленте категорий на главной.
+   */
+  image?: (number | null) | Media;
+  /**
+   * Порядок вывода, по возрастанию.
+   */
+  order?: number | null;
+  seo?: {
+    /**
+     * До ~60 знаков. Пусто — берётся название.
+     */
+    title?: string | null;
+    /**
+     * До ~160 знаков.
+     */
+    description?: string | null;
+    /**
+     * Картинка для OG-превью.
+     */
+    image?: (number | null) | Media;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notes".
+ */
+export interface Note {
+  id: number;
+  title: string;
+  /**
+   * Латиницей, один на все локали. Пусто — соберётся из названия.
+   */
+  slug: string;
+  description?: string | null;
+  /**
+   * Группа ноты — для навигации по нотам.
+   */
+  group?: ('citrus' | 'floral' | 'woody' | 'spicy' | 'sweet' | 'fresh' | 'animalic') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders".
+ */
+export interface Order {
+  id: number;
+  orderNumber?: string | null;
+  status: 'new' | 'contacted' | 'done' | 'cancelled';
+  /**
+   * Локаль, с которой пришла заявка.
+   */
+  locale?: ('ro' | 'ru' | 'en') | null;
+  /**
+   * cart / one-click / site
+   */
+  source?: string | null;
+  customer: {
+    name: string;
+    phone: string;
+    messenger?: ('telegram' | 'viber' | 'whatsapp' | 'call') | null;
+  };
+  comment?: string | null;
+  /**
+   * Снапшот на момент заявки — не меняется вслед за каталогом.
+   */
+  items?:
+    | {
+        /**
+         * Ссылка на товар, если он ещё существует.
+         */
+        product?: (number | null) | Product;
+        title: string;
+        brandTitle?: string | null;
+        sku: string;
+        /**
+         * мл
+         */
+        volume?: number | null;
+        /**
+         * MDL
+         */
+        price: number;
+        qty: number;
+        lineTotal: number;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Итог заявки, MDL.
+   */
+  total: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
  */
 export interface User {
   id: number;
+  name?: string | null;
+  /**
+   * Менеджер: товары только на чтение, заказы — полностью.
+   */
+  role: 'admin' | 'manager';
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -141,25 +466,6 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
- */
-export interface Media {
-  id: number;
-  alt: string;
-  updatedAt: string;
-  createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -186,12 +492,32 @@ export interface PayloadLockedDocument {
   id: number;
   document?:
     | ({
-        relationTo: 'users';
-        value: number | User;
+        relationTo: 'products';
+        value: number | Product;
+      } | null)
+    | ({
+        relationTo: 'brands';
+        value: number | Brand;
+      } | null)
+    | ({
+        relationTo: 'categories';
+        value: number | Category;
+      } | null)
+    | ({
+        relationTo: 'notes';
+        value: number | Note;
       } | null)
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'orders';
+        value: number | Order;
+      } | null)
+    | ({
+        relationTo: 'users';
+        value: number | User;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -237,9 +563,202 @@ export interface PayloadMigration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "products_select".
+ */
+export interface ProductsSelect<T extends boolean = true> {
+  title?: T;
+  brand?: T;
+  categories?: T;
+  gender?: T;
+  family?: T;
+  description?: T;
+  images?: T;
+  variants?:
+    | T
+    | {
+        volume?: T;
+        sku?: T;
+        price?: T;
+        oldPrice?: T;
+        stock?: T;
+        isActive?: T;
+        id?: T;
+      };
+  notes?: T;
+  pyramid?:
+    | T
+    | {
+        top?: T;
+        heart?: T;
+        base?: T;
+      };
+  handle?: T;
+  slug?: T;
+  isNew?: T;
+  isHit?: T;
+  isSale?: T;
+  minPrice?: T;
+  maxPrice?: T;
+  inStock?: T;
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "brands_select".
+ */
+export interface BrandsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  description?: T;
+  logo?: T;
+  country?: T;
+  isFeatured?: T;
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories_select".
+ */
+export interface CategoriesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  description?: T;
+  parent?: T;
+  image?: T;
+  order?: T;
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notes_select".
+ */
+export interface NotesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  description?: T;
+  group?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media_select".
+ */
+export interface MediaSelect<T extends boolean = true> {
+  alt?: T;
+  caption?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+  sizes?:
+    | T
+    | {
+        thumb?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        card?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        full?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+      };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders_select".
+ */
+export interface OrdersSelect<T extends boolean = true> {
+  orderNumber?: T;
+  status?: T;
+  locale?: T;
+  source?: T;
+  customer?:
+    | T
+    | {
+        name?: T;
+        phone?: T;
+        messenger?: T;
+      };
+  comment?: T;
+  items?:
+    | T
+    | {
+        product?: T;
+        title?: T;
+        brandTitle?: T;
+        sku?: T;
+        volume?: T;
+        price?: T;
+        qty?: T;
+        lineTotal?: T;
+        id?: T;
+      };
+  total?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  name?: T;
+  role?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -256,24 +775,6 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media_select".
- */
-export interface MediaSelect<T extends boolean = true> {
-  alt?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  url?: T;
-  thumbnailURL?: T;
-  filename?: T;
-  mimeType?: T;
-  filesize?: T;
-  width?: T;
-  height?: T;
-  focalX?: T;
-  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -314,6 +815,267 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "homepage".
+ */
+export interface Homepage {
+  id: number;
+  hero: {
+    /**
+     * Фирменная EN-фраза — не переводится.
+     */
+    eyebrow?: string | null;
+    /**
+     * Фирменные EN-фразы оставляйте на английском.
+     */
+    title: string;
+    subtitle?: string | null;
+    ctaLabel?: string | null;
+    /**
+     * Без префикса локали.
+     */
+    ctaHref?: string | null;
+  };
+  /**
+   * Четыре плитки; счётчики товаров считаются из БД.
+   */
+  categoryTiles?:
+    | {
+        category: number | Category;
+        /**
+         * Пусто — берётся название категории.
+         */
+        labelOverride?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  newRow?: {
+    title?: string | null;
+    linkLabel?: string | null;
+    limit?: number | null;
+  };
+  /**
+   * WIREFRAMES.md §Опциональный слот — по умолчанию выключен.
+   */
+  hitsRow?: {
+    enabled?: boolean | null;
+    title?: string | null;
+    linkLabel?: string | null;
+    limit?: number | null;
+  };
+  editorial?: {
+    /**
+     * Фирменная EN-фраза — не переводится.
+     */
+    phrase?: string | null;
+    text?: string | null;
+    linkLabel?: string | null;
+    linkHref?: string | null;
+    /**
+     * Пусто — на плите cream остаётся знак бренда.
+     */
+    image?: (number | null) | Media;
+  };
+  /**
+   * Одна центрированная строка названий без логотипов.
+   */
+  featuredBrands?: (number | Brand)[] | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "settings".
+ */
+export interface Setting {
+  id: number;
+  /**
+   * Название бренда — не переводится (BRAND.md §7).
+   */
+  siteName?: string | null;
+  /**
+   * Дескриптор логотипа — фирменная EN-фраза, не переводится.
+   */
+  tagline?: string | null;
+  contacts?: {
+    phone?: string | null;
+    email?: string | null;
+    address?: string | null;
+    workingHours?: string | null;
+    /**
+     * Ссылка на карту.
+     */
+    mapUrl?: string | null;
+  };
+  messengers?: {
+    telegram?: string | null;
+    viber?: string | null;
+    whatsapp?: string | null;
+  };
+  social?:
+    | {
+        label: string;
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Строка под логотипом в футере.
+   */
+  footerNote?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "navigation".
+ */
+export interface Navigation {
+  id: number;
+  /**
+   * Каталог · Бренды · Новинки · О нас (WIREFRAMES.md §Шапка).
+   */
+  header?:
+    | {
+        label: string;
+        /**
+         * Без префикса локали: /catalog
+         */
+        href: string;
+        id?: string | null;
+      }[]
+    | null;
+  footerColumns?:
+    | {
+        title: string;
+        links?:
+          | {
+              label: string;
+              href: string;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "homepage_select".
+ */
+export interface HomepageSelect<T extends boolean = true> {
+  hero?:
+    | T
+    | {
+        eyebrow?: T;
+        title?: T;
+        subtitle?: T;
+        ctaLabel?: T;
+        ctaHref?: T;
+      };
+  categoryTiles?:
+    | T
+    | {
+        category?: T;
+        labelOverride?: T;
+        id?: T;
+      };
+  newRow?:
+    | T
+    | {
+        title?: T;
+        linkLabel?: T;
+        limit?: T;
+      };
+  hitsRow?:
+    | T
+    | {
+        enabled?: T;
+        title?: T;
+        linkLabel?: T;
+        limit?: T;
+      };
+  editorial?:
+    | T
+    | {
+        phrase?: T;
+        text?: T;
+        linkLabel?: T;
+        linkHref?: T;
+        image?: T;
+      };
+  featuredBrands?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "settings_select".
+ */
+export interface SettingsSelect<T extends boolean = true> {
+  siteName?: T;
+  tagline?: T;
+  contacts?:
+    | T
+    | {
+        phone?: T;
+        email?: T;
+        address?: T;
+        workingHours?: T;
+        mapUrl?: T;
+      };
+  messengers?:
+    | T
+    | {
+        telegram?: T;
+        viber?: T;
+        whatsapp?: T;
+      };
+  social?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        id?: T;
+      };
+  footerNote?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "navigation_select".
+ */
+export interface NavigationSelect<T extends boolean = true> {
+  header?:
+    | T
+    | {
+        label?: T;
+        href?: T;
+        id?: T;
+      };
+  footerColumns?:
+    | T
+    | {
+        title?: T;
+        links?:
+          | T
+          | {
+              label?: T;
+              href?: T;
+              id?: T;
+            };
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

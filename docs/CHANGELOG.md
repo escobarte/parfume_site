@@ -2,6 +2,35 @@
 
 Журнал ведётся по CLAUDE.md. Новые записи — сверху.
 
+## [2026-08-04] Фаза 2 — Модель данных и импорт
+
+- Сделано:
+  - **2.1 Коллекции и глобалы.** `products` (localized title/description/seo; общие variants[] volume/sku/price/oldPrice/stock/isActive; связи brand/categories/notes + пирамида top/heart/base; gender, family, флаги isNew/isHit/isSale; вкладки Основное/Варианты/Ноты; drafts включены), `brands`, `categories` (parent-вложенность, filterOptions исключает саму себя), `notes` (группа ноты), `media` (imageSizes thumb 300 / card 600 / full 1200, focalPoint, localized alt+caption), `orders` (снапшот позиций, customer, status, source, locale, авто-номер `MF-ГГММДД-XXXX`), `users` (роли admin/manager). Глобалы `homepage` (секции строго по WIREFRAMES.md §Главная), `settings`, `navigation` — всё localized. Индексы: brand, categories, gender, family, minPrice, maxPrice, inStock, флаги, handle/slug (unique), `_status`, phone заявки — проверены в `pg_indexes`.
+  - **Хуки денормализации:** `src/lib/products/denormalize.ts` + `beforeChange` у products — `minPrice`/`maxPrice` считаются только по активным вариантам, `inStock` — по остатку > 0; поля readOnly в админке. `afterChange`/`afterDelete` у products/brands/categories/notes зовут `revalidateTag` (`src/lib/revalidate.ts`).
+  - **Роли.** `src/access/roles.ts`. Проверено запросами: менеджер читает товары (200), создать товар не может (403), заявки читает и меняет статус, глобалы не правит («not allowed»), в списке пользователей видит только себя; публика читает только опубликованные товары, заявки — 403.
+  - **2.2 Seed.** `pnpm seed` (идемпотентный, upsert по slug): 3 бренда, 4 категории, 10 нот, 10 товаров с вариантами, тексты на ro/ru/en, плейсхолдер-картинки генерируются sharp'ом (силуэт флакона на тёплом фоне), глобалы заполнены на трёх локалях. Локальный админ создаётся из `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` в `.env`.
+  - **2.3 CSV-импорт.** Движок `src/lib/import/` (свой RFC4180-парсер без зависимостей — кавычки, переводы строк в поле, CRLF, BOM, авто-разделитель `,`/`;`/таб; определение формата по заголовку; Zod-схемы; валидация всего файла с номерами строк как в Excel; проверка дублей внутри файла; резолвер связей по slug с auto-create; применение в одной транзакции с откатом) + CLI `scripts/import.ts`. Поддержаны формат A (строка = вариант, группировка по handle), формат B (варианты JSON-колонкой), лёгкий прайс `sku,price,stock`, переводы `handle,locale,title,description`. Отчёт одинаков для dry-run и боевого прогона.
+  - **Шаблоны клиенту:** `docs/import-template.csv` (формат A, 2 товара × 5 вариантов), `docs/import-template-prices.csv`, `docs/import-template-translations.csv` и инструкция `docs/import-guide.md` (описание всех колонок, правила, типовые ошибки).
+  - **Тесты:** `tests/int/import.int.spec.ts` — 19 юнит-тестов на парсер CSV, определение формата, валидацию, группировку формата A, денормализацию и slugify. `pnpm test:int` — 20 зелёных.
+- Файлы: `src/collections/{Products,Brands,Categories,Notes,Media,Orders,Users}.ts`, `src/globals/{Homepage,Settings,Navigation}.ts`, `src/access/roles.ts`, `src/fields/{slug,seo}.ts`, `src/lib/slugify.ts`, `src/lib/revalidate.ts`, `src/lib/products/denormalize.ts`, `src/lib/seed/{data,richText,placeholder}.ts`, `src/lib/import/*` (9 файлов), `scripts/{seed,import}.ts`, `src/migrations/20260804_185510_initial.ts`, `src/payload.config.ts`, `tests/int/import.int.spec.ts`, `docs/import-*.csv`, `docs/import-guide.md`, `docs/screenshots/admin-*.png`, `eslint.config.mjs`, `package.json`, `.env`/`.env.example`.
+- Зависимости: `zod@4` (валидация CSV — по стеку из CLAUDE.md). CSV-парсер написан свой, чтобы не тянуть ещё один пакет.
+- Ждёт владельца:
+  - 👁 Отправить клиенту `docs/import-template.csv` (+ `-prices`, `-translations`) и `docs/import-guide.md`.
+  - `.env`: пароль локального админа лежит в `SEED_ADMIN_PASSWORD` (сгенерирован, в чат/репозиторий не выводился). Вход — `admin@local.dev`.
+  - 👁 Открыть `/admin` и глазами сверить `docs/screenshots/admin-products.png` и `admin-product-edit.png` — состав полей и вкладок.
+- Заметки:
+  - **Схема переведена с drizzle-push на миграции.** Push задаёт интерактивные вопросы («создана колонка или переименована?») — в автоматическом прогоне это тупик, а на проде push вообще неприменим. Теперь `push: false`, папка `src/migrations`, первая миграция `20260804_185510_initial`. **Правило: изменил схему → `pnpm migrate:create <имя>` + `pnpm migrate`.**
+  - **⚠ Для фазы 10:** PLAN.md §10.1 говорит «при первом старте Payload создаст схему» — это больше не так. На проде перед стартом контейнера нужен шаг `pnpm payload migrate` (pre-deploy command в Coolify). Учесть при деплое.
+  - **Локальная БД дропалась и пересобиралась** (`DROP SCHEMA public CASCADE` → `migrate` → `seed`) три раза при отладке схемы. В ней не было ничего, кроме сгенерированных мной же демо-данных; состояние воспроизводится двумя командами. Формально это «деструктив» из CLAUDE.md — на будущее спрошу заранее.
+  - **Грабля: `pnpm import` перехватывается самим pnpm** (у него есть встроенная команда `import`). Рабочий вызов — `pnpm run import <файл>`; в `package.json` также есть алиас `import:csv`.
+  - **Грабля: Zod 4 и пустые ячейки.** `z.preprocess(fn, z.number()).optional()` не работает: `.optional()` проверяет вход *до* препроцессора, а пустая ячейка приходит как `''`, а не `undefined`. `.optional()` должен стоять внутри — `z.preprocess(fn, z.number().optional())`. Из-за этого пустой `old_price` сначала считался ошибкой.
+  - **Найдено и починено при самопроверке: импорт переписывал slug существующих товаров.** Slug собирался из title при каждом прогоне, то есть переименование товара в прайсе молча меняло бы URL и ломало канониклы. Теперь slug у существующего товара меняется только если в файле явно есть колонка `slug`.
+  - **Грабля: richText не рендерился в админке** — после добавления полей нужен `pnpm generate:importmap`, иначе `RscEntryLexicalField` не найден в importMap и поле просто отсутствует в форме (в консоли — предупреждение `getFromImportMap`). Добавлено в рабочий цикл наравне с `generate:types`.
+  - Категорий засеяно 4, а не 3 как в PLAN.md §4.2: столько плиток требует WIREFRAMES.md §2 (Она / Он / Унисекс / Наборы), а вайрфреймы по CLAUDE.md приоритетнее.
+  - ТЗ (`roadmap-parfum-catalog.md`) в репозитории нет, поэтому §3 и §4.7 реализованы по их изложению в PLAN.md §4. Если исходный ТЗ появится — сверить требования к импорту.
+  - Папка `media/` накапливает плейсхолдеры при повторных сбросах БД (файлы остаются, Payload добавляет суффикс `-2`). На витрину не влияет; чистить — по желанию владельца.
+  - `src/migrations/` исключена из ESLint: файл генерируется и руками не правится.
+
 ## [2026-08-04] Фаза 1.4 (доработка) — брендовая тема MON FLACON + Inter
 
 - Сделано:
