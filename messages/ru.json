@@ -1,0 +1,18 @@
+{
+  "HomePage": {
+    "greeting": "Добро пожаловать в MON FLACON",
+    "tagline": "Perfumes for everyone."
+  },
+  "Nav": {
+    "catalog": "Каталог",
+    "brands": "Бренды",
+    "cart": "Корзина",
+    "search": "Поиск"
+  },
+  "LocaleSwitcher": {
+    "label": "Язык",
+    "ro": "Română",
+    "ru": "Русский",
+    "en": "English"
+  }
+}

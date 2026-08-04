@@ -1,0 +1,18 @@
+{
+  "HomePage": {
+    "greeting": "Bine ai venit la MON FLACON",
+    "tagline": "Perfumes for everyone."
+  },
+  "Nav": {
+    "catalog": "Catalog",
+    "brands": "Branduri",
+    "cart": "Coș",
+    "search": "Căutare"
+  },
+  "LocaleSwitcher": {
+    "label": "Limbă",
+    "ro": "Română",
+    "ru": "Русский",
+    "en": "English"
+  }
+}
