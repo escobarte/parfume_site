@@ -14,6 +14,7 @@ const fontSizes = [
   'section',
   'body',
   'body-sm',
+  'link',
   'label',
   'eyebrow',
   'micro',

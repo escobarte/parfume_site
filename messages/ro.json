@@ -4,10 +4,96 @@
     "tagline": "Perfumes for everyone."
   },
   "Nav": {
+    "home": "Acasă",
     "catalog": "Catalog",
     "brands": "Branduri",
     "cart": "Coș",
-    "search": "Căutare"
+    "search": "Căutare",
+    "menu": "Meniu",
+    "breadcrumbs": "Navigare"
+  },
+  "Footer": {
+    "contacts": "Contacte"
+  },
+  "Search": {
+    "title": "Căutare",
+    "placeholder": "Căutați un parfum, brand sau categorie",
+    "empty": "Nu am găsit nimic",
+    "emptyHint": "Verificați ortografia sau încercați un cuvânt mai scurt.",
+    "resultsFor": "Rezultate pentru «{query}»",
+    "prompt": "Introduceți cel puțin două litere.",
+    "type": {
+      "product": "Parfum",
+      "brand": "Brand",
+      "category": "Categorie"
+    }
+  },
+  "Catalog": {
+    "title": "Catalog",
+    "showing": "{shown} din {total}",
+    "loadMore": "Arată mai multe",
+    "empty": "Niciun parfum nu corespunde filtrelor",
+    "emptyHint": "Încercați să eliminați câteva filtre.",
+    "from": "de la",
+    "sort": {
+      "label": "Sortare",
+      "new": "Noutăți",
+      "priceAsc": "Preț crescător",
+      "priceDesc": "Preț descrescător",
+      "titleAsc": "După nume"
+    },
+    "filters": {
+      "title": "Filtre",
+      "open": "Filtre",
+      "apply": "Arată rezultatele",
+      "reset": "Resetează tot",
+      "close": "Închide",
+      "brand": "Brand",
+      "brandSearch": "Caută brand",
+      "price": "Preț, MDL",
+      "priceFrom": "de la",
+      "priceTo": "până la",
+      "volume": "Volum",
+      "gender": "Pentru cine",
+      "notes": "Note",
+      "flags": "Selecții",
+      "active": "Filtre active: {count}"
+    },
+    "gender": {
+      "female": "Ea",
+      "male": "El",
+      "unisex": "Unisex"
+    },
+    "family": {
+      "floral": "floral",
+      "woody": "lemnos",
+      "oriental": "oriental",
+      "fresh": "proaspăt",
+      "fougere": "fougère",
+      "chypre": "chypre"
+    },
+    "flags": {
+      "isNew": "Noutate",
+      "isHit": "Populare",
+      "isSale": "Reducere"
+    }
+  },
+  "Product": {
+    "addToCart": "Adaugă în coș",
+    "oneClick": "Comandă într-un clic",
+    "outOfStock": "Stoc epuizat",
+    "inStock": "În stoc",
+    "volume": "Volum",
+    "sku": "Cod",
+    "description": "Descriere",
+    "pyramid": "Piramida notelor",
+    "pyramidTop": "Note de vârf",
+    "pyramidHeart": "Note de mijloc",
+    "pyramidBase": "Note de bază",
+    "notes": "Note",
+    "similar": "Parfumuri similare",
+    "added": "Adăugat în coș",
+    "zoomHint": "Apăsați pentru a mări"
   },
   "LocaleSwitcher": {
     "label": "Limbă",

@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 import { adminOnly, publicRead } from '@/access/roles'
 import { seoField } from '@/fields/seo'
 import { slugField } from '@/fields/slug'
-import { revalidateCatalog } from '@/lib/revalidate'
+import { revalidateTaxonomy } from '@/lib/revalidate'
 
 export const Categories: CollectionConfig = {
   slug: 'categories',
@@ -19,8 +19,8 @@ export const Categories: CollectionConfig = {
     delete: adminOnly,
   },
   hooks: {
-    afterChange: [() => revalidateCatalog()],
-    afterDelete: [() => revalidateCatalog()],
+    afterChange: [() => revalidateTaxonomy()],
+    afterDelete: [() => revalidateTaxonomy()],
   },
   fields: [
     { name: 'title', type: 'text', required: true, localized: true, index: true },

@@ -4,10 +4,96 @@
     "tagline": "Perfumes for everyone."
   },
   "Nav": {
+    "home": "Главная",
     "catalog": "Каталог",
     "brands": "Бренды",
     "cart": "Корзина",
-    "search": "Поиск"
+    "search": "Поиск",
+    "menu": "Меню",
+    "breadcrumbs": "Навигация"
+  },
+  "Footer": {
+    "contacts": "Контакты"
+  },
+  "Search": {
+    "title": "Поиск",
+    "placeholder": "Аромат, бренд или категория",
+    "empty": "Ничего не нашлось",
+    "emptyHint": "Проверьте написание или попробуйте более короткое слово.",
+    "resultsFor": "Результаты по запросу «{query}»",
+    "prompt": "Введите хотя бы две буквы.",
+    "type": {
+      "product": "Аромат",
+      "brand": "Бренд",
+      "category": "Категория"
+    }
+  },
+  "Catalog": {
+    "title": "Каталог",
+    "showing": "{shown} из {total}",
+    "loadMore": "Показать ещё",
+    "empty": "Под фильтры ничего не подошло",
+    "emptyHint": "Попробуйте снять часть фильтров.",
+    "from": "от",
+    "sort": {
+      "label": "Сортировка",
+      "new": "Новинки",
+      "priceAsc": "Сначала дешевле",
+      "priceDesc": "Сначала дороже",
+      "titleAsc": "По названию"
+    },
+    "filters": {
+      "title": "Фильтры",
+      "open": "Фильтры",
+      "apply": "Показать результаты",
+      "reset": "Сбросить всё",
+      "close": "Закрыть",
+      "brand": "Бренд",
+      "brandSearch": "Поиск бренда",
+      "price": "Цена, MDL",
+      "priceFrom": "от",
+      "priceTo": "до",
+      "volume": "Объём",
+      "gender": "Кому",
+      "notes": "Ноты",
+      "flags": "Подборки",
+      "active": "Фильтров активно: {count}"
+    },
+    "gender": {
+      "female": "Она",
+      "male": "Он",
+      "unisex": "Унисекс"
+    },
+    "family": {
+      "floral": "цветочный",
+      "woody": "древесный",
+      "oriental": "восточный",
+      "fresh": "свежий",
+      "fougere": "фужерный",
+      "chypre": "шипровый"
+    },
+    "flags": {
+      "isNew": "Новинка",
+      "isHit": "Хит",
+      "isSale": "Акция"
+    }
+  },
+  "Product": {
+    "addToCart": "Добавить в корзину",
+    "oneClick": "Заказать в 1 клик",
+    "outOfStock": "Нет в наличии",
+    "inStock": "В наличии",
+    "volume": "Объём",
+    "sku": "Артикул",
+    "description": "Описание",
+    "pyramid": "Пирамида нот",
+    "pyramidTop": "Верхние ноты",
+    "pyramidHeart": "Ноты сердца",
+    "pyramidBase": "Базовые ноты",
+    "notes": "Ноты",
+    "similar": "Похожие ароматы",
+    "added": "Добавлено в корзину",
+    "zoomHint": "Нажмите, чтобы увеличить"
   },
   "LocaleSwitcher": {
     "label": "Язык",

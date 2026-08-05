@@ -259,21 +259,44 @@ async function seedGlobals(
     ['/delivery', '/payment', '/returns', '/contacts'],
   ]
 
+  // Локализованные поля внутри массивов: писать локали подряд нельзя — Payload
+  // пересоздаёт строки массива и вместе с ними сносит значения прошлых локалей.
+  // Поэтому после первой записи забираем id строк и передаём их дальше.
+  type Rows = { headerIds: (string | null)[]; columnIds: (string | null)[]; linkIds: string[][] }
+  let rows: Rows | null = null
+
   for (const locale of LOCALES) {
     await payload.updateGlobal({
       slug: 'navigation',
       locale,
       data: {
-        header: nav[locale].header.map((label, index) => ({ label, href: headerHrefs[index] })),
+        header: nav[locale].header.map((label, index) => ({
+          ...(rows ? { id: rows.headerIds[index] } : {}),
+          label,
+          href: headerHrefs[index],
+        })),
         footerColumns: nav[locale].columns.map(([title, ...labels], columnIndex) => ({
+          ...(rows ? { id: rows.columnIds[columnIndex] } : {}),
           title,
           links: labels.map((label, linkIndex) => ({
+            ...(rows ? { id: rows.linkIds[columnIndex]?.[linkIndex] } : {}),
             label,
             href: columnHrefs[columnIndex][linkIndex],
           })),
         })),
       },
     })
+
+    if (!rows) {
+      const saved = await payload.findGlobal({ slug: 'navigation', locale, depth: 0 })
+      rows = {
+        headerIds: (saved.header ?? []).map((item) => item.id ?? null),
+        columnIds: (saved.footerColumns ?? []).map((item) => item.id ?? null),
+        linkIds: (saved.footerColumns ?? []).map((column) =>
+          (column.links ?? []).map((link) => link.id as string),
+        ),
+      }
+    }
   }
 
   const home: Record<Locale, Record<string, string>> = {

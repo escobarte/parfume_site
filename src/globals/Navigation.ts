@@ -1,11 +1,13 @@
 import type { GlobalConfig } from 'payload'
 import { adminOnly, isAdmin, publicRead } from '@/access/roles'
+import { GLOBALS_TAG, revalidateCatalog } from '@/lib/revalidate'
 
 export const Navigation: GlobalConfig = {
   slug: 'navigation',
   label: 'Навигация',
   admin: { group: 'Контент', hidden: ({ user }) => !isAdmin(user) },
   access: { read: publicRead, update: adminOnly },
+  hooks: { afterChange: [() => revalidateCatalog(GLOBALS_TAG)] },
   fields: [
     {
       name: 'header',

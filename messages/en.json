@@ -4,10 +4,96 @@
     "tagline": "Perfumes for everyone."
   },
   "Nav": {
+    "home": "Home",
     "catalog": "Catalog",
     "brands": "Brands",
     "cart": "Cart",
-    "search": "Search"
+    "search": "Search",
+    "menu": "Menu",
+    "breadcrumbs": "Breadcrumbs"
+  },
+  "Footer": {
+    "contacts": "Contacts"
+  },
+  "Search": {
+    "title": "Search",
+    "placeholder": "Scent, brand or category",
+    "empty": "Nothing found",
+    "emptyHint": "Check the spelling or try a shorter word.",
+    "resultsFor": "Results for “{query}”",
+    "prompt": "Type at least two letters.",
+    "type": {
+      "product": "Scent",
+      "brand": "Brand",
+      "category": "Category"
+    }
+  },
+  "Catalog": {
+    "title": "Catalog",
+    "showing": "{shown} of {total}",
+    "loadMore": "Show more",
+    "empty": "No scents match these filters",
+    "emptyHint": "Try removing some filters.",
+    "from": "from",
+    "sort": {
+      "label": "Sort",
+      "new": "New arrivals",
+      "priceAsc": "Price: low to high",
+      "priceDesc": "Price: high to low",
+      "titleAsc": "By name"
+    },
+    "filters": {
+      "title": "Filters",
+      "open": "Filters",
+      "apply": "Show results",
+      "reset": "Reset all",
+      "close": "Close",
+      "brand": "Brand",
+      "brandSearch": "Find a brand",
+      "price": "Price, MDL",
+      "priceFrom": "from",
+      "priceTo": "to",
+      "volume": "Volume",
+      "gender": "For whom",
+      "notes": "Notes",
+      "flags": "Selections",
+      "active": "Active filters: {count}"
+    },
+    "gender": {
+      "female": "For her",
+      "male": "For him",
+      "unisex": "Unisex"
+    },
+    "family": {
+      "floral": "floral",
+      "woody": "woody",
+      "oriental": "oriental",
+      "fresh": "fresh",
+      "fougere": "fougère",
+      "chypre": "chypre"
+    },
+    "flags": {
+      "isNew": "New",
+      "isHit": "Bestseller",
+      "isSale": "Sale"
+    }
+  },
+  "Product": {
+    "addToCart": "Add to cart",
+    "oneClick": "One-click order",
+    "outOfStock": "Out of stock",
+    "inStock": "In stock",
+    "volume": "Volume",
+    "sku": "SKU",
+    "description": "Description",
+    "pyramid": "Notes pyramid",
+    "pyramidTop": "Top notes",
+    "pyramidHeart": "Heart notes",
+    "pyramidBase": "Base notes",
+    "notes": "Notes",
+    "similar": "Similar scents",
+    "added": "Added to cart",
+    "zoomHint": "Click to zoom"
   },
   "LocaleSwitcher": {
     "label": "Language",

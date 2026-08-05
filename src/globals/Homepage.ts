@@ -1,6 +1,6 @@
 import type { GlobalConfig } from 'payload'
 import { adminOnly, isAdmin, publicRead } from '@/access/roles'
-import { revalidateCatalog } from '@/lib/revalidate'
+import { HOMEPAGE_TAG, revalidateCatalog } from '@/lib/revalidate'
 
 /**
  * Главная страница — состав секций по docs/WIREFRAMES.md §Главная
@@ -12,7 +12,7 @@ export const Homepage: GlobalConfig = {
   label: 'Главная страница',
   admin: { group: 'Контент', hidden: ({ user }) => !isAdmin(user) },
   access: { read: publicRead, update: adminOnly },
-  hooks: { afterChange: [() => revalidateCatalog('homepage')] },
+  hooks: { afterChange: [() => revalidateCatalog(HOMEPAGE_TAG)] },
   fields: [
     {
       type: 'tabs',

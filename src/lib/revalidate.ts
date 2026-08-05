@@ -6,6 +6,11 @@
  * бросает исключение — оно намеренно гасится, кэша в тот момент не существует.
  */
 export const CATALOG_TAG = 'products'
+/** Справочники витрины: бренды, категории, ноты. */
+export const TAXONOMY_TAG = 'taxonomy'
+/** Глобалы: settings, navigation. */
+export const GLOBALS_TAG = 'globals'
+export const HOMEPAGE_TAG = 'homepage'
 
 export async function revalidateCatalog(tag: string = CATALOG_TAG): Promise<void> {
   try {
@@ -15,4 +20,10 @@ export async function revalidateCatalog(tag: string = CATALOG_TAG): Promise<void
   } catch {
     // вне запроса Next (CLI-скрипты) — ревалидировать нечего
   }
+}
+
+/** Справочник изменился — устарели и его списки, и выдача каталога. */
+export async function revalidateTaxonomy(): Promise<void> {
+  await revalidateCatalog(CATALOG_TAG)
+  await revalidateCatalog(TAXONOMY_TAG)
 }
