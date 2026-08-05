@@ -1,102 +1,77 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { ChevronRight } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { Facets } from '@/lib/catalog/types'
 import type { FlagOption } from '@/lib/catalog/searchParams'
+import { BrandFacet, BRAND_SEARCH_THRESHOLD } from './BrandFacet'
+import { ChipCount, FacetGroup, FacetRow } from './FacetRow'
 import { useCatalogQuery } from './useCatalogQuery'
 
-/** Чекбокс фасета: подпись слева, счётчик справа (без подложек, BRAND §5). */
-function FacetRow({
-  label,
-  count,
-  checked,
-  onToggle,
+export function FilterPanel({
+  facets,
+  /** В шторке заголовок и «сбросить всё» живут в её шапке — здесь не дублируем. */
+  withHeader = true,
+  /** В шторке фильтры не должны копить историю: «Назад» закрывает саму шторку. */
+  historyMode = 'push',
+  /** Длинный список брендов на мобильном открывается отдельным слоем. */
+  onOpenBrands,
+  /** Шторке нужно знать актуальный URL с фильтрами — см. useCatalogQuery. */
+  onQueryWrite,
 }: {
-  label: string
-  count: number
-  checked: boolean
-  onToggle: () => void
+  facets: Facets
+  withHeader?: boolean
+  historyMode?: 'push' | 'replace'
+  onOpenBrands?: () => void
+  onQueryWrite?: (search: string) => void
 }) {
-  return (
-    <label className="hover:text-ink flex cursor-pointer items-center justify-between gap-3 py-1.5">
-      <span className="flex items-center gap-2.5">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={onToggle}
-          className="accent-navy size-3.5"
-        />
-        <span className="text-ink text-body-sm">{label}</span>
-      </span>
-      <span className="text-ink-subtle text-eyebrow tabular-nums">{count}</span>
-    </label>
-  )
-}
-
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="border-line border-b py-5 last:border-b-0">
-      <h3 className="text-ink text-eyebrow tracking-display mb-3 uppercase">{title}</h3>
-      {children}
-    </section>
-  )
-}
-
-export function FilterPanel({ facets }: { facets: Facets }) {
   const t = useTranslations('Catalog.filters')
-  const { query, setQuery, toggleInList, resetAll } = useCatalogQuery()
-  const [brandSearch, setBrandSearch] = useState('')
+  const { query, setQuery, toggleInList, resetAll } = useCatalogQuery(historyMode, onQueryWrite)
 
-  const brands = useMemo(() => {
-    const term = brandSearch.trim().toLowerCase()
-    return term
-      ? facets.brand.filter((item) => item.label.toLowerCase().includes(term))
-      : facets.brand
-  }, [facets.brand, brandSearch])
+  const brandsAsLayer = Boolean(onOpenBrands) && facets.brand.length > BRAND_SEARCH_THRESHOLD
 
   return (
     <div>
-      <div className="border-line flex items-center justify-between gap-3 border-b pb-3">
-        <h2 className="text-ink text-section tracking-display font-light uppercase">
-          {t('title')}
-        </h2>
-        <button
-          type="button"
-          onClick={resetAll}
-          className="text-ink-muted hover:text-ink text-eyebrow tracking-label cursor-pointer uppercase transition-colors"
-        >
-          {t('reset')}
-        </button>
-      </div>
+      {withHeader && (
+        <div className="border-line flex items-center justify-between gap-3 border-b pb-3">
+          <h2 className="text-ink text-section tracking-display font-light uppercase">
+            {t('title')}
+          </h2>
+          <button
+            type="button"
+            onClick={resetAll}
+            className="text-ink-muted hover:text-ink text-eyebrow tracking-label cursor-pointer uppercase transition-colors"
+          >
+            {t('reset')}
+          </button>
+        </div>
+      )}
 
       {facets.brand.length > 0 && (
-        <Group title={t('brand')}>
-          {facets.brand.length > 6 && (
-            <input
-              type="search"
-              value={brandSearch}
-              onChange={(event) => setBrandSearch(event.target.value)}
-              placeholder={t('brandSearch')}
-              className="border-line text-ink text-body-sm placeholder:text-ink-subtle mb-2 w-full rounded-sm border px-2.5 py-1.5 outline-none focus:border-[var(--color-navy)]"
+        <FacetGroup title={t('brand')}>
+          {brandsAsLayer ? (
+            <button
+              type="button"
+              onClick={onOpenBrands}
+              className="text-ink text-body-sm flex w-full cursor-pointer items-center justify-between gap-3 py-1.5"
+            >
+              <span>
+                {query.brand.length ? t('active', { count: query.brand.length }) : t('brandSearch')}
+              </span>
+              <ChevronRight className="text-ink-muted size-4 shrink-0" strokeWidth={1.6} />
+            </button>
+          ) : (
+            <BrandFacet
+              brands={facets.brand}
+              selected={query.brand}
+              onToggle={(slug) => toggleInList('brand', slug)}
             />
           )}
-          <div className="max-h-60 overflow-y-auto">
-            {brands.map((item) => (
-              <FacetRow
-                key={item.value}
-                label={item.label}
-                count={item.count}
-                checked={query.brand.includes(item.value)}
-                onToggle={() => toggleInList('brand', item.value)}
-              />
-            ))}
-          </div>
-        </Group>
+        </FacetGroup>
       )}
 
       {facets.price && (
-        <Group title={t('price')}>
+        <FacetGroup title={t('price')}>
           <div className="flex items-center gap-2">
             <input
               type="number"
@@ -132,11 +107,11 @@ export function FilterPanel({ facets }: { facets: Facets }) {
               className="border-line text-ink text-body-sm w-full rounded-sm border px-2.5 py-1.5 outline-none focus:border-[var(--color-navy)]"
             />
           </div>
-        </Group>
+        </FacetGroup>
       )}
 
       {facets.volume.length > 0 && (
-        <Group title={t('volume')}>
+        <FacetGroup title={t('volume')}>
           <div className="flex flex-wrap gap-1.5">
             {facets.volume.map((item) => {
               const value = Number(item.value)
@@ -149,19 +124,20 @@ export function FilterPanel({ facets }: { facets: Facets }) {
                   className={`text-eyebrow cursor-pointer rounded-sm border px-2 py-1 transition-colors ${
                     active
                       ? 'border-navy bg-navy text-cream'
-                      : 'border-line text-ink-muted hover:border-navy'
+                      : 'border-line text-ink hover:border-navy'
                   }`}
                 >
-                  {item.label} <span className="tabular-nums opacity-70">{item.count}</span>
+                  {item.label}
+                  <ChipCount count={item.count} onDark={active} />
                 </button>
               )
             })}
           </div>
-        </Group>
+        </FacetGroup>
       )}
 
       {facets.gender.length > 0 && (
-        <Group title={t('gender')}>
+        <FacetGroup title={t('gender')}>
           {facets.gender.map((item) => (
             <FacetRow
               key={item.value}
@@ -171,11 +147,11 @@ export function FilterPanel({ facets }: { facets: Facets }) {
               onToggle={() => toggleInList('gender', item.value)}
             />
           ))}
-        </Group>
+        </FacetGroup>
       )}
 
       {facets.notes.length > 0 && (
-        <Group title={t('notes')}>
+        <FacetGroup title={t('notes')}>
           <div className="max-h-60 overflow-y-auto">
             {facets.notes.map((item) => (
               <FacetRow
@@ -187,11 +163,11 @@ export function FilterPanel({ facets }: { facets: Facets }) {
               />
             ))}
           </div>
-        </Group>
+        </FacetGroup>
       )}
 
       {facets.flags.length > 0 && (
-        <Group title={t('flags')}>
+        <FacetGroup title={t('flags')}>
           {facets.flags.map((item) => (
             <FacetRow
               key={item.value}
@@ -201,7 +177,7 @@ export function FilterPanel({ facets }: { facets: Facets }) {
               onToggle={() => toggleInList('flags', item.value)}
             />
           ))}
-        </Group>
+        </FacetGroup>
       )}
     </div>
   )
