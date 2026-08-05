@@ -48,11 +48,6 @@ export async function ProductCard({
           ) : (
             <BottleGlyph className="text-navy h-32 w-auto" />
           )}
-          {!product.inStock && (
-            <span className="bg-surface/90 text-ink-muted text-micro tracking-label absolute bottom-0 left-0 px-2 py-1 uppercase">
-              {tp('outOfStock')}
-            </span>
-          )}
         </div>
 
         <div className="flex flex-col gap-1.5 p-4">
@@ -77,8 +72,20 @@ export async function ProductCard({
             </div>
           )}
 
-          <div className="text-ink text-body mt-1 font-medium">
-            {t('from')} {formatPrice(product.minPrice, locale)}
+          {/* Цена и наличие — одна строка: слева цена, справа плашка.
+              Плашка — текст, а не подложка: линия и цвет вместо теней
+              (BRAND.md §5), «нет в наличии» уходит в приглушённый тон. */}
+          <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
+            <span className="text-ink text-body font-medium">
+              {t('from')} {formatPrice(product.minPrice, locale)}
+            </span>
+            <span
+              className={`text-micro tracking-label uppercase ${
+                product.inStock ? 'text-ink-muted' : 'text-ink-subtle'
+              }`}
+            >
+              {product.inStock ? tp('inStock') : tp('outOfStock')}
+            </span>
           </div>
         </div>
       </Link>

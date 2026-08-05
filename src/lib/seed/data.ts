@@ -264,6 +264,26 @@ export const products: SeedProduct[] = [
     variants: v('NA-SG', [230, 400, 940], [3, 2, 1]),
   },
   {
+    // Единственный товар, у которого нет ни одного варианта в наличии:
+    // на нём проверяются плашка «нет в наличии» в карточке и блокировка
+    // всех объёмов на странице товара.
+    handle: 'NA-WINTER-ARCHIVE',
+    slug: 'nord-atelier-winter-archive',
+    title: 'Winter Archive',
+    brand: 'nord-atelier',
+    categories: ['unisex'],
+    gender: 'unisex',
+    family: 'woody',
+    notes: ['cedru', 'iris', 'mosc'],
+    pyramid: { top: ['iris'], heart: ['cedru'], base: ['mosc'] },
+    description: {
+      ro: 'Ediție de arhivă: cedru rece și iris. Momentan epuizat.',
+      ru: 'Архивный выпуск: холодный кедр и ирис. Сейчас распродан.',
+      en: 'An archive release: cold cedar and iris. Currently sold out.',
+    },
+    variants: v('NA-WA', [250, 430, 990], [0, 0, 0]),
+  },
+  {
     handle: 'CL-VANILIE-CALDA',
     slug: 'casa-lumina-vanilie-calda',
     title: 'Vanilie Caldă',
