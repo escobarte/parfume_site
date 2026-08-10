@@ -58,6 +58,62 @@ export const Homepage: GlobalConfig = {
                 },
               ],
             },
+            {
+              // Подмена по датам, не слайдер (PLAN.md §4.5, WIREFRAMES.md §1):
+              // пока promoHero включён и дата внутри интервала — hero целиком
+              // рендерится в этой версии вместо обычной; вне интервала —
+              // обычный hero выше. Композиция и типографика те же.
+              name: 'promoHero',
+              type: 'group',
+              label: 'Акционная версия hero (подмена по датам)',
+              admin: {
+                description:
+                  'Пока включена и дата попадает в интервал — заменяет hero целиком. Один экран, без слайдера.',
+              },
+              fields: [
+                { name: 'enabled', type: 'checkbox', defaultValue: false, label: 'Включена' },
+                {
+                  name: 'eyebrow',
+                  type: 'text',
+                  localized: true,
+                  admin: { description: 'Пусто — берётся обычный «Perfumes for everyone».' },
+                },
+                { name: 'title', type: 'text', localized: true },
+                { name: 'subtitle', type: 'textarea', localized: true },
+                {
+                  type: 'row',
+                  fields: [
+                    { name: 'ctaLabel', type: 'text', localized: true, admin: { width: '50%' } },
+                    {
+                      name: 'ctaHref',
+                      type: 'text',
+                      admin: { width: '50%', description: 'Без префикса локали.' },
+                    },
+                  ],
+                },
+                {
+                  name: 'image',
+                  type: 'upload',
+                  relationTo: 'media',
+                  admin: { description: 'Необязательно. Пусто — фон остаётся navy.' },
+                },
+                {
+                  type: 'row',
+                  fields: [
+                    {
+                      name: 'startDate',
+                      type: 'date',
+                      admin: { width: '50%', description: 'Пусто — без ограничения снизу.' },
+                    },
+                    {
+                      name: 'endDate',
+                      type: 'date',
+                      admin: { width: '50%', description: 'Пусто — без ограничения сверху.' },
+                    },
+                  ],
+                },
+              ],
+            },
           ],
         },
         {

@@ -72,7 +72,10 @@ await compare(
 
 await compare(
   'бренд в карточке',
-  ['.card div[style*="letter-spacing:.2em"]', 'article span'],
+  // .tracking-label, а не просто «первый span» — с фазы 4.5 первым span-ом
+  // в карточке иногда идёт бейдж скидки (.tracking-display), если товар
+  // с максимальной скидкой попал в начало выдачи.
+  ['.card div[style*="letter-spacing:.2em"]', 'article span.tracking-label'],
   ['fontSize', 'letterSpacing', 'color'],
 )
 

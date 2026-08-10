@@ -11,10 +11,13 @@ import {
  * переслать и открыть в новой вкладке — фильтры, сортировка и «показать ещё»
  * восстановятся один в один. Парсеры общие для сервера и клиента.
  */
-export const SORT_OPTIONS = ['new', 'priceAsc', 'priceDesc', 'titleAsc'] as const
+export const SORT_OPTIONS = ['new', 'priceAsc', 'priceDesc', 'titleAsc', 'discount'] as const
 export type SortOption = (typeof SORT_OPTIONS)[number]
 
-export const FLAG_OPTIONS = ['isNew', 'isHit', 'isSale'] as const
+// 'hasDiscount' — денормализованное поле products (фаза 4.5), а не ручной
+// флаг вроде isNew/isHit/isSale, но фильтруется тем же generic-механизмом
+// (см. filterWhere в queries.ts): { [flag]: { equals: true } }.
+export const FLAG_OPTIONS = ['isNew', 'isHit', 'isSale', 'hasDiscount'] as const
 export type FlagOption = (typeof FLAG_OPTIONS)[number]
 
 export const PAGE_SIZE = 24

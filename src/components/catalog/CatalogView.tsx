@@ -51,7 +51,12 @@ export async function CatalogView({
       male: tGender('male'),
       unisex: tGender('unisex'),
     },
-    flags: { isNew: tFlags('isNew'), isHit: tFlags('isHit'), isSale: tFlags('isSale') },
+    flags: {
+      isNew: tFlags('isNew'),
+      isHit: tFlags('isHit'),
+      isSale: tFlags('isSale'),
+      hasDiscount: tFlags('hasDiscount'),
+    },
   })
 
   const activeCount = countActiveFilters(query)

@@ -218,6 +218,14 @@ export interface Product {
   minPrice?: number | null;
   maxPrice?: number | null;
   inStock?: boolean | null;
+  /**
+   * Есть активный вариант с oldPrice > price.
+   */
+  hasDiscount?: boolean | null;
+  /**
+   * Максимальный % скидки среди активных вариантов.
+   */
+  maxDiscountPercent?: number | null;
   seo?: {
     /**
      * До ~60 знаков. Пусто — берётся название.
@@ -604,6 +612,8 @@ export interface ProductsSelect<T extends boolean = true> {
   minPrice?: T;
   maxPrice?: T;
   inStock?: T;
+  hasDiscount?: T;
+  maxDiscountPercent?: T;
   seo?:
     | T
     | {
@@ -844,6 +854,35 @@ export interface Homepage {
     ctaHref?: string | null;
   };
   /**
+   * Пока включена и дата попадает в интервал — заменяет hero целиком. Один экран, без слайдера.
+   */
+  promoHero?: {
+    enabled?: boolean | null;
+    /**
+     * Пусто — берётся обычный «Perfumes for everyone».
+     */
+    eyebrow?: string | null;
+    title?: string | null;
+    subtitle?: string | null;
+    ctaLabel?: string | null;
+    /**
+     * Без префикса локали.
+     */
+    ctaHref?: string | null;
+    /**
+     * Необязательно. Пусто — фон остаётся navy.
+     */
+    image?: (number | null) | Media;
+    /**
+     * Пусто — без ограничения снизу.
+     */
+    startDate?: string | null;
+    /**
+     * Пусто — без ограничения сверху.
+     */
+    endDate?: string | null;
+  };
+  /**
    * Четыре плитки; счётчики товаров считаются из БД.
    */
   categoryTiles?:
@@ -930,6 +969,32 @@ export interface Setting {
    * Строка под логотипом в футере.
    */
   footerNote?: string | null;
+  /**
+   * Полоса над шапкой на всех страницах, если включена и дата подходит.
+   */
+  promoBanner?: {
+    enabled?: boolean | null;
+    /**
+     * Текст полосы.
+     */
+    text?: string | null;
+    /**
+     * Пусто — баннер без ссылки.
+     */
+    linkLabel?: string | null;
+    /**
+     * Без префикса локали, напр. /catalog
+     */
+    linkHref?: string | null;
+    /**
+     * Пусто — без ограничения снизу.
+     */
+    startDate?: string | null;
+    /**
+     * Пусто — без ограничения сверху.
+     */
+    endDate?: string | null;
+  };
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -981,6 +1046,19 @@ export interface HomepageSelect<T extends boolean = true> {
         subtitle?: T;
         ctaLabel?: T;
         ctaHref?: T;
+      };
+  promoHero?:
+    | T
+    | {
+        enabled?: T;
+        eyebrow?: T;
+        title?: T;
+        subtitle?: T;
+        ctaLabel?: T;
+        ctaHref?: T;
+        image?: T;
+        startDate?: T;
+        endDate?: T;
       };
   categoryTiles?:
     | T
@@ -1049,6 +1127,16 @@ export interface SettingsSelect<T extends boolean = true> {
         id?: T;
       };
   footerNote?: T;
+  promoBanner?:
+    | T
+    | {
+        enabled?: T;
+        text?: T;
+        linkLabel?: T;
+        linkHref?: T;
+        startDate?: T;
+        endDate?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

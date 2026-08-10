@@ -10,6 +10,10 @@ export type ProductCardData = {
   noteTitles: string[]
   volumes: number[]
   minPrice: number | null
+  /** Старая цена самого дешёвого активного варианта — только если он сам со скидкой. */
+  oldPrice: number | null
+  /** Бейдж скидки на карточке: максимальный % среди активных вариантов (фаза 4.5). */
+  discountPercent: number | null
   image: { url: string; alt: string } | null
   inStock: boolean
   flags: FlagOption[]

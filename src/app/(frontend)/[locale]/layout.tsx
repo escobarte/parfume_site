@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import { Footer } from '@/components/layout/Footer'
 import { Header } from '@/components/layout/Header'
+import { PromoBanner } from '@/components/layout/PromoBanner'
 import { inter } from '@/lib/fonts'
 import { routing } from '@/i18n/routing'
 import './styles.css'
@@ -47,6 +48,7 @@ export default async function LocaleLayout(props: {
         <NextIntlClientProvider>
           {/* nuqs держит состояние фильтров в URL — адаптер обязателен (фаза 3.3) */}
           <NuqsAdapter>
+            <PromoBanner locale={locale} />
             <Header locale={locale} />
             <main className="flex-1">{children}</main>
             <Footer locale={locale} />

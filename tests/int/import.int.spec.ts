@@ -5,6 +5,7 @@ import { groupFormatA } from '@/lib/import/applyProducts'
 import { formatARow } from '@/lib/import/schema'
 import { findDuplicates, validateRows } from '@/lib/import/validate'
 import { denormalizeVariants } from '@/lib/products/denormalize'
+import { discountPercent } from '@/lib/pricing'
 import { slugify } from '@/lib/slugify'
 
 describe('парсер CSV', () => {
@@ -105,11 +106,34 @@ describe('денормализация вариантов', () => {
         { price: 100, stock: 0, isActive: false },
         { price: 200, stock: 5, isActive: true },
       ]),
-    ).toEqual({ minPrice: 200, maxPrice: 300, inStock: true })
+    ).toEqual({
+      minPrice: 200,
+      maxPrice: 300,
+      inStock: true,
+      hasDiscount: false,
+      maxDiscountPercent: 0,
+    })
   })
 
   it('без вариантов — пустые цены и нет наличия', () => {
-    expect(denormalizeVariants([])).toEqual({ minPrice: null, maxPrice: null, inStock: false })
+    expect(denormalizeVariants([])).toEqual({
+      minPrice: null,
+      maxPrice: null,
+      inStock: false,
+      hasDiscount: false,
+      maxDiscountPercent: 0,
+    })
+  })
+
+  it('скидка — только по вариантам с oldPrice > price, максимум среди них', () => {
+    expect(
+      denormalizeVariants([
+        { price: 200, oldPrice: 250, stock: 1, isActive: true }, // -20%
+        { price: 380, stock: 1, isActive: true }, // без скидки
+        { price: 800, oldPrice: 1200, stock: 1, isActive: true }, // -33%
+        { price: 10, oldPrice: 5, stock: 1, isActive: true }, // oldPrice < price — не скидка
+      ]),
+    ).toMatchObject({ hasDiscount: true, maxDiscountPercent: 33 })
   })
 
   it('все остатки нулевые — inStock false', () => {
@@ -124,5 +148,18 @@ describe('slugify', () => {
     ['Maison Orphée', 'maison-orphee'],
   ])('%s → %s', (input, expected) => {
     expect(slugify(input)).toBe(expected)
+  })
+})
+
+describe('discountPercent', () => {
+  it('округляет процент скидки', () => {
+    expect(discountPercent(200, 250)).toBe(20)
+    expect(discountPercent(800, 1200)).toBe(33)
+  })
+
+  it('нет скидки, если oldPrice отсутствует или не больше price', () => {
+    expect(discountPercent(100, null)).toBeNull()
+    expect(discountPercent(100, 100)).toBeNull()
+    expect(discountPercent(100, 90)).toBeNull()
   })
 })

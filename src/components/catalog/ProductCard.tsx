@@ -5,6 +5,7 @@ import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import type { ProductCardData } from '@/lib/catalog/types'
 import { formatPrice, formatVolume } from '@/lib/format'
+import { DiscountBadge } from './DiscountBadge'
 
 /**
  * Эталонная карточка товара (WIREFRAMES.md §3) — одна на весь сайт:
@@ -48,6 +49,12 @@ export async function ProductCard({
           ) : (
             <BottleGlyph className="text-navy h-32 w-auto" />
           )}
+          {product.discountPercent !== null && (
+            <DiscountBadge
+              percent={product.discountPercent}
+              className="absolute top-2.5 right-2.5"
+            />
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5 p-4">
@@ -78,6 +85,11 @@ export async function ProductCard({
           <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-ink text-body font-medium">
               {t('from')} {formatPrice(product.minPrice, locale)}
+              {product.oldPrice !== null && (
+                <span className="text-ink-subtle text-label ml-1.5 font-normal line-through">
+                  {formatPrice(product.oldPrice, locale)}
+                </span>
+              )}
             </span>
             <span
               className={`text-micro tracking-label uppercase ${

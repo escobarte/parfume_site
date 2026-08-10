@@ -40,7 +40,8 @@
       "new": "New arrivals",
       "priceAsc": "Price: low to high",
       "priceDesc": "Price: high to low",
-      "titleAsc": "By name"
+      "titleAsc": "By name",
+      "discount": "Biggest discount"
     },
     "filters": {
       "title": "Filters",
@@ -75,7 +76,8 @@
     "flags": {
       "isNew": "New",
       "isHit": "Bestseller",
-      "isSale": "Sale"
+      "isSale": "Sale",
+      "hasDiscount": "Discounted"
     }
   },
   "Product": {
@@ -137,5 +139,8 @@
     "text": "We have your request. We will call or write shortly.",
     "orderNumber": "Request number",
     "toCatalog": "Back to the catalog"
+  },
+  "PromoBar": {
+    "close": "Close"
   }
 }

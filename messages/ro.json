@@ -40,7 +40,8 @@
       "new": "Noutăți",
       "priceAsc": "Preț crescător",
       "priceDesc": "Preț descrescător",
-      "titleAsc": "După nume"
+      "titleAsc": "După nume",
+      "discount": "După reducere"
     },
     "filters": {
       "title": "Filtre",
@@ -75,7 +76,8 @@
     "flags": {
       "isNew": "Noutate",
       "isHit": "Populare",
-      "isSale": "Reducere"
+      "isSale": "Reducere",
+      "hasDiscount": "Cu reducere"
     }
   },
   "Product": {
@@ -137,5 +139,8 @@
     "text": "Cererea este la noi. Vă sunăm sau vă scriem în curând.",
     "orderNumber": "Numărul cererii",
     "toCatalog": "Înapoi în catalog"
+  },
+  "PromoBar": {
+    "close": "Închide"
   }
 }

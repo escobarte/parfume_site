@@ -73,5 +73,49 @@ export const Settings: GlobalConfig = {
       localized: true,
       admin: { description: 'Строка под логотипом в футере.' },
     },
+    {
+      // Узкая полоса над шапкой на всех страницах (PLAN.md §4.5).
+      // Видимость решает isWithinWindow(startDate, endDate) на сервере —
+      // без даты граница не ограничивает.
+      name: 'promoBanner',
+      type: 'group',
+      label: 'Промо-баннер',
+      admin: { description: 'Полоса над шапкой на всех страницах, если включена и дата подходит.' },
+      fields: [
+        { name: 'enabled', type: 'checkbox', defaultValue: false, label: 'Показывать' },
+        { name: 'text', type: 'text', localized: true, admin: { description: 'Текст полосы.' } },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'linkLabel',
+              type: 'text',
+              localized: true,
+              admin: { width: '50%', description: 'Пусто — баннер без ссылки.' },
+            },
+            {
+              name: 'linkHref',
+              type: 'text',
+              admin: { width: '50%', description: 'Без префикса локали, напр. /catalog' },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'startDate',
+              type: 'date',
+              admin: { width: '50%', description: 'Пусто — без ограничения снизу.' },
+            },
+            {
+              name: 'endDate',
+              type: 'date',
+              admin: { width: '50%', description: 'Пусто — без ограничения сверху.' },
+            },
+          ],
+        },
+      ],
+    },
   ],
 }

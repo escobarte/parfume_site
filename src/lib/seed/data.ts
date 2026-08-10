@@ -284,6 +284,32 @@ export const products: SeedProduct[] = [
     variants: v('NA-WA', [250, 430, 990], [0, 0, 0]),
   },
   {
+    // Скидка не на всех объёмах (фаза 4.5): 5 ml −20%, 10 ml без скидки,
+    // 30 ml −33%. Бейдж карточки должен показать максимум (−33%), а
+    // зачёркнутая цена в строке «от N MDL» — старую цену именно 5 ml
+    // (он же самый дешёвый активный вариант), а не 30 ml.
+    handle: 'MO-AMBER-SALE',
+    slug: 'maison-orphee-amber-sale',
+    title: 'Amber Sale',
+    brand: 'maison-orphee',
+    categories: ['unisex'],
+    gender: 'unisex',
+    family: 'oriental',
+    notes: ['vanilie', 'piper-negru', 'santal'],
+    pyramid: { top: ['piper-negru'], heart: ['vanilie'], base: ['santal'] },
+    description: {
+      ro: 'Chihlimbar cald cu piper — ediție de sezon la preț redus.',
+      ru: 'Тёплый янтарь с перцем — сезонное издание по сниженной цене.',
+      en: 'Warm amber with pepper — a seasonal edition at a reduced price.',
+    },
+    variants: [
+      { volume: 5, sku: 'MO-AS-05', price: 200, oldPrice: 250, stock: 9 },
+      { volume: 10, sku: 'MO-AS-10', price: 380, stock: 6 },
+      { volume: 30, sku: 'MO-AS-30', price: 800, oldPrice: 1200, stock: 4 },
+    ],
+    isSale: true,
+  },
+  {
     handle: 'CL-VANILIE-CALDA',
     slug: 'casa-lumina-vanilie-calda',
     title: 'Vanilie Caldă',

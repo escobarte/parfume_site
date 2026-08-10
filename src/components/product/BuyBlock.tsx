@@ -7,6 +7,8 @@ import type { Locale } from '@/i18n/routing'
 import { useCart } from '@/lib/cart/store'
 import type { ProductView } from '@/lib/catalog/product'
 import { formatPrice, formatVolume } from '@/lib/format'
+import { discountPercent } from '@/lib/pricing'
+import { DiscountBadge } from '@/components/catalog/DiscountBadge'
 
 /**
  * Переключатель объёма и кнопки покупки. Смена объёма меняет цену, SKU
@@ -27,6 +29,9 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
   if (!variant) return null
 
   const available = variant.stock > 0
+  // Пересчитывается при каждом переключении объёма — index меняет variant,
+  // а не хранится отдельным состоянием (PLAN.md §4.5).
+  const percent = discountPercent(variant.price, variant.oldPrice)
 
   const putInCart = () => {
     add({
@@ -86,10 +91,13 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
         <span className="text-ink text-display font-medium">
           {formatPrice(variant.price, locale)}
         </span>
-        {variant.oldPrice && variant.oldPrice > variant.price && (
-          <span className="text-ink-subtle text-body line-through">
-            {formatPrice(variant.oldPrice, locale)}
-          </span>
+        {percent !== null && (
+          <>
+            <span className="text-ink-subtle text-body line-through">
+              {formatPrice(variant.oldPrice, locale)}
+            </span>
+            <DiscountBadge percent={percent} />
+          </>
         )}
         <span
           className={`text-eyebrow tracking-label ml-auto uppercase ${

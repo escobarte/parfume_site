@@ -64,6 +64,7 @@ const SORT: Record<CatalogQuery['sort'], string> = {
   priceAsc: 'minPrice',
   priceDesc: '-minPrice',
   titleAsc: 'title',
+  discount: '-maxDiscountPercent',
 }
 
 /**
@@ -166,6 +167,7 @@ export async function getFacetSource(
             isNew: Boolean(doc.isNew),
             isHit: Boolean(doc.isHit),
             isSale: Boolean(doc.isSale),
+            hasDiscount: Boolean(doc.hasDiscount),
           },
         }
       })

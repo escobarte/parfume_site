@@ -197,16 +197,22 @@ async function seedGlobals(
       address: 'Chișinău, str. Ștefan cel Mare 1',
       workingHours: 'Luni–Sâmbătă, 10:00–19:00',
       footerNote: 'Scents that feel like you.',
+      promoText: 'Livrare gratuită la comenzi peste 500 MDL',
+      promoLinkLabel: 'Detalii',
     },
     ru: {
       address: 'Кишинёв, ул. Штефан чел Маре 1',
       workingHours: 'Пн–Сб, 10:00–19:00',
       footerNote: 'Scents that feel like you.',
+      promoText: 'Бесплатная доставка при заказе от 500 MDL',
+      promoLinkLabel: 'Подробнее',
     },
     en: {
       address: 'Chisinau, Stefan cel Mare st. 1',
       workingHours: 'Mon–Sat, 10:00–19:00',
       footerNote: 'Scents that feel like you.',
+      promoText: 'Free delivery on orders over 500 MDL',
+      promoLinkLabel: 'Details',
     },
   }
 
@@ -225,6 +231,14 @@ async function seedGlobals(
         },
         messengers: { telegram: 'monflacon', viber: '+37322000000', whatsapp: '+37322000000' },
         footerNote: settings[locale].footerNote as string,
+        // Выключен по умолчанию — контент готов, владелец включает галочкой
+        // и датами, когда нужна реальная акция (фаза 4.5).
+        promoBanner: {
+          enabled: false,
+          text: settings[locale].promoText as string,
+          linkLabel: settings[locale].promoLinkLabel as string,
+          linkHref: '/delivery',
+        },
       },
     })
   }
@@ -309,6 +323,10 @@ async function seedGlobals(
       editorialText: 'Fiecare aromă are un context: un oraș, o oră, o persoană.',
       editorialLink: 'Ghidul aromelor',
       hitsTitle: 'Populare',
+      promoEyebrow: 'Ofertă limitată',
+      promoTitle: 'Vânzare de vară.',
+      promoSubtitle: 'Reduceri de până la 30% la o selecție de arome, pe timp limitat.',
+      promoCta: 'Vezi reducerile',
     },
     ru: {
       subtitle:
@@ -319,6 +337,10 @@ async function seedGlobals(
       editorialText: 'У каждого аромата есть контекст: город, час, человек.',
       editorialLink: 'Гид по ароматам',
       hitsTitle: 'Хиты',
+      promoEyebrow: 'Ограниченное предложение',
+      promoTitle: 'Летняя распродажа.',
+      promoSubtitle: 'Скидки до 30% на подборку ароматов — ограниченное время.',
+      promoCta: 'Смотреть скидки',
     },
     en: {
       subtitle:
@@ -329,6 +351,10 @@ async function seedGlobals(
       editorialText: 'Every scent has a context: a city, an hour, a person.',
       editorialLink: 'Fragrance guide',
       hitsTitle: 'Bestsellers',
+      promoEyebrow: 'Limited offer',
+      promoTitle: 'Summer sale.',
+      promoSubtitle: 'Up to 30% off a selection of scents, for a limited time.',
+      promoCta: 'See the sale',
     },
   }
 
@@ -344,6 +370,17 @@ async function seedGlobals(
           subtitle: text.subtitle,
           ctaLabel: text.cta,
           ctaHref: '/catalog',
+        },
+        // Выключена по умолчанию — контент готов, владелец включает
+        // галочкой и датами на время реальной акции (фаза 4.5).
+        // ctaHref ведёт сразу в каталог с фильтром «со скидкой».
+        promoHero: {
+          enabled: false,
+          eyebrow: text.promoEyebrow,
+          title: text.promoTitle,
+          subtitle: text.promoSubtitle,
+          ctaLabel: text.promoCta,
+          ctaHref: '/catalog?flags=hasDiscount',
         },
         categoryTiles: categories.map((category) => ({ category: categoryIds.get(category.slug) })),
         newRow: { title: text.newTitle, linkLabel: text.newLink, limit: 4 },
