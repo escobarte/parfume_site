@@ -42,7 +42,6 @@ export type SeedProduct = {
   variants: { volume: number; sku: string; price: number; oldPrice?: number; stock: number }[]
   isNew?: boolean
   isHit?: boolean
-  isSale?: boolean
 }
 
 export const brands: SeedBrand[] = [
@@ -284,10 +283,12 @@ export const products: SeedProduct[] = [
     variants: v('NA-WA', [250, 430, 990], [0, 0, 0]),
   },
   {
-    // Скидка не на всех объёмах (фаза 4.5): 5 ml −20%, 10 ml без скидки,
-    // 30 ml −33%. Бейдж карточки должен показать максимум (−33%), а
-    // зачёркнутая цена в строке «от N MDL» — старую цену именно 5 ml
-    // (он же самый дешёвый активный вариант), а не 30 ml.
+    // Скидка не на всех объёмах (фаза 4.5, вариант B): 5 ml −20%, 10 ml без
+    // скидки, 30 ml −33%. Карточка выбирает вариант с максимальным процентом
+    // (30 ml) и показывает целиком его — цену 800, зачёркнутую 1200 и бейдж
+    // −33%, хотя 30 ml не самый дешёвый объём товара. Это осознанно и
+    // проверяется самопроверкой: бейдж и зачёркнутая цена обязаны быть об
+    // одном и том же варианте.
     handle: 'MO-AMBER-SALE',
     slug: 'maison-orphee-amber-sale',
     title: 'Amber Sale',
@@ -307,7 +308,6 @@ export const products: SeedProduct[] = [
       { volume: 10, sku: 'MO-AS-10', price: 380, stock: 6 },
       { volume: 30, sku: 'MO-AS-30', price: 800, oldPrice: 1200, stock: 4 },
     ],
-    isSale: true,
   },
   {
     handle: 'CL-VANILIE-CALDA',
@@ -325,7 +325,6 @@ export const products: SeedProduct[] = [
       en: 'Kitchen vanilla, without excess sweetness.',
     },
     variants: v('CL-VC', [150, 260, 590], [20, 15, 9]),
-    isSale: true,
   },
   {
     handle: 'CL-TRANDAFIR-DE-MAI',
@@ -382,6 +381,5 @@ export const products: SeedProduct[] = [
       { volume: 12, sku: 'CL-SD-12', price: 320, oldPrice: 360, stock: 12 },
     ],
     isNew: true,
-    isSale: true,
   },
 ]

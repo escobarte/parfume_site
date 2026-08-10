@@ -54,7 +54,6 @@ export async function CatalogView({
     flags: {
       isNew: tFlags('isNew'),
       isHit: tFlags('isHit'),
-      isSale: tFlags('isSale'),
       hasDiscount: tFlags('hasDiscount'),
     },
   })

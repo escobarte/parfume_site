@@ -84,7 +84,7 @@ export async function ProductCard({
               (BRAND.md §5), «нет в наличии» уходит в приглушённый тон. */}
           <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-ink text-body font-medium">
-              {t('from')} {formatPrice(product.minPrice, locale)}
+              {t('from')} {formatPrice(product.displayPrice, locale)}
               {product.oldPrice !== null && (
                 <span className="text-ink-subtle text-label ml-1.5 font-normal line-through">
                   {formatPrice(product.oldPrice, locale)}

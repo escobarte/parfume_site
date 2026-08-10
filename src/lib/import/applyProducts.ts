@@ -146,7 +146,6 @@ export async function applyProducts(
     if (base.description) data.description = paragraphs(base.description)
     if (base.is_new !== undefined) data.isNew = base.is_new
     if (base.is_hit !== undefined) data.isHit = base.is_hit
-    if (base.is_sale !== undefined) data.isSale = base.is_sale
 
     if (current) {
       plan.update.push(base.handle)

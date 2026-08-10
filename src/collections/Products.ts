@@ -215,7 +215,9 @@ export const Products: CollectionConfig = {
       fields: [
         { name: 'isNew', type: 'checkbox', label: 'Новинка', defaultValue: false, index: true },
         { name: 'isHit', type: 'checkbox', label: 'Хит', defaultValue: false, index: true },
-        { name: 'isSale', type: 'checkbox', label: 'Акция', defaultValue: false, index: true },
+        // Ручного тега «Sale»/«Акция» больше нет (фаза 4.5, правка): он путал
+        // рядом с авто-фасетом «со скидкой». Единственный источник —
+        // денормализованный hasDiscount ниже, в UI подписан как Sale.
       ],
     },
     {

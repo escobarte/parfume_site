@@ -166,7 +166,6 @@ export async function getFacetSource(
           flags: {
             isNew: Boolean(doc.isNew),
             isHit: Boolean(doc.isHit),
-            isSale: Boolean(doc.isSale),
             hasDiscount: Boolean(doc.hasDiscount),
           },
         }

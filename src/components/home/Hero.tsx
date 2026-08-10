@@ -1,7 +1,9 @@
 import Image from 'next/image'
+import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { getHomepage } from '@/lib/content/globals'
+import { resolveLinkHref } from '@/lib/links'
 import { isWithinWindow } from '@/lib/promo'
 
 const FALLBACK = {
@@ -24,15 +26,21 @@ const FALLBACK = {
  * остаётся полностью SSR и не влияет на LCP.
  */
 export async function Hero({ locale }: { locale: Locale }) {
-  const homepage = await getHomepage(locale)
+  const [homepage, tLinkTargets] = await Promise.all([
+    getHomepage(locale),
+    getTranslations('LinkTargets'),
+  ])
   const promo = homepage.promoHero
   const active = Boolean(promo?.enabled) && isWithinWindow(promo ?? {})
+
+  const promoCtaHref = resolveLinkHref(promo?.ctaTarget, promo?.ctaTargetOverride)
+  const promoCtaLabel = promo?.ctaLabel || (promo?.ctaTarget ? tLinkTargets(promo.ctaTarget) : null)
 
   const eyebrow = (active ? promo?.eyebrow : null) || homepage.hero?.eyebrow || FALLBACK.eyebrow
   const title = (active ? promo?.title : null) || homepage.hero?.title || FALLBACK.title
   const subtitle = (active ? promo?.subtitle : null) || homepage.hero?.subtitle || FALLBACK.subtitle
-  const ctaLabel = (active ? promo?.ctaLabel : null) || homepage.hero?.ctaLabel || FALLBACK.ctaLabel
-  const ctaHref = (active ? promo?.ctaHref : null) || homepage.hero?.ctaHref || FALLBACK.ctaHref
+  const ctaLabel = (active ? promoCtaLabel : null) || homepage.hero?.ctaLabel || FALLBACK.ctaLabel
+  const ctaHref = (active ? promoCtaHref : null) || homepage.hero?.ctaHref || FALLBACK.ctaHref
 
   const image = active && typeof promo?.image === 'object' ? promo.image : null
   const imageUrl = image?.sizes?.full?.url ?? image?.url ?? null

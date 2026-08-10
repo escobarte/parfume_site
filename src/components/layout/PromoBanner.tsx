@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server'
 import type { Locale } from '@/i18n/routing'
 import { getSettings } from '@/lib/content/globals'
+import { resolveLinkHref } from '@/lib/links'
 import { isWithinWindow } from '@/lib/promo'
 import { PromoBannerClient } from './PromoBannerClient'
 
@@ -11,17 +12,25 @@ import { PromoBannerClient } from './PromoBannerClient'
  * и не может мигнуть при загрузке.
  */
 export async function PromoBanner({ locale }: { locale: Locale }) {
-  const [settings, t] = await Promise.all([getSettings(locale), getTranslations('PromoBar')])
+  const [settings, t, tLinkTargets] = await Promise.all([
+    getSettings(locale),
+    getTranslations('PromoBar'),
+    getTranslations('LinkTargets'),
+  ])
   const banner = settings.promoBanner
 
   const active = Boolean(banner?.enabled) && Boolean(banner?.text) && isWithinWindow(banner ?? {})
   if (!active || !banner?.text) return null
 
+  const linkHref = resolveLinkHref(banner.linkTarget, banner.linkTargetOverride)
+  const linkLabel =
+    banner.linkLabel || (banner.linkTarget ? tLinkTargets(banner.linkTarget) : null)
+
   return (
     <PromoBannerClient
       text={banner.text}
-      linkLabel={banner.linkLabel}
-      linkHref={banner.linkHref}
+      linkLabel={linkLabel}
+      linkHref={linkHref}
       closeLabel={t('close')}
     />
   )

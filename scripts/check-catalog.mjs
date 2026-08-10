@@ -91,17 +91,27 @@ const afterReset = await waitForCards(comboCount)
 check('сброс возвращает полную выдачу', afterReset === totalAll, `${afterReset} из ${totalAll}`)
 
 // ── Сортировка по цене ────────────────────────────────────────────────────
-const priceOf = async () =>
-  (await page.locator('article').allInnerTexts()).map((text) => {
-    const match = text.match(/(\d[\d\s]*)\s*MDL/)
-    return match ? Number(match[1].replace(/\s/g, '')) : 0
-  })
+// Сортировка на сервере идёт по минимальной цене товара (minPrice), но с
+// «вариантом B» (фаза 4.5) карточка может показывать цену уценённого
+// варианта, а не минимальную — поэтому сверяем порядок не с текстом на
+// карточке, а с реальным minPrice по REST (slug → minPrice), независимо от
+// того, что отображено.
+const slugsOf = async () =>
+  (await page.locator('article a[href*="/product/"]').evaluateAll((nodes) => nodes.map((n) => n.getAttribute('href')))).map(
+    (href) => href.split('/').pop(),
+  )
+const priceIndex = await fetch(`${BASE}/api/products?limit=100&locale=ro&depth=0`)
+  .then((r) => r.json())
+  .then((data) => new Map(data.docs.map((doc) => [doc.slug, doc.minPrice])))
+
 await goto(`${BASE}/ro/catalog?sort=priceAsc`)
-const asc = await priceOf()
+const ascSlugs = await slugsOf()
+const asc = ascSlugs.map((slug) => priceIndex.get(slug))
 await goto(`${BASE}/ro/catalog?sort=priceDesc`)
-const desc = await priceOf()
+const descSlugs = await slugsOf()
+const desc = descSlugs.map((slug) => priceIndex.get(slug))
 check(
-  'сортировка по цене работает в обе стороны',
+  'сортировка по цене работает в обе стороны (по реальному minPrice, не по тексту карточки)',
   asc.every((v, i) => i === 0 || asc[i - 1] <= v) &&
     desc.every((v, i) => i === 0 || desc[i - 1] >= v),
   `${asc[0]}…${asc.at(-1)} / ${desc[0]}…${desc.at(-1)}`,

@@ -165,7 +165,6 @@ async function main() {
       variants: product.variants.map((variant) => ({ ...variant, isActive: true })),
       isNew: product.isNew ?? false,
       isHit: product.isHit ?? false,
-      isSale: product.isSale ?? false,
       _status: 'published',
     }))
   }
@@ -237,7 +236,7 @@ async function seedGlobals(
           enabled: false,
           text: settings[locale].promoText as string,
           linkLabel: settings[locale].promoLinkLabel as string,
-          linkHref: '/delivery',
+          linkTarget: 'delivery',
         },
       },
     })
@@ -373,14 +372,14 @@ async function seedGlobals(
         },
         // Выключена по умолчанию — контент готов, владелец включает
         // галочкой и датами на время реальной акции (фаза 4.5).
-        // ctaHref ведёт сразу в каталог с фильтром «со скидкой».
+        // ctaTarget ведёт сразу в каталог с фильтром «со скидкой».
         promoHero: {
           enabled: false,
           eyebrow: text.promoEyebrow,
           title: text.promoTitle,
           subtitle: text.promoSubtitle,
           ctaLabel: text.promoCta,
-          ctaHref: '/catalog?flags=hasDiscount',
+          ctaTarget: 'catalogDiscounted',
         },
         categoryTiles: categories.map((category) => ({ category: categoryIds.get(category.slug) })),
         newRow: { title: text.newTitle, linkLabel: text.newLink, limit: 4 },

@@ -76,8 +76,7 @@
     "flags": {
       "isNew": "Новинка",
       "isHit": "Хит",
-      "isSale": "Акция",
-      "hasDiscount": "Со скидкой"
+      "hasDiscount": "Sale"
     }
   },
   "Product": {
@@ -142,5 +141,14 @@
   },
   "PromoBar": {
     "close": "Закрыть"
+  },
+  "LinkTargets": {
+    "home": "Главная",
+    "catalog": "Каталог",
+    "catalogDiscounted": "Каталог со скидками",
+    "brands": "Бренды",
+    "about": "О нас",
+    "delivery": "Доставка",
+    "contacts": "Контакты"
   }
 }

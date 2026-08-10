@@ -46,7 +46,8 @@ const settle = async (path) => {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// 1. Скидка: бейдж, зачёркнутая цена, пересчёт при смене объёма
+// 1. Скидка на карточке — «вариант B» (правка фазы 4.5): бейдж и цена
+//    всегда об одном и том же уценённом варианте, не о самом дешёвом.
 // ═══════════════════════════════════════════════════════════════════════
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
@@ -56,6 +57,10 @@ const goto = async (path) => {
 }
 
 await goto('/ro/catalog')
+
+// Amber Sale: 5 ml −20% (200/250), 10 ml без скидки, 30 ml −33% (800/1200).
+// Максимальный % — на 30 ml, не на самом дешёвом варианте (5 ml) — карточка
+// должна показать именно 30 ml целиком (цену, зачёркнутую и бейдж).
 const saleCard = page
   .locator('article')
   .filter({ has: page.locator('a[href*="maison-orphee-amber-sale"]') })
@@ -65,7 +70,7 @@ const cardBadge = await saleCard
   .innerText()
   .catch(() => null)
 check(
-  'бейдж на карточке — максимальный % среди активных вариантов',
+  'Amber Sale: бейдж — процент лучшего уценённого варианта (30 ml, −33%)',
   cardBadge === '−33%',
   `бейдж «${cardBadge}» (5 ml −20%, 30 ml −33%, 10 ml без скидки)`,
 )
@@ -91,10 +96,56 @@ check(
   JSON.stringify(badgeStyle),
 )
 
-const cardText = await saleCard.innerText()
+const salePriceLine = await saleCard.locator('span.text-body.font-medium').first().innerText()
 check(
-  'на карточке зачёркнута старая цена самого дешёвого варианта (250, а не 1200)',
-  cardText.includes('250') && !cardText.includes('1.200') && !cardText.includes('1200'),
+  'Amber Sale: «от» — цена того же варианта, что и бейдж (800 MDL, 30 ml, не 200 MDL с 5 ml)',
+  salePriceLine.includes('de la 800') && !salePriceLine.includes('de la 200'),
+  salePriceLine,
+)
+check(
+  'Amber Sale: зачёркнута старая цена того же варианта (1.200, а не 250)',
+  salePriceLine.includes('1.200') && !salePriceLine.includes('250'),
+  salePriceLine,
+)
+
+// Set Descoperire — ровно баг-репродукция из задания: скидка на 12 ml
+// (320/360, −11%), 6 ml дешевле и без скидки. Бейдж/цена обязаны описывать
+// 12 ml, а не «от 180» с бейджем в никуда.
+const setCard = page
+  .locator('article')
+  .filter({ has: page.locator('a[href*="casa-lumina-set-descoperire"]') })
+const setBadge = await setCard
+  .locator('span', { hasText: /^−\d+%$/ })
+  .first()
+  .innerText()
+  .catch(() => null)
+check('Set Descoperire: бейдж −11% (скидка на 12 ml, не на 6 ml)', setBadge === '−11%', setBadge)
+const setPriceLine = await setCard.locator('span.text-body.font-medium').first().innerText()
+check(
+  'Set Descoperire: «от» — цена уценённого 12 ml (320 MDL), не самого дешёвого 6 ml (180 MDL)',
+  setPriceLine.includes('de la 320') && !setPriceLine.includes('de la 180'),
+  setPriceLine,
+)
+check(
+  'Set Descoperire: зачёркнута старая цена того же варианта (360)',
+  setPriceLine.includes('360'),
+  setPriceLine,
+)
+// Инвариант «бейдж никогда без зачёркнутой цены, и наоборот» — проверяем
+// на ВСЕХ карточках каталога разом, а не только на двух известных.
+const invariantViolations = await page.locator('article').evaluateAll((articles) =>
+  articles
+    .map((article) => {
+      const hasBadge = !!article.querySelector('span.bg-navy')
+      const hasStrike = !!article.querySelector('span.line-through')
+      return { hasBadge, hasStrike, ok: hasBadge === hasStrike }
+    })
+    .filter((row) => !row.ok),
+)
+check(
+  'инвариант «бейдж без зачёркнутой цены невозможен, и наоборот» — по всему каталогу',
+  invariantViolations.length === 0,
+  `нарушений: ${invariantViolations.length}`,
 )
 
 await goto('/ro/product/maison-orphee-amber-sale')
@@ -126,11 +177,16 @@ check(
 )
 
 // ═══════════════════════════════════════════════════════════════════════
-// 2. Фильтр «со скидкой» + сортировка «по скидке»
+// 2. Фасета «Sale» не задвоена + фильтр «со скидкой» + сортировка «по скидке»
 // ═══════════════════════════════════════════════════════════════════════
 await goto('/ro/catalog')
 const totalAll = await page.locator('article a[href*="/product/"]').count()
-const discountRow = page.locator('aside label').filter({ hasText: /^Cu reducere/ })
+const discountRow = page.locator('aside label').filter({ hasText: /^Sale/ })
+check(
+  'ручной тег «Sale» удалён — фасета «Sale» ровно одна (авто-hasDiscount, без задвоения)',
+  (await discountRow.count()) === 1,
+  `найдено фасет с меткой «Sale»: ${await discountRow.count()}`,
+)
 const counterText = await discountRow.first().innerText()
 await discountRow.first().locator('input').check()
 await page.waitForFunction(
@@ -164,7 +220,8 @@ await patchGlobal('settings', 'ru', {
     enabled: true,
     text: BANNER_TEXT,
     linkLabel: 'Подробнее',
-    linkHref: '/delivery',
+    linkTarget: 'delivery',
+    linkTargetOverride: null,
     startDate: '2099-01-01T00:00:00.000Z',
     endDate: null,
   },
@@ -184,7 +241,35 @@ check(
   ) ||
     (html.includes('bg-cream') && html.includes('text-navy') && html.includes('tracking-display')),
 )
-check('ссылка баннера ведёт на /ru/delivery', html.includes('href="/ru/delivery"'))
+// Ищем ссылку конкретно внутри полосы баннера, а не по всей странице: у
+// футера есть свой, не связанный с баннером, пункт «Доставка» → /ru/delivery,
+// сравнение по всей странице давало бы ложное совпадение в обе стороны.
+const bannerFragment = (currentHtml) => {
+  const anchor = currentHtml.indexOf(BANNER_TEXT.slice(0, 10))
+  return currentHtml.slice(anchor - 200, anchor + 400)
+}
+check(
+  'select linkTarget=delivery даёт корректный локализованный URL /ru/delivery',
+  bannerFragment(html).includes('href="/ru/delivery"'),
+  bannerFragment(html),
+)
+
+// Override должен побеждать выбор из select, даже если target заполнен.
+// Значение override — без префикса локали (как раньше был linkHref);
+// префикс добавляет <Link> из '@/i18n/navigation'.
+await patchGlobal('settings', 'ru', {
+  promoBanner: { linkTarget: 'delivery', linkTargetOverride: '/catalog?flags=isNew' },
+})
+html = await settle('/ru/catalog')
+check(
+  'override-поле ссылки баннера побеждает выбор из select',
+  bannerFragment(html).includes('href="/ru/catalog?flags=isNew"') &&
+    !bannerFragment(html).includes('href="/ru/delivery"'),
+  bannerFragment(html),
+)
+await patchGlobal('settings', 'ru', {
+  promoBanner: { linkTarget: 'delivery', linkTargetOverride: null },
+})
 
 await patchGlobal('settings', 'ru', {
   promoBanner: { startDate: '2020-01-01T00:00:00.000Z', endDate: '2020-02-01T00:00:00.000Z' },
@@ -254,7 +339,8 @@ await patchGlobal('settings', 'ru', {
     enabled: false,
     text: 'Бесплатная доставка при заказе от 500 MDL',
     linkLabel: 'Подробнее',
-    linkHref: '/delivery',
+    linkTarget: 'delivery',
+    linkTargetOverride: null,
     startDate: null,
     endDate: null,
   },
@@ -276,7 +362,11 @@ check(
 )
 
 await patchGlobal('homepage', 'ro', {
-  promoHero: { startDate: '2020-01-01T00:00:00.000Z', endDate: '2099-01-01T00:00:00.000Z' },
+  promoHero: {
+    startDate: '2020-01-01T00:00:00.000Z',
+    endDate: '2099-01-01T00:00:00.000Z',
+    ctaTarget: 'catalogDiscounted',
+  },
 })
 html = await settle('/ro')
 check(
@@ -284,9 +374,23 @@ check(
   html.includes(PROMO_TITLE) && !html.includes(NORMAL_TITLE),
 )
 check(
-  'CTA акционного hero ведёт в каталог с фильтром «со скидкой»',
+  'select ctaTarget=catalogDiscounted даёт каталог с фильтром «со скидкой»',
   html.includes('href="/ro/catalog?flags=hasDiscount"'),
 )
+
+// Override должен побеждать выбор из select и здесь же — без префикса локали.
+await patchGlobal('homepage', 'ro', {
+  promoHero: { ctaTarget: 'catalogDiscounted', ctaTargetOverride: '/catalog?flags=isHit' },
+})
+html = await settle('/ro')
+check(
+  'override-поле CTA акционного hero побеждает выбор из select',
+  html.includes('href="/ro/catalog?flags=isHit"') &&
+    !html.includes('href="/ro/catalog?flags=hasDiscount"'),
+)
+await patchGlobal('homepage', 'ro', {
+  promoHero: { ctaTarget: 'catalogDiscounted', ctaTargetOverride: null },
+})
 
 await patchGlobal('homepage', 'ro', {
   promoHero: { startDate: '2020-01-01T00:00:00.000Z', endDate: '2020-02-01T00:00:00.000Z' },

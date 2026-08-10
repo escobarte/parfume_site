@@ -214,7 +214,6 @@ export interface Product {
   slug: string;
   isNew?: boolean | null;
   isHit?: boolean | null;
-  isSale?: boolean | null;
   minPrice?: number | null;
   maxPrice?: number | null;
   inStock?: boolean | null;
@@ -608,7 +607,6 @@ export interface ProductsSelect<T extends boolean = true> {
   slug?: T;
   isNew?: T;
   isHit?: T;
-  isSale?: T;
   minPrice?: T;
   maxPrice?: T;
   inStock?: T;
@@ -864,11 +862,18 @@ export interface Homepage {
     eyebrow?: string | null;
     title?: string | null;
     subtitle?: string | null;
+    /**
+     * Пусто — берётся подпись выбранной цели.
+     */
     ctaLabel?: string | null;
     /**
-     * Без префикса локали.
+     * Куда ведёт ссылка. «О нас», «Доставка», «Контакты», «Бренды» — страницы фазы 5.
      */
-    ctaHref?: string | null;
+    ctaTarget?: ('home' | 'catalog' | 'catalogDiscounted' | 'brands' | 'about' | 'delivery' | 'contacts') | null;
+    /**
+     * Заполнено — используется вместо выбора слева (внешний URL или внутренний путь без префикса локали, напр. /catalog).
+     */
+    ctaTargetOverride?: string | null;
     /**
      * Необязательно. Пусто — фон остаётся navy.
      */
@@ -979,13 +984,17 @@ export interface Setting {
      */
     text?: string | null;
     /**
-     * Пусто — баннер без ссылки.
+     * Пусто — берётся подпись выбранной цели.
      */
     linkLabel?: string | null;
     /**
-     * Без префикса локали, напр. /catalog
+     * Куда ведёт ссылка. «О нас», «Доставка», «Контакты», «Бренды» — страницы фазы 5.
      */
-    linkHref?: string | null;
+    linkTarget?: ('home' | 'catalog' | 'catalogDiscounted' | 'brands' | 'about' | 'delivery' | 'contacts') | null;
+    /**
+     * Заполнено — используется вместо выбора слева (внешний URL или внутренний путь без префикса локали, напр. /catalog).
+     */
+    linkTargetOverride?: string | null;
     /**
      * Пусто — без ограничения снизу.
      */
@@ -1055,7 +1064,8 @@ export interface HomepageSelect<T extends boolean = true> {
         title?: T;
         subtitle?: T;
         ctaLabel?: T;
-        ctaHref?: T;
+        ctaTarget?: T;
+        ctaTargetOverride?: T;
         image?: T;
         startDate?: T;
         endDate?: T;
@@ -1133,7 +1143,8 @@ export interface SettingsSelect<T extends boolean = true> {
         enabled?: T;
         text?: T;
         linkLabel?: T;
-        linkHref?: T;
+        linkTarget?: T;
+        linkTargetOverride?: T;
         startDate?: T;
         endDate?: T;
       };

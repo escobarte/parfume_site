@@ -1,5 +1,6 @@
 import type { GlobalConfig } from 'payload'
 import { adminOnly, isAdmin, publicRead } from '@/access/roles'
+import { internalLinkFields } from '@/fields/internalLink'
 import { GLOBALS_TAG, revalidateCatalog } from '@/lib/revalidate'
 
 export const Settings: GlobalConfig = {
@@ -85,21 +86,12 @@ export const Settings: GlobalConfig = {
         { name: 'enabled', type: 'checkbox', defaultValue: false, label: 'Показывать' },
         { name: 'text', type: 'text', localized: true, admin: { description: 'Текст полосы.' } },
         {
-          type: 'row',
-          fields: [
-            {
-              name: 'linkLabel',
-              type: 'text',
-              localized: true,
-              admin: { width: '50%', description: 'Пусто — баннер без ссылки.' },
-            },
-            {
-              name: 'linkHref',
-              type: 'text',
-              admin: { width: '50%', description: 'Без префикса локали, напр. /catalog' },
-            },
-          ],
+          name: 'linkLabel',
+          type: 'text',
+          localized: true,
+          admin: { description: 'Пусто — берётся подпись выбранной цели.' },
         },
+        { type: 'row', fields: internalLinkFields('linkTarget') },
         {
           type: 'row',
           fields: [

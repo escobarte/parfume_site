@@ -76,8 +76,7 @@
     "flags": {
       "isNew": "New",
       "isHit": "Bestseller",
-      "isSale": "Sale",
-      "hasDiscount": "Discounted"
+      "hasDiscount": "Sale"
     }
   },
   "Product": {
@@ -142,5 +141,14 @@
   },
   "PromoBar": {
     "close": "Close"
+  },
+  "LinkTargets": {
+    "home": "Home",
+    "catalog": "Catalog",
+    "catalogDiscounted": "Catalog on sale",
+    "brands": "Brands",
+    "about": "About",
+    "delivery": "Delivery",
+    "contacts": "Contacts"
   }
 }

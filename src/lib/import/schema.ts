@@ -66,7 +66,6 @@ const productBase = {
   description: trimmed.optional(),
   is_new: boolFrom,
   is_hit: boolFrom,
-  is_sale: boolFrom,
 }
 
 /** Формат A: одна строка = один вариант, группировка по handle. */

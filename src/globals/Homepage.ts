@@ -1,5 +1,6 @@
 import type { GlobalConfig } from 'payload'
 import { adminOnly, isAdmin, publicRead } from '@/access/roles'
+import { internalLinkFields } from '@/fields/internalLink'
 import { HOMEPAGE_TAG, revalidateCatalog } from '@/lib/revalidate'
 
 /**
@@ -81,16 +82,12 @@ export const Homepage: GlobalConfig = {
                 { name: 'title', type: 'text', localized: true },
                 { name: 'subtitle', type: 'textarea', localized: true },
                 {
-                  type: 'row',
-                  fields: [
-                    { name: 'ctaLabel', type: 'text', localized: true, admin: { width: '50%' } },
-                    {
-                      name: 'ctaHref',
-                      type: 'text',
-                      admin: { width: '50%', description: 'Без префикса локали.' },
-                    },
-                  ],
+                  name: 'ctaLabel',
+                  type: 'text',
+                  localized: true,
+                  admin: { description: 'Пусто — берётся подпись выбранной цели.' },
                 },
+                { type: 'row', fields: internalLinkFields('ctaTarget') },
                 {
                   name: 'image',
                   type: 'upload',

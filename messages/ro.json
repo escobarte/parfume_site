@@ -76,8 +76,7 @@
     "flags": {
       "isNew": "Noutate",
       "isHit": "Populare",
-      "isSale": "Reducere",
-      "hasDiscount": "Cu reducere"
+      "hasDiscount": "Sale"
     }
   },
   "Product": {
@@ -142,5 +141,14 @@
   },
   "PromoBar": {
     "close": "Închide"
+  },
+  "LinkTargets": {
+    "home": "Pagina principală",
+    "catalog": "Catalog",
+    "catalogDiscounted": "Catalog cu reduceri",
+    "brands": "Branduri",
+    "about": "Despre noi",
+    "delivery": "Livrare",
+    "contacts": "Contacte"
   }
 }

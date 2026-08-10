@@ -15,22 +15,27 @@ export function toCard(doc: Product): ProductCardData {
 
   const variants = (doc.variants ?? []).filter((variant) => variant.isActive !== false)
 
-  // Цена на карточке — «от {minPrice}» самого дешёвого варианта; зачёркнутая
-  // старая цена рядом показывается, только если СКИДКА именно на этом
-  // варианте (а не на каком-то другом, более дорогом). Бейдж процента при
-  // этом — максимум среди всех активных вариантов (denormalizeVariants),
-  // так требует PLAN.md §4.5: «если скидка не на всех объёмах — максимальный
-  // процент среди активных вариантов».
-  const cheapest = variants.reduce<(typeof variants)[number] | null>(
-    (min, variant) => (min === null || variant.price < min.price ? variant : min),
+  // Вариант B (фаза 4.5, правка): бейдж и цена ВСЕГДА об одном и том же
+  // варианте. Среди уценённых (oldPrice > price) берём вариант с наибольшим
+  // процентом скидки и показываем именно его цену/oldPrice/процент — это
+  // не обязательно самый дешёвый объём. Если уценённых вариантов нет —
+  // обычная «от {минимальная цена}» без бейджа и зачёркивания. Инвариант:
+  // бейдж не может появиться без зачёркнутой цены, и наоборот — оба поля
+  // выводятся из одного и того же bestDiscount.
+  const discounted = variants
+    .map((variant) => ({ variant, percent: discountPercent(variant.price, variant.oldPrice) }))
+    .filter(
+      (entry): entry is { variant: (typeof variants)[number]; percent: number } =>
+        entry.percent !== null,
+    )
+  const bestDiscount = discounted.reduce<(typeof discounted)[number] | null>(
+    (best, entry) => (best === null || entry.percent > best.percent ? entry : best),
     null,
   )
-  const cheapestDiscount = cheapest ? discountPercent(cheapest.price, cheapest.oldPrice) : null
 
   const flags: FlagOption[] = []
   if (doc.isNew) flags.push('isNew')
   if (doc.isHit) flags.push('isHit')
-  if (doc.isSale) flags.push('isSale')
 
   return {
     id: doc.id,
@@ -40,9 +45,9 @@ export function toCard(doc: Product): ProductCardData {
     family: doc.family ?? null,
     noteTitles: notes.map((note) => note.title),
     volumes: [...new Set(variants.map((variant) => variant.volume))].sort((a, b) => a - b),
-    minPrice: doc.minPrice ?? null,
-    oldPrice: cheapestDiscount !== null ? (cheapest?.oldPrice ?? null) : null,
-    discountPercent: doc.hasDiscount ? (doc.maxDiscountPercent ?? null) : null,
+    displayPrice: bestDiscount ? bestDiscount.variant.price : (doc.minPrice ?? null),
+    oldPrice: bestDiscount ? (bestDiscount.variant.oldPrice ?? null) : null,
+    discountPercent: bestDiscount ? bestDiscount.percent : null,
     image: cover?.sizes?.card?.url
       ? { url: cover.sizes.card.url, alt: cover.alt ?? doc.title }
       : cover?.url
