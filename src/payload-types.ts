@@ -434,6 +434,10 @@ export interface Order {
    * Итог заявки, MDL.
    */
   total: number;
+  /**
+   * CSV заявки для Excel (UTF-8 с BOM, разделитель «;»).
+   */
+  exportCsv?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -749,6 +753,7 @@ export interface OrdersSelect<T extends boolean = true> {
         id?: T;
       };
   total?: T;
+  exportCsv?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -140,14 +140,28 @@ check(
 
 // ── Корзина ───────────────────────────────────────────────────────────────
 await goto(`${BASE}/ro/product/maison-orphee-signature-wood`)
-await page.getByRole('button', { name: /adaugă în coș/i }).click()
-await page.waitForTimeout(300)
+// В dev клик до окончания гидрации теряется — жмём, пока корзина не наполнится.
+let addedToCart = false
+for (let attempt = 0; attempt < 5 && !addedToCart; attempt += 1) {
+  await page.getByRole('button', { name: /adaugă în coș/i }).click()
+  addedToCart = await page
+    .waitForFunction(() => Boolean(localStorage.getItem('mf-cart')?.includes('MO-SW')), {
+      timeout: 3000,
+    })
+    .then(() => true)
+    .catch(() => false)
+}
+// Счётчик живёт на кнопке мини-корзины в шапке (раньше это была ссылка).
 const badge = await page
-  .locator('header a[href$="/cart"] span')
+  .locator('header button[aria-label="Coș"] span')
   .first()
   .innerText()
   .catch(() => '')
-check('кнопка «в корзину» наполняет счётчик шапки', badge === '1', `бейдж «${badge}»`)
+check(
+  'кнопка «в корзину» наполняет счётчик шапки',
+  addedToCart && badge === '1',
+  `бейдж «${badge}»`,
+)
 
 // ── Поиск ─────────────────────────────────────────────────────────────────
 await goto(`${BASE}/ro/search?q=cedar`)

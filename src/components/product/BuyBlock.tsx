@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { useRouter } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { useCart } from '@/lib/cart/store'
 import type { ProductView } from '@/lib/catalog/product'
@@ -16,6 +17,7 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
   const t = useTranslations('Product')
   const locale = useLocale() as Locale
   const add = useCart((state) => state.add)
+  const router = useRouter()
 
   const firstAvailable = product.variants.findIndex((variant) => variant.stock > 0)
   const [index, setIndex] = useState(firstAvailable >= 0 ? firstAvailable : 0)
@@ -26,7 +28,7 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
 
   const available = variant.stock > 0
 
-  const addToCart = () => {
+  const putInCart = () => {
     add({
       productId: product.id,
       slug: product.slug,
@@ -37,8 +39,18 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
       price: variant.price,
       image,
     })
+  }
+
+  const addToCart = () => {
+    putInCart()
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
+  }
+
+  /** «В 1 клик» — то же добавление, но сразу к форме заявки. */
+  const oneClick = () => {
+    putInCart()
+    router.push('/cart')
   }
 
   return (
@@ -104,6 +116,7 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
         <button
           type="button"
           disabled={!available}
+          onClick={oneClick}
           className="border-navy text-navy hover:bg-navy hover:text-cream text-label tracking-display flex-1 cursor-pointer rounded-sm border px-6 py-3.5 uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-40"
         >
           {t('oneClick')}

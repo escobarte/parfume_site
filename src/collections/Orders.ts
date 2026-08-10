@@ -13,7 +13,16 @@ export const Orders: CollectionConfig = {
   labels: { singular: 'Заявка', plural: 'Заявки' },
   admin: {
     useAsTitle: 'orderNumber',
-    defaultColumns: ['orderNumber', 'createdAt', 'customer', 'total', 'status'],
+    // Менеджеру нужны дата, имя, телефон, сумма и статус прямо в списке
+    // (PLAN.md §6.3) — поля группы адресуются через точку.
+    defaultColumns: [
+      'orderNumber',
+      'createdAt',
+      'customer.name',
+      'customer.phone',
+      'total',
+      'status',
+    ],
     group: 'Заказы',
     listSearchableFields: ['orderNumber'],
   },
@@ -142,6 +151,20 @@ export const Orders: CollectionConfig = {
       type: 'number',
       required: true,
       admin: { description: 'Итог заявки, MDL.' },
+    },
+    {
+      // Файл заявки в нашем формате (не 1С): менеджер скачивает его кнопкой
+      // из карточки. Хранится текстом — отдельное файловое хранилище ради
+      // одной таблички на заявку заводить незачем.
+      name: 'exportCsv',
+      type: 'textarea',
+      admin: {
+        readOnly: true,
+        description: 'CSV заявки для Excel (UTF-8 с BOM, разделитель «;»).',
+        components: {
+          Field: '@/components/admin/OrderCsvField#OrderCsvField',
+        },
+      },
     },
   ],
 }

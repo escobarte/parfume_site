@@ -100,5 +100,42 @@
     "ro": "Română",
     "ru": "Русский",
     "en": "English"
+  },
+  "Cart": {
+    "title": "Coș",
+    "empty": "Coșul este gol",
+    "emptyHint": "Alegeți un parfum din catalog — îl puteți rezerva în câteva secunde.",
+    "toCatalog": "Deschide catalogul",
+    "item": "Poziție",
+    "qty": "Cantitate",
+    "remove": "Șterge",
+    "total": "Total",
+    "checkout": "Lăsați o cerere",
+    "miniTitle": "În coș",
+    "viewCart": "Deschide coșul",
+    "more": "și încă {count}"
+  },
+  "OrderForm": {
+    "title": "Datele dumneavoastră",
+    "name": "Nume",
+    "namePlaceholder": "Cum să vă numim",
+    "phone": "Telefon",
+    "messenger": "Cum să vă contactăm",
+    "messengerCall": "Apel",
+    "comment": "Comentariu",
+    "commentPlaceholder": "Opțional: întrebare sau dorință",
+    "submit": "Trimite cererea",
+    "sending": "Se trimite…",
+    "errorName": "Introduceți numele",
+    "errorPhone": "Număr de telefon incorect",
+    "errorRate": "Prea multe cereri. Încercați peste câteva minute.",
+    "errorGeneric": "Nu am reușit să trimitem cererea. Încercați din nou.",
+    "agreement": "Trimițând cererea, sunteți de acord să fiți contactat."
+  },
+  "ThankYou": {
+    "title": "Mulțumim!",
+    "text": "Cererea este la noi. Vă sunăm sau vă scriem în curând.",
+    "orderNumber": "Numărul cererii",
+    "toCatalog": "Înapoi în catalog"
   }
 }

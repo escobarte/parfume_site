@@ -100,5 +100,42 @@
     "ro": "Română",
     "ru": "Русский",
     "en": "English"
+  },
+  "Cart": {
+    "title": "Cart",
+    "empty": "Your cart is empty",
+    "emptyHint": "Pick a scent from the catalog — the request takes seconds.",
+    "toCatalog": "Open the catalog",
+    "item": "Item",
+    "qty": "Quantity",
+    "remove": "Remove",
+    "total": "Total",
+    "checkout": "Place a request",
+    "miniTitle": "In cart",
+    "viewCart": "Go to cart",
+    "more": "and {count} more"
+  },
+  "OrderForm": {
+    "title": "Your details",
+    "name": "Name",
+    "namePlaceholder": "How to address you",
+    "phone": "Phone",
+    "messenger": "How to reach you",
+    "messengerCall": "Call",
+    "comment": "Comment",
+    "commentPlaceholder": "Optional: a question or a wish",
+    "submit": "Send the request",
+    "sending": "Sending…",
+    "errorName": "Enter your name",
+    "errorPhone": "Invalid phone number",
+    "errorRate": "Too many requests. Try again in a few minutes.",
+    "errorGeneric": "Could not send the request. Please try again.",
+    "agreement": "By sending the request you agree to be contacted."
+  },
+  "ThankYou": {
+    "title": "Thank you!",
+    "text": "We have your request. We will call or write shortly.",
+    "orderNumber": "Request number",
+    "toCatalog": "Back to the catalog"
   }
 }

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import { useScrolled } from '@/lib/useScrolled'
 import { Link, usePathname } from '@/i18n/navigation'
-import { CartButton } from './CartButton'
+import { MiniCart } from '@/components/cart/MiniCart'
 import { LocaleSwitcher } from './LocaleSwitcher'
 import { SearchBox } from './SearchBox'
 import { Wordmark } from './Wordmark'
@@ -90,7 +90,7 @@ export function HeaderShell({ links }: { links: NavLink[] }) {
             )}
           </button>
           <LocaleSwitcher className="hidden sm:flex" />
-          <CartButton />
+          <MiniCart />
         </div>
       </div>
 
