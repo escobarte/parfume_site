@@ -16,7 +16,6 @@ export function OrderForm() {
   const locale = useLocale() as Locale
   const router = useRouter()
   const items = useCart((state) => state.items)
-  const clear = useCart((state) => state.clear)
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -83,6 +82,7 @@ export function OrderForm() {
               ? { phone: t('errorPhone') }
               : {}),
         })
+        setSending(false)
         return
       }
 
@@ -90,11 +90,18 @@ export function OrderForm() {
       // здесь только отправляем его, если аналитика уже загружена.
       window.dataLayer?.push({ event: 'generate_lead', currency: 'MDL' })
 
-      clear()
+      // Корзину не чистим здесь: переход на thank-you асинхронный, а этот
+      // компонент/страница /cart ещё смонтированы — синхронный clear() тут
+      // на мгновение отрисовывал бы empty-state корзины поверх текущего
+      // экрана раньше, чем завершится навигация (баг «вспышка пустой
+      // корзины» между отправкой и thank-you). Корзину чистит thank-you
+      // (LeadEvent.tsx) уже после того, как переход состоялся.
       router.push(`/thank-you?order=${encodeURIComponent(data.orderNumber ?? '')}`)
+      // sending намеренно остаётся true: форма вот-вот размонтируется вместе
+      // с /cart, не нужно на миг возвращать кнопку в активное состояние,
+      // пока переход ещё не завершился.
     } catch {
       setErrors({ form: t('errorGeneric') })
-    } finally {
       setSending(false)
     }
   }

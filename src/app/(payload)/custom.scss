@@ -18,3 +18,20 @@
 
   --font-body: var(--font-sans), 'Helvetica Neue', helvetica, arial, sans-serif;
 }
+
+/*
+ * Цвет знака/лого MON FLACON (BrandIcon/BrandLogo) — тема-зависимый, иначе
+ * navy-текст/обводка почти не читаются на тёмной теме логина (баг из
+ * приёмки фазы 4.7). Payload сам ставит data-theme на <html> (Theme
+ * provider), переключатель темы уже есть в /admin/account — здесь только
+ * выбор между двумя значениями tokens.css по этому атрибуту.
+ */
+.brand-icon,
+.brand-logo {
+  color: var(--color-navy);
+}
+
+:root[data-theme='dark'] .brand-icon,
+:root[data-theme='dark'] .brand-logo {
+  color: var(--color-cream);
+}

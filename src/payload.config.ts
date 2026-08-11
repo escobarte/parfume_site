@@ -36,6 +36,10 @@ export default buildConfig({
         Logo: '@/components/admin/BrandLogo#BrandLogo',
       },
       beforeDashboard: ['@/components/admin/NewOrdersCard#NewOrdersCard'],
+      // Явный «Выйти» в always-visible зоне шапки (багфикс приёмки 4.7.5) —
+      // штатная кнопка живёт в свёрнутой по умолчанию Nav-шторке и не видна
+      // без клика по гамбургеру, см. LogoutAction.tsx.
+      actions: ['@/components/admin/LogoutAction#LogoutAction'],
     },
   },
   // supportedLanguages задаёт РЕАЛЬНЫЙ выбор языка интерфейса /admin (фаза
