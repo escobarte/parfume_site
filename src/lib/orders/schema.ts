@@ -31,6 +31,9 @@ export const orderRequestSchema = z.object({
     .string()
     .transform(normalizePhone)
     .refine((value) => PHONE_PATTERN.test(value), 'phone'),
+  // Необязателен — телефон единственный обязательный канал (Молдова: Viber/
+  // WhatsApp/звонок работают без email). Если заполнен — обязан быть валидным.
+  email: z.union([z.literal(''), z.string().trim().email('email')]).optional(),
   messenger: z.enum(MESSENGERS).optional(),
   comment: z.string().trim().max(2000).optional(),
   locale: z.enum(['ro', 'ru', 'en']).default('ro'),
@@ -41,3 +44,19 @@ export const orderRequestSchema = z.object({
 })
 
 export type OrderRequest = z.infer<typeof orderRequestSchema>
+
+/**
+ * Запасной путь страницы статуса заказа (фаза 4.7.2): номер И телефон вместе
+ * ОБЯЗАТЕЛЬНЫ — оба поля required на уровне схемы, без .optional() ни на
+ * одном. Поиск по одному лишь номеру запрещён не только в UI, но и здесь:
+ * без телефона safeParse() не пройдёт, эндпоинт не долетит до payload.find.
+ */
+export const orderLookupSchema = z.object({
+  orderNumber: z.string().trim().min(1, 'orderNumber'),
+  phone: z
+    .string()
+    .transform(normalizePhone)
+    .refine((value) => PHONE_PATTERN.test(value), 'phone'),
+})
+
+export type OrderLookup = z.infer<typeof orderLookupSchema>

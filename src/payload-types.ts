@@ -397,7 +397,11 @@ export interface Note {
 export interface Order {
   id: number;
   orderNumber?: string | null;
-  status: 'new' | 'contacted' | 'done' | 'cancelled';
+  /**
+   * Токен страницы статуса заказа.
+   */
+  statusToken?: string | null;
+  status: 'new' | 'confirmed' | 'ready' | 'issued' | 'cancelled';
   /**
    * Локаль, с которой пришла заявка.
    */
@@ -409,6 +413,10 @@ export interface Order {
   customer: {
     name: string;
     phone: string;
+    /**
+     * Необязательно — для письма-подтверждения и ссылки на статус заказа.
+     */
+    email?: string | null;
     messenger?: ('telegram' | 'viber' | 'whatsapp' | 'call') | null;
   };
   comment?: string | null;
@@ -736,6 +744,7 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface OrdersSelect<T extends boolean = true> {
   orderNumber?: T;
+  statusToken?: T;
   status?: T;
   locale?: T;
   source?: T;
@@ -744,6 +753,7 @@ export interface OrdersSelect<T extends boolean = true> {
     | {
         name?: T;
         phone?: T;
+        email?: T;
         messenger?: T;
       };
   comment?: T;
@@ -869,7 +879,8 @@ export interface Homepage {
     /**
      * Куда ведёт ссылка. «О нас», «Доставка», «Контакты», «Бренды» — страницы фазы 5.
      */
-    ctaTarget?: ('home' | 'catalog' | 'catalogDiscounted' | 'brands' | 'about' | 'delivery' | 'contacts') | null;
+    ctaTarget?:
+      ('home' | 'catalog' | 'catalogDiscounted' | 'catalogNew' | 'brands' | 'about' | 'delivery' | 'contacts') | null;
     /**
      * Заполнено — используется вместо выбора слева (внешний URL или внутренний путь без префикса локали, напр. /catalog).
      */
@@ -990,7 +1001,8 @@ export interface Setting {
     /**
      * Куда ведёт ссылка. «О нас», «Доставка», «Контакты», «Бренды» — страницы фазы 5.
      */
-    linkTarget?: ('home' | 'catalog' | 'catalogDiscounted' | 'brands' | 'about' | 'delivery' | 'contacts') | null;
+    linkTarget?:
+      ('home' | 'catalog' | 'catalogDiscounted' | 'catalogNew' | 'brands' | 'about' | 'delivery' | 'contacts') | null;
     /**
      * Заполнено — используется вместо выбора слева (внешний URL или внутренний путь без префикса локали, напр. /catalog).
      */
@@ -1020,9 +1032,15 @@ export interface Navigation {
     | {
         label: string;
         /**
-         * Без префикса локали: /catalog
+         * Куда ведёт ссылка. «О нас», «Доставка», «Контакты», «Бренды» — страницы фазы 5.
          */
-        href: string;
+        target?:
+          | ('home' | 'catalog' | 'catalogDiscounted' | 'catalogNew' | 'brands' | 'about' | 'delivery' | 'contacts')
+          | null;
+        /**
+         * Заполнено — используется вместо выбора слева (внешний URL или внутренний путь без префикса локали, напр. /catalog).
+         */
+        targetOverride?: string | null;
         id?: string | null;
       }[]
     | null;
@@ -1161,7 +1179,8 @@ export interface NavigationSelect<T extends boolean = true> {
     | T
     | {
         label?: T;
-        href?: T;
+        target?: T;
+        targetOverride?: T;
         id?: T;
       };
   footerColumns?:

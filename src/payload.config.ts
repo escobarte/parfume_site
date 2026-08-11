@@ -1,5 +1,8 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { en } from '@payloadcms/translations/languages/en'
+import { ro } from '@payloadcms/translations/languages/ro'
+import { ru } from '@payloadcms/translations/languages/ru'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
@@ -25,6 +28,24 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    components: {
+      // Логотип/акценты MON FLACON поверх стандартного layout (фаза 4.7.6) —
+      // структура экранов Payload admin не трогается, см. src/app/(payload)/custom.scss.
+      graphics: {
+        Icon: '@/components/admin/BrandIcon#BrandIcon',
+        Logo: '@/components/admin/BrandLogo#BrandLogo',
+      },
+      beforeDashboard: ['@/components/admin/NewOrdersCard#NewOrdersCard'],
+    },
+  },
+  // supportedLanguages задаёт РЕАЛЬНЫЙ выбор языка интерфейса /admin (фаза
+  // 4.7.5) — до этого был только английский дефолт Payload, из-за чего
+  // переключатель ro/ru/en ничего не менял. fallbackLanguage — язык нового
+  // пользователя без сохранённого выбора (клиент по умолчанию — русский).
+  // Не путать с next-intl локалями витрины: у Payload admin своя i18n.
+  i18n: {
+    supportedLanguages: { en, ro, ru },
+    fallbackLanguage: 'ru',
   },
   collections: [Products, Brands, Categories, Notes, Media, Orders, Users],
   globals: [Homepage, Settings, Navigation],

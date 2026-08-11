@@ -33,14 +33,14 @@ function escapeCell(value: unknown): string {
 
 const row = (cells: unknown[]) => cells.map(escapeCell).join(SEPARATOR)
 
-export function buildOrderCsv(order: Order): string {
+/** Позиции одной заявки + её итоговая строка — общая часть для одиночного и массового CSV. */
+function orderRows(order: Order): string[] {
   const date = new Date(order.createdAt ?? Date.now()).toISOString().slice(0, 16).replace('T', ' ')
   const customer = order.customer
-
-  const lines = [row([...CSV_COLUMNS])]
+  const rows: string[] = []
 
   for (const item of order.items ?? []) {
-    lines.push(
+    rows.push(
       row([
         date,
         customer?.name ?? '',
@@ -59,10 +59,22 @@ export function buildOrderCsv(order: Order): string {
   }
 
   // Итоговая строка: сумма заявки в колонке sum, остальное пусто.
-  lines.push(
-    row([date, customer?.name ?? '', '', '', 'ИТОГО', '', '', '', '', '', order.total, '']),
-  )
+  rows.push(row([date, customer?.name ?? '', '', '', 'ИТОГО', '', '', '', '', '', order.total, '']))
 
+  return rows
+}
+
+export function buildOrderCsv(order: Order): string {
+  return BOM + [row([...CSV_COLUMNS]), ...orderRows(order)].join('\r\n') + '\r\n'
+}
+
+/**
+ * Массовый CSV (фаза 4.7.4): один файл на несколько выбранных заявок —
+ * одна шапка сверху, позиции + итоговая строка каждой заявки одна за другой.
+ */
+export function buildOrdersCsvBulk(orders: Order[]): string {
+  const lines = [row([...CSV_COLUMNS])]
+  for (const order of orders) lines.push(...orderRows(order))
   return BOM + lines.join('\r\n') + '\r\n'
 }
 

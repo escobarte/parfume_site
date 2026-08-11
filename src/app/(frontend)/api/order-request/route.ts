@@ -57,7 +57,12 @@ export async function POST(request: Request) {
       status: 'new',
       locale: data.locale,
       source: data.source,
-      customer: { name: data.name, phone: data.phone, messenger: data.messenger },
+      customer: {
+        name: data.name,
+        phone: data.phone,
+        email: data.email || undefined,
+        messenger: data.messenger,
+      },
       comment: data.comment,
       items,
       total,

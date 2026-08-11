@@ -1,5 +1,6 @@
 import type { GlobalConfig } from 'payload'
 import { adminOnly, isAdmin, publicRead } from '@/access/roles'
+import { internalLinkFields } from '@/fields/internalLink'
 import { GLOBALS_TAG, revalidateCatalog } from '@/lib/revalidate'
 
 export const Navigation: GlobalConfig = {
@@ -15,24 +16,8 @@ export const Navigation: GlobalConfig = {
       label: 'Меню в шапке',
       admin: { description: 'Каталог · Бренды · Новинки · О нас (WIREFRAMES.md §Шапка).' },
       fields: [
-        {
-          type: 'row',
-          fields: [
-            {
-              name: 'label',
-              type: 'text',
-              required: true,
-              localized: true,
-              admin: { width: '50%' },
-            },
-            {
-              name: 'href',
-              type: 'text',
-              required: true,
-              admin: { width: '50%', description: 'Без префикса локали: /catalog' },
-            },
-          ],
-        },
+        { name: 'label', type: 'text', required: true, localized: true },
+        { type: 'row', fields: internalLinkFields('target') },
       ],
     },
     {

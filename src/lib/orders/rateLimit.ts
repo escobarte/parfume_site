@@ -11,23 +11,33 @@ const MAX_REQUESTS = Number(process.env.ORDERS_RATE_LIMIT ?? 5)
 
 const hits = new Map<string, number[]>()
 
-export function checkRateLimit(ip: string): { allowed: boolean; retryAfter: number } {
+/**
+ * `scope` разводит независимые счётчики по IP на разные endpoint'ы (форма
+ * заявки и, с фазы 4.7.2, поиск заказа по номеру+телефону) — иначе один
+ * общий счётчик позволил бы легитимным заявкам выедать лимит поиска и
+ * наоборот. Дефолт без scope не меняет поведение формы заявки (фаза 4.2).
+ */
+export function checkRateLimit(
+  ip: string,
+  scope = 'default',
+): { allowed: boolean; retryAfter: number } {
+  const key = `${scope}:${ip}`
   const now = Date.now()
-  const recent = (hits.get(ip) ?? []).filter((time) => now - time < WINDOW_MS)
+  const recent = (hits.get(key) ?? []).filter((time) => now - time < WINDOW_MS)
 
   if (recent.length >= MAX_REQUESTS) {
     const retryAfter = Math.ceil((WINDOW_MS - (now - recent[0])) / 1000)
-    hits.set(ip, recent)
+    hits.set(key, recent)
     return { allowed: false, retryAfter }
   }
 
   recent.push(now)
-  hits.set(ip, recent)
+  hits.set(key, recent)
 
   // Чтобы карта не росла бесконечно на длинных прогонах.
   if (hits.size > 5000) {
-    for (const [key, times] of hits) {
-      if (!times.some((time) => now - time < WINDOW_MS)) hits.delete(key)
+    for (const [mapKey, times] of hits) {
+      if (!times.some((time) => now - time < WINDOW_MS)) hits.delete(mapKey)
     }
   }
 

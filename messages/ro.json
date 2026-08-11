@@ -121,6 +121,8 @@
     "name": "Nume",
     "namePlaceholder": "Cum să vă numim",
     "phone": "Telefon",
+    "email": "Email",
+    "emailPlaceholder": "Pentru confirmarea comenzii și linkul spre status",
     "messenger": "Cum să vă contactăm",
     "messengerCall": "Apel",
     "comment": "Comentariu",
@@ -129,6 +131,7 @@
     "sending": "Se trimite…",
     "errorName": "Introduceți numele",
     "errorPhone": "Număr de telefon incorect",
+    "errorEmail": "Email incorect",
     "errorRate": "Prea multe cereri. Încercați peste câteva minute.",
     "errorGeneric": "Nu am reușit să trimitem cererea. Încercați din nou.",
     "agreement": "Trimițând cererea, sunteți de acord să fiți contactat."
@@ -137,7 +140,14 @@
     "title": "Mulțumim!",
     "text": "Cererea este la noi. Vă sunăm sau vă scriem în curând.",
     "orderNumber": "Numărul cererii",
-    "toCatalog": "Înapoi în catalog"
+    "toCatalog": "Înapoi în catalog",
+    "itemsHeading": "Comanda dumneavoastră",
+    "totalLabel": "Total",
+    "contactsHeading": "Contacte",
+    "nameLabel": "Nume",
+    "phoneLabel": "Telefon",
+    "emailLabel": "Email",
+    "statusCta": "Urmăriți statusul comenzii"
   },
   "PromoBar": {
     "close": "Închide"
@@ -146,9 +156,40 @@
     "home": "Pagina principală",
     "catalog": "Catalog",
     "catalogDiscounted": "Catalog cu reduceri",
+    "catalogNew": "Catalog cu noutăți",
     "brands": "Branduri",
     "about": "Despre noi",
     "delivery": "Livrare",
     "contacts": "Contacte"
+  },
+  "OrderEmailCustomer": {
+    "subject": "Comanda {orderNumber} a fost primită — MON FLACON",
+    "heading": "Mulțumim pentru comandă",
+    "intro": "Am primit comanda dumneavoastră {orderNumber} și vă vom contacta în curând.",
+    "totalLabel": "Total",
+    "statusCta": "Urmăriți statusul comenzii"
+  },
+  "OrderStatus": {
+    "new": "Nouă",
+    "confirmed": "Confirmată",
+    "ready": "Pregătită",
+    "issued": "Eliberată",
+    "cancelled": "Anulată"
+  },
+  "OrderStatusPage": {
+    "orderNumber": "Comanda",
+    "title": "Statusul comenzii",
+    "itemsHeading": "Comanda dumneavoastră",
+    "totalLabel": "Total"
+  },
+  "OrderLookup": {
+    "title": "Găsește comanda",
+    "text": "Dacă ați pierdut linkul spre statusul comenzii — introduceți numărul comenzii și telefonul indicat la comandă.",
+    "orderNumberLabel": "Numărul comenzii",
+    "phoneLabel": "Telefon",
+    "submit": "Caută",
+    "sending": "Căutăm…",
+    "errorRate": "Prea multe încercări. Încercați peste câteva minute.",
+    "errorGeneric": "Comanda nu a fost găsită. Verificați numărul și telefonul."
   }
 }

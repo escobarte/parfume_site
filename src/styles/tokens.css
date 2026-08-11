@@ -37,6 +37,14 @@
   --color-danger: #b3453c; /* вне брендбука — согласовать (BRAND.md §2) */
   --color-pattern: rgb(232 207 176 / 0.06); /* фоновый знак-паттерн на navy */
 
+  /* ── Статусы заказа (фаза 4.7.3) — служебные цвета /admin, вне палитры
+     BRAND.md (как --color-danger выше): плашка статуса в списке заявок. ── */
+  --color-status-new: #c1743a; /* новая — требует внимания */
+  --color-status-confirmed: #3d6b8f; /* подтверждена — в работе */
+  --color-status-ready: #8a6d2f; /* готова — на выдаче */
+  --color-status-issued: #4a7a54; /* выдана — завершено */
+  --color-status-cancelled: var(--color-danger); /* отменена */
+
   /* ── Типографика (BRAND.md §3) ────────────────────────────────────── */
   /* --font-inter приходит из next/font (src/lib/fonts.ts): latin + latin-ext
      (диакритики ăâîșț для RO) + cyrillic (RU). Если клиент купит лицензию

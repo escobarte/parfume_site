@@ -121,6 +121,8 @@
     "name": "Имя",
     "namePlaceholder": "Как к вам обращаться",
     "phone": "Телефон",
+    "email": "Email",
+    "emailPlaceholder": "Для подтверждения заказа и ссылки на его статус",
     "messenger": "Как связаться",
     "messengerCall": "Звонок",
     "comment": "Комментарий",
@@ -129,6 +131,7 @@
     "sending": "Отправляем…",
     "errorName": "Укажите имя",
     "errorPhone": "Неверный номер телефона",
+    "errorEmail": "Неверный email",
     "errorRate": "Слишком много заявок. Попробуйте через несколько минут.",
     "errorGeneric": "Не удалось отправить заявку. Попробуйте ещё раз.",
     "agreement": "Отправляя заявку, вы соглашаетесь на связь с вами."
@@ -137,7 +140,14 @@
     "title": "Спасибо!",
     "text": "Заявка у нас. Скоро позвоним или напишем.",
     "orderNumber": "Номер заявки",
-    "toCatalog": "Вернуться в каталог"
+    "toCatalog": "Вернуться в каталог",
+    "itemsHeading": "Состав заказа",
+    "totalLabel": "Итого",
+    "contactsHeading": "Контакты",
+    "nameLabel": "Имя",
+    "phoneLabel": "Телефон",
+    "emailLabel": "Email",
+    "statusCta": "Отследить статус заказа"
   },
   "PromoBar": {
     "close": "Закрыть"
@@ -146,9 +156,40 @@
     "home": "Главная",
     "catalog": "Каталог",
     "catalogDiscounted": "Каталог со скидками",
+    "catalogNew": "Каталог с новинками",
     "brands": "Бренды",
     "about": "О нас",
     "delivery": "Доставка",
     "contacts": "Контакты"
+  },
+  "OrderEmailCustomer": {
+    "subject": "Заявка {orderNumber} принята — MON FLACON",
+    "heading": "Спасибо за заказ",
+    "intro": "Мы получили вашу заявку {orderNumber} и скоро свяжемся с вами.",
+    "totalLabel": "Итого",
+    "statusCta": "Отследить статус заказа"
+  },
+  "OrderStatus": {
+    "new": "Новая",
+    "confirmed": "Подтверждена",
+    "ready": "Готова",
+    "issued": "Выдана",
+    "cancelled": "Отменена"
+  },
+  "OrderStatusPage": {
+    "orderNumber": "Заказ",
+    "title": "Статус заказа",
+    "itemsHeading": "Состав заказа",
+    "totalLabel": "Итого"
+  },
+  "OrderLookup": {
+    "title": "Найти заказ",
+    "text": "Если ссылка на статус заказа потерялась — введите номер заказа и телефон, указанный при оформлении.",
+    "orderNumberLabel": "Номер заказа",
+    "phoneLabel": "Телефон",
+    "submit": "Найти",
+    "sending": "Ищем…",
+    "errorRate": "Слишком много попыток. Попробуйте через несколько минут.",
+    "errorGeneric": "Заказ не найден. Проверьте номер и телефон."
   }
 }

@@ -3,6 +3,8 @@ import * as migration_20260804_200000_search from './20260804_200000_search';
 import * as migration_20260805_133900_orders_csv from './20260805_133900_orders_csv';
 import * as migration_20260810_063924_discounts_promo from './20260810_063924_discounts_promo';
 import * as migration_20260810_122918_phase4_5_fixes from './20260810_122918_phase4_5_fixes';
+import * as migration_20260811_090518_phase4_6_order_flow from './20260811_090518_phase4_6_order_flow';
+import * as migration_20260811_094105_phase4_7_order_status from './20260811_094105_phase4_7_order_status';
 
 export const migrations = [
   {
@@ -28,6 +30,16 @@ export const migrations = [
   {
     up: migration_20260810_122918_phase4_5_fixes.up,
     down: migration_20260810_122918_phase4_5_fixes.down,
-    name: '20260810_122918_phase4_5_fixes'
+    name: '20260810_122918_phase4_5_fixes',
+  },
+  {
+    up: migration_20260811_090518_phase4_6_order_flow.up,
+    down: migration_20260811_090518_phase4_6_order_flow.down,
+    name: '20260811_090518_phase4_6_order_flow',
+  },
+  {
+    up: migration_20260811_094105_phase4_7_order_status.up,
+    down: migration_20260811_094105_phase4_7_order_status.down,
+    name: '20260811_094105_phase4_7_order_status'
   },
 ];

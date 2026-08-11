@@ -7,6 +7,7 @@ const TARGET_LABELS: Record<(typeof LINK_TARGETS)[number], string> = {
   home: 'Главная',
   catalog: 'Каталог',
   catalogDiscounted: 'Каталог со скидками',
+  catalogNew: 'Каталог с новинками',
   brands: 'Бренды',
   about: 'О нас',
   delivery: 'Доставка',

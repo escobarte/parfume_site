@@ -266,9 +266,12 @@ async function seedGlobals(
     },
   }
 
-  const headerHrefs = ['/catalog', '/brands', '/catalog?new=1', '/about']
+  // Цели select+override (фаза 4.6.4): пункт «Новинки» раньше вёл на
+  // /catalog?new=1, который каталог не понимает (нужен flags=isNew) —
+  // тот же баг, что чинится и в шапке.
+  const headerTargets = ['catalog', 'brands', 'catalogNew', 'about'] as const
   const columnHrefs = [
-    ['/catalog?new=1', '/brands', '/catalog/femei', '/catalog/barbati'],
+    ['/catalog?flags=isNew', '/brands', '/catalog/femei', '/catalog/barbati'],
     ['/delivery', '/payment', '/returns', '/contacts'],
   ]
 
@@ -286,7 +289,7 @@ async function seedGlobals(
         header: nav[locale].header.map((label, index) => ({
           ...(rows ? { id: rows.headerIds[index] } : {}),
           label,
-          href: headerHrefs[index],
+          target: headerTargets[index],
         })),
         footerColumns: nav[locale].columns.map(([title, ...labels], columnIndex) => ({
           ...(rows ? { id: rows.columnIds[columnIndex] } : {}),

@@ -8,7 +8,7 @@ import { useCart } from '@/lib/cart/store'
 import { MESSENGERS } from '@/lib/orders/schema'
 import { digitsOf, PHONE_PREFIX, PhoneInput } from './PhoneInput'
 
-type Errors = Partial<Record<'name' | 'phone' | 'form', string>>
+type Errors = Partial<Record<'name' | 'phone' | 'email' | 'form', string>>
 
 /** Форма заявки: имя, телефон с маской +373, мессенджер, комментарий. */
 export function OrderForm() {
@@ -20,6 +20,7 @@ export function OrderForm() {
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [messenger, setMessenger] = useState<(typeof MESSENGERS)[number]>('telegram')
   const [comment, setComment] = useState('')
   const [company, setCompany] = useState('') // honeypot
@@ -33,6 +34,9 @@ export function OrderForm() {
     const next: Errors = {}
     if (name.trim().length < 2) next.name = t('errorName')
     if (digitsOf(phone).length !== 8) next.phone = t('errorPhone')
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      next.email = t('errorEmail')
+    }
     setErrors(next)
     if (Object.keys(next).length) return
 
@@ -44,6 +48,7 @@ export function OrderForm() {
         body: JSON.stringify({
           name: name.trim(),
           phone: `${PHONE_PREFIX}${digitsOf(phone)}`,
+          email: email.trim() || undefined,
           messenger,
           comment: comment.trim() || undefined,
           locale,
@@ -62,12 +67,21 @@ export function OrderForm() {
         }),
       })
 
-      const data = (await response.json()) as { ok: boolean; orderNumber?: string; error?: string }
+      const data = (await response.json()) as {
+        ok: boolean
+        orderNumber?: string
+        error?: string
+        fields?: string[]
+      }
 
       if (!response.ok || !data.ok) {
         setErrors({
           form: data.error === 'rate_limit' ? t('errorRate') : t('errorGeneric'),
-          ...(data.error === 'validation' ? { phone: t('errorPhone') } : {}),
+          ...(data.error === 'validation' && data.fields?.includes('email')
+            ? { email: t('errorEmail') }
+            : data.error === 'validation'
+              ? { phone: t('errorPhone') }
+              : {}),
         })
         return
       }
@@ -119,6 +133,20 @@ export function OrderForm() {
           />
           {errors.phone && <span className="text-danger text-eyebrow">{errors.phone}</span>}
         </div>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-ink-muted text-eyebrow tracking-label uppercase">{t('email')}</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder={t('emailPlaceholder')}
+            autoComplete="email"
+            aria-invalid={Boolean(errors.email) || undefined}
+            className={fieldClass(Boolean(errors.email))}
+          />
+          {errors.email && <span className="text-danger text-eyebrow">{errors.email}</span>}
+        </label>
 
         <div className="flex flex-col gap-1.5">
           <span className="text-ink-muted text-eyebrow tracking-label uppercase">

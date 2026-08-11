@@ -1,10 +1,18 @@
-import type { CollectionConfig } from 'payload'
-import { adminOnly, staffOnly } from '@/access/roles'
+import type { CollectionConfig, Where } from 'payload'
+import crypto from 'node:crypto'
+import { adminOnly, isStaff, staffOnly } from '@/access/roles'
+import { buildOrdersCsvBulk } from '@/lib/orders/csv'
+import type { Order } from '@/payload-types'
 
+// Подписи — хардкод-русский, как весь остальной admin UI (CLAUDE.md).
+// «done» расщеплён на «ready»/«issued» (готова к выдаче ≠ фактически выдана),
+// «contacted» переименован в «confirmed» — 5 значений вместо 4 (фаза 4.7.1).
+// Публичные подписи для страницы статуса заказа — messages/*.json::OrderStatus.
 export const ORDER_STATUSES = [
   { label: 'Новая', value: 'new' },
-  { label: 'Связались', value: 'contacted' },
-  { label: 'Выполнена', value: 'done' },
+  { label: 'Подтверждена', value: 'confirmed' },
+  { label: 'Готова', value: 'ready' },
+  { label: 'Выдана', value: 'issued' },
   { label: 'Отменена', value: 'cancelled' },
 ] as const
 
@@ -17,6 +25,7 @@ export const Orders: CollectionConfig = {
     // (PLAN.md §6.3) — поля группы адресуются через точку.
     defaultColumns: [
       'orderNumber',
+      'csvDownload',
       'createdAt',
       'customer.name',
       'customer.phone',
@@ -25,6 +34,11 @@ export const Orders: CollectionConfig = {
     ],
     group: 'Заказы',
     listSearchableFields: ['orderNumber'],
+    // Кнопка «CSV выбранных» (фаза 4.7.4) — над таблицей списка, доступна
+    // всегда, но действует только когда что-то выделено (useSelection).
+    components: {
+      beforeListTable: ['@/components/admin/OrdersBulkCsv#OrdersBulkCsv'],
+    },
   },
   access: {
     // Заявки создаёт route handler через Local API (overrideAccess), снаружи — нельзя.
@@ -33,6 +47,40 @@ export const Orders: CollectionConfig = {
     update: staffOnly,
     delete: adminOnly,
   },
+  endpoints: [
+    {
+      // Массовый CSV нескольких заявок (фаза 4.7.4) — один файл, шапка одна,
+      // позиции + итоговая строка каждой заявки друг за другом.
+      path: '/bulk-csv',
+      method: 'get',
+      handler: async (req) => {
+        if (!isStaff(req.user)) return new Response('Forbidden', { status: 403 })
+
+        // where приходит уже структурой из useSelection().getQueryParams()
+        // (?where[id][in][0]=1... или, для «выбрать все доступные», реальный
+        // where-фильтр списка — не только id уже отрисованных строк).
+        const where = req.query?.where
+        if (!where || typeof where !== 'object') return new Response('Bad Request', { status: 400 })
+
+        const { docs } = await req.payload.find({
+          collection: 'orders',
+          where: where as Where,
+          depth: 0,
+          limit: 0,
+          pagination: false,
+        })
+        if (!docs.length) return new Response('Bad Request', { status: 400 })
+
+        const csv = buildOrdersCsvBulk(docs as Order[])
+        return new Response(csv, {
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': 'attachment; filename="orders.csv"',
+          },
+        })
+      },
+    },
+  ],
   hooks: {
     beforeChange: [
       ({ data, operation }) => {
@@ -41,6 +89,12 @@ export const Orders: CollectionConfig = {
           const stamp = now.toISOString().slice(2, 10).replace(/-/g, '')
           const rand = Math.random().toString(36).slice(2, 6).toUpperCase()
           data.orderNumber = `MF-${stamp}-${rand}`
+        }
+        // Токен публичной страницы статуса (фаза 4.7) — генерируется уже
+        // сейчас (фаза 4.6), чтобы ссылка в письме клиенту/thank-you сразу
+        // указывала на итоговый адрес. Криптослучайный, не подбираем.
+        if (operation === 'create' && !data.statusToken) {
+          data.statusToken = crypto.randomBytes(24).toString('hex')
         }
         return data
       },
@@ -55,13 +109,37 @@ export const Orders: CollectionConfig = {
       admin: { position: 'sidebar', readOnly: true },
     },
     {
+      // Фаза 4.7: публичная страница /order/<token>. Заведено уже здесь
+      // (4.6) вместе с генерацией — станет доступно по ссылке, как только
+      // появится сама страница.
+      name: 'statusToken',
+      type: 'text',
+      unique: true,
+      index: true,
+      admin: { position: 'sidebar', readOnly: true, description: 'Токен страницы статуса заказа.' },
+    },
+    {
       name: 'status',
       type: 'select',
       required: true,
       defaultValue: 'new',
       index: true,
       options: [...ORDER_STATUSES],
-      admin: { position: 'sidebar' },
+      admin: {
+        position: 'sidebar',
+        // Цветная плашка в списке (фаза 4.7.3) — цвета только из tokens.css.
+        components: { Cell: '@/components/admin/OrderStatusCell#OrderStatusCell' },
+      },
+    },
+    {
+      // Кнопка CSV прямо в строке списка (фаза 4.7.4), рядом с номером —
+      // без сети, из уже загруженного exportCsv строки (как в карточке).
+      name: 'csvDownload',
+      type: 'ui',
+      label: 'CSV',
+      admin: {
+        components: { Cell: '@/components/admin/OrderCsvCell#OrderCsvCell' },
+      },
     },
     {
       name: 'locale',
@@ -90,6 +168,11 @@ export const Orders: CollectionConfig = {
             { name: 'name', type: 'text', required: true, admin: { width: '50%' } },
             { name: 'phone', type: 'text', required: true, index: true, admin: { width: '50%' } },
           ],
+        },
+        {
+          name: 'email',
+          type: 'email',
+          admin: { description: 'Необязательно — для письма-подтверждения и ссылки на статус заказа.' },
         },
         {
           name: 'messenger',

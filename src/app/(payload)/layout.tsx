@@ -7,6 +7,10 @@ import { handleServerFunctions, RootLayout } from '@payloadcms/next/layouts'
 import React from 'react'
 
 import { importMap } from './admin/importMap.js'
+// Единственный источник цветов/шрифта для брендинга /admin (фаза 4.7.6) —
+// custom.scss ниже ссылается на эти переменные через var(--color-navy) и т.п.,
+// а не хардкодит hex.
+import '@/styles/tokens.css'
 import './custom.scss'
 
 type Args = {

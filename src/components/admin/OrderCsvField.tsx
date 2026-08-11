@@ -1,6 +1,7 @@
 'use client'
 
 import { useFormFields } from '@payloadcms/ui'
+import { downloadCsv } from '@/lib/admin/downloadCsv'
 
 /**
  * Кнопка «Скачать CSV» в карточке заявки.
@@ -17,17 +18,7 @@ export function OrderCsvField() {
 
   if (!csv) return null
 
-  const download = () => {
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${orderNumber ?? 'order'}.csv`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
-  }
+  const download = () => downloadCsv(csv, `${orderNumber ?? 'order'}.csv`)
 
   return (
     <div className="field-type" style={{ marginBottom: '1.5rem' }}>

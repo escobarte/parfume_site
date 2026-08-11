@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react'
+
 /**
  * Знак бренда — контур флакона (BRAND.md §4).
  * Плейсхолдер той же геометрии, что в мокапе; заменится SVG-исходником
@@ -6,12 +8,16 @@
 export function BrandMark({
   className,
   strokeWidth = 4,
+  style,
 }: {
   className?: string
   strokeWidth?: number
+  // Инлайн-размер для контекстов без Tailwind (напр. /admin — фаза 4.7.6),
+  // где className с utility-классами недоступен.
+  style?: CSSProperties
 }) {
   return (
-    <svg viewBox="0 0 100 118" fill="none" className={className} aria-hidden="true">
+    <svg viewBox="0 0 100 118" fill="none" className={className} style={style} aria-hidden="true">
       <rect
         x="44"
         y="6"

@@ -121,6 +121,8 @@
     "name": "Name",
     "namePlaceholder": "How to address you",
     "phone": "Phone",
+    "email": "Email",
+    "emailPlaceholder": "For order confirmation and the status link",
     "messenger": "How to reach you",
     "messengerCall": "Call",
     "comment": "Comment",
@@ -129,6 +131,7 @@
     "sending": "Sending…",
     "errorName": "Enter your name",
     "errorPhone": "Invalid phone number",
+    "errorEmail": "Invalid email",
     "errorRate": "Too many requests. Try again in a few minutes.",
     "errorGeneric": "Could not send the request. Please try again.",
     "agreement": "By sending the request you agree to be contacted."
@@ -137,7 +140,14 @@
     "title": "Thank you!",
     "text": "We have your request. We will call or write shortly.",
     "orderNumber": "Request number",
-    "toCatalog": "Back to the catalog"
+    "toCatalog": "Back to the catalog",
+    "itemsHeading": "Your order",
+    "totalLabel": "Total",
+    "contactsHeading": "Contacts",
+    "nameLabel": "Name",
+    "phoneLabel": "Phone",
+    "emailLabel": "Email",
+    "statusCta": "Track your order status"
   },
   "PromoBar": {
     "close": "Close"
@@ -146,9 +156,40 @@
     "home": "Home",
     "catalog": "Catalog",
     "catalogDiscounted": "Catalog on sale",
+    "catalogNew": "Catalog of new arrivals",
     "brands": "Brands",
     "about": "About",
     "delivery": "Delivery",
     "contacts": "Contacts"
+  },
+  "OrderEmailCustomer": {
+    "subject": "Order {orderNumber} received — MON FLACON",
+    "heading": "Thank you for your order",
+    "intro": "We've received your order {orderNumber} and will contact you shortly.",
+    "totalLabel": "Total",
+    "statusCta": "Track your order status"
+  },
+  "OrderStatus": {
+    "new": "New",
+    "confirmed": "Confirmed",
+    "ready": "Ready",
+    "issued": "Issued",
+    "cancelled": "Cancelled"
+  },
+  "OrderStatusPage": {
+    "orderNumber": "Order",
+    "title": "Order status",
+    "itemsHeading": "Your order",
+    "totalLabel": "Total"
+  },
+  "OrderLookup": {
+    "title": "Find your order",
+    "text": "If you've lost the link to your order status — enter the order number and the phone used at checkout.",
+    "orderNumberLabel": "Order number",
+    "phoneLabel": "Phone",
+    "submit": "Find",
+    "sending": "Searching…",
+    "errorRate": "Too many attempts. Try again in a few minutes.",
+    "errorGeneric": "Order not found. Check the number and phone."
   }
 }
