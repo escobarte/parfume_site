@@ -14,6 +14,8 @@
     "migrate": "cross-env NODE_OPTIONS=--no-deprecation payload migrate",
     "migrate:create": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:create",
     "seed": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/seed.ts",
+    "seed:load": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/seed-load.ts",
+    "seed:load:clean": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/seed-load-clean.ts",
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
