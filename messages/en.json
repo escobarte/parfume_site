@@ -1,7 +1,13 @@
 {
   "HomePage": {
-    "greeting": "Welcome to MON FLACON",
-    "tagline": "Perfumes for everyone."
+    "categories": {
+      "count": "{count, plural, one {# scent} other {# scents}}"
+    },
+    "rows": {
+      "newTitle": "New arrivals",
+      "hitsTitle": "Bestsellers",
+      "seeAll": "See all"
+    }
   },
   "Nav": {
     "home": "Home",
@@ -13,7 +19,20 @@
     "breadcrumbs": "Breadcrumbs"
   },
   "Footer": {
-    "contacts": "Contacts"
+    "contacts": "Contacts",
+    "trackOrder": "Track order"
+  },
+  "NotFound": {
+    "title": "Page not found",
+    "text": "The link may be outdated or the address mistyped. Take a look at the catalog — there's always something to see.",
+    "cta": "To the catalog"
+  },
+  "ErrorPage": {
+    "eyebrow": "Error",
+    "title": "Something went wrong",
+    "text": "Try reloading the page. If the problem persists, message us on one of the channels listed in Contacts.",
+    "retry": "Try again",
+    "home": "Go home"
   },
   "Search": {
     "title": "Search",

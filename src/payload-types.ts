@@ -71,6 +71,7 @@ export interface Config {
     brands: Brand;
     categories: Category;
     notes: Note;
+    pages: Page;
     media: Media;
     orders: Order;
     users: User;
@@ -85,6 +86,7 @@ export interface Config {
     brands: BrandsSelect<false> | BrandsSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     notes: NotesSelect<false> | NotesSelect<true>;
+    pages: PagesSelect<false> | PagesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
@@ -392,6 +394,49 @@ export interface Note {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages".
+ */
+export interface Page {
+  id: number;
+  title: string;
+  /**
+   * Латиницей, один на все локали. Пусто — соберётся из названия.
+   */
+  slug: string;
+  body?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  seo?: {
+    /**
+     * До ~60 знаков. Пусто — берётся название.
+     */
+    title?: string | null;
+    /**
+     * До ~160 знаков.
+     */
+    description?: string | null;
+    /**
+     * Картинка для OG-превью.
+     */
+    image?: (number | null) | Media;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "orders".
  */
 export interface Order {
@@ -525,6 +570,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'notes';
         value: number | Note;
+      } | null)
+    | ({
+        relationTo: 'pages';
+        value: number | Page;
       } | null)
     | ({
         relationTo: 'media';
@@ -682,6 +731,24 @@ export interface NotesSelect<T extends boolean = true> {
   slug?: T;
   description?: T;
   group?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages_select".
+ */
+export interface PagesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  body?: T;
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
@@ -876,13 +943,17 @@ export interface Homepage {
      * Пусто — берётся подпись выбранной цели.
      */
     ctaLabel?: string | null;
+    ctaTargetMode?: ('system' | 'page') | null;
     /**
-     * Куда ведёт ссылка. «О нас», «Доставка», «Контакты», «Бренды» — страницы фазы 5.
+     * Каталог, Бренды, Главная и т.п. — не Pages-контент.
      */
-    ctaTarget?:
-      ('home' | 'catalog' | 'catalogDiscounted' | 'catalogNew' | 'brands' | 'about' | 'delivery' | 'contacts') | null;
+    ctaTarget?: ('home' | 'catalog' | 'catalogDiscounted' | 'catalogNew' | 'brands' | 'orderLookup') | null;
     /**
-     * Заполнено — используется вместо выбора слева (внешний URL или внутренний путь без префикса локали, напр. /catalog).
+     * О нас, Доставка, Контакты и другой контент из коллекции Страницы.
+     */
+    ctaTargetPage?: (number | null) | Page;
+    /**
+     * Заполнено — используется вместо выбора выше (внешний URL или внутренний путь без префикса локали, напр. /catalog).
      */
     ctaTargetOverride?: string | null;
     /**
@@ -998,13 +1069,17 @@ export interface Setting {
      * Пусто — берётся подпись выбранной цели.
      */
     linkLabel?: string | null;
+    linkTargetMode?: ('system' | 'page') | null;
     /**
-     * Куда ведёт ссылка. «О нас», «Доставка», «Контакты», «Бренды» — страницы фазы 5.
+     * Каталог, Бренды, Главная и т.п. — не Pages-контент.
      */
-    linkTarget?:
-      ('home' | 'catalog' | 'catalogDiscounted' | 'catalogNew' | 'brands' | 'about' | 'delivery' | 'contacts') | null;
+    linkTarget?: ('home' | 'catalog' | 'catalogDiscounted' | 'catalogNew' | 'brands' | 'orderLookup') | null;
     /**
-     * Заполнено — используется вместо выбора слева (внешний URL или внутренний путь без префикса локали, напр. /catalog).
+     * О нас, Доставка, Контакты и другой контент из коллекции Страницы.
+     */
+    linkTargetPage?: (number | null) | Page;
+    /**
+     * Заполнено — используется вместо выбора выше (внешний URL или внутренний путь без префикса локали, напр. /catalog).
      */
     linkTargetOverride?: string | null;
     /**
@@ -1031,14 +1106,17 @@ export interface Navigation {
   header?:
     | {
         label: string;
+        targetMode?: ('system' | 'page') | null;
         /**
-         * Куда ведёт ссылка. «О нас», «Доставка», «Контакты», «Бренды» — страницы фазы 5.
+         * Каталог, Бренды, Главная и т.п. — не Pages-контент.
          */
-        target?:
-          | ('home' | 'catalog' | 'catalogDiscounted' | 'catalogNew' | 'brands' | 'about' | 'delivery' | 'contacts')
-          | null;
+        target?: ('home' | 'catalog' | 'catalogDiscounted' | 'catalogNew' | 'brands' | 'orderLookup') | null;
         /**
-         * Заполнено — используется вместо выбора слева (внешний URL или внутренний путь без префикса локали, напр. /catalog).
+         * О нас, Доставка, Контакты и другой контент из коллекции Страницы.
+         */
+        targetPage?: (number | null) | Page;
+        /**
+         * Заполнено — используется вместо выбора выше (внешний URL или внутренний путь без префикса локали, напр. /catalog).
          */
         targetOverride?: string | null;
         id?: string | null;
@@ -1082,7 +1160,9 @@ export interface HomepageSelect<T extends boolean = true> {
         title?: T;
         subtitle?: T;
         ctaLabel?: T;
+        ctaTargetMode?: T;
         ctaTarget?: T;
+        ctaTargetPage?: T;
         ctaTargetOverride?: T;
         image?: T;
         startDate?: T;
@@ -1161,7 +1241,9 @@ export interface SettingsSelect<T extends boolean = true> {
         enabled?: T;
         text?: T;
         linkLabel?: T;
+        linkTargetMode?: T;
         linkTarget?: T;
+        linkTargetPage?: T;
         linkTargetOverride?: T;
         startDate?: T;
         endDate?: T;
@@ -1179,7 +1261,9 @@ export interface NavigationSelect<T extends boolean = true> {
     | T
     | {
         label?: T;
+        targetMode?: T;
         target?: T;
+        targetPage?: T;
         targetOverride?: T;
         id?: T;
       };

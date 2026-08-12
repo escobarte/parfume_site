@@ -17,7 +17,7 @@ export const Navigation: GlobalConfig = {
       admin: { description: 'Каталог · Бренды · Новинки · О нас (WIREFRAMES.md §Шапка).' },
       fields: [
         { name: 'label', type: 'text', required: true, localized: true },
-        { type: 'row', fields: internalLinkFields('target') },
+        ...internalLinkFields('target'),
       ],
     },
     {

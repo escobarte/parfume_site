@@ -15,7 +15,7 @@ const TMP_DIR = path.resolve(process.cwd(), '.seed-tmp')
 /** Создать или обновить документ по slug; вернуть id. Seed идемпотентен. */
 async function upsertBySlug(
   payload: Payload,
-  collection: 'brands' | 'categories' | 'notes' | 'products',
+  collection: 'brands' | 'categories' | 'notes' | 'products' | 'pages',
   slug: string,
   byLocale: (locale: Locale) => Record<string, unknown>,
 ): Promise<number | string> {
@@ -169,7 +169,9 @@ async function main() {
     }))
   }
 
-  await seedGlobals(payload, { brandIds, categoryIds })
+  const pageIds = await seedPages(payload)
+
+  await seedGlobals(payload, { brandIds, categoryIds, pageIds })
 
   await rm(TMP_DIR, { recursive: true, force: true })
 
@@ -185,11 +187,114 @@ async function main() {
   process.exit(0)
 }
 
+/**
+ * Статические страницы (фаза 5.2): slug фиксирован под системные цели
+ * LINK_TARGETS (about/delivery/contacts) и футер (returns) — маршруты
+ * `/[locale]/{about,delivery,returns,contacts}` уже ждут ровно эти slug.
+ * Текст — стартовый черновик в голосе бренда (BRAND.md §7), правится из
+ * админки владельцем/клиентом, сюда зашит не как код, а как первичный контент.
+ */
+async function seedPages(payload: Payload): Promise<Map<string, number | string>> {
+  const pages: {
+    slug: 'about' | 'delivery' | 'returns' | 'contacts'
+    title: Record<Locale, string>
+    body: Record<Locale, string[]>
+  }[] = [
+    {
+      slug: 'about',
+      title: { ro: 'Despre noi', ru: 'О нас', en: 'About us' },
+      body: {
+        ro: [
+          'MON FLACON este o galerie de parfumuri din Chișinău. Nu credem în reguli stricte despre cum trebuie să miroasă cineva — aroma este o alegere personală, la fel ca o haină sau o culoare preferată.',
+          'Selecția noastră reunește nișă și mărci cunoscute, pentru orice buget și orice poveste. Vă ajutăm să explorați, să încercați și să găsiți aroma care vă reprezintă.',
+        ],
+        ru: [
+          'MON FLACON — парфюмерная галерея в Кишинёве. Мы не верим в строгие правила о том, как «должен» пахнуть человек — аромат такой же личный выбор, как любимый цвет или силуэт одежды.',
+          'В подборке — нишевые и известные бренды, на любой бюджет и вкус. Мы помогаем исследовать, пробовать и находить тот аромат, который говорит именно о вас.',
+        ],
+        en: [
+          'MON FLACON is a perfume gallery in Chisinau. We don’t believe in strict rules about how someone should smell — scent is a personal choice, just like a favourite colour or silhouette.',
+          'Our selection brings together niche and well-known houses, for every budget and every story. We help you explore, try, and find the scent that feels like you.',
+        ],
+      },
+    },
+    {
+      slug: 'delivery',
+      title: { ro: 'Livrare', ru: 'Доставка', en: 'Delivery' },
+      body: {
+        ro: [
+          'Livrăm în Chișinău și în toată Moldova. După ce trimiteți cererea din coșul de cumpărături, un consultant vă contactează pentru a confirma comanda, adresa și metoda de livrare.',
+          'Plata se face la livrare sau prin transfer, în funcție de înțelegerea cu consultantul. Termenul de livrare în Chișinău este de obicei 1–2 zile lucrătoare.',
+        ],
+        ru: [
+          'Доставляем по Кишинёву и всей Молдове. После отправки заявки из корзины с вами свяжется консультант, чтобы подтвердить заказ, адрес и способ доставки.',
+          'Оплата — при получении или переводом, по договорённости с консультантом. Срок доставки по Кишинёву обычно 1–2 рабочих дня.',
+        ],
+        en: [
+          'We deliver across Chisinau and all of Moldova. After you submit a request from the cart, a consultant will contact you to confirm the order, address, and delivery method.',
+          'Payment is on delivery or by transfer, as agreed with the consultant. Delivery within Chisinau usually takes 1–2 business days.',
+        ],
+      },
+    },
+    {
+      slug: 'returns',
+      title: { ro: 'Retur', ru: 'Возврат', en: 'Returns' },
+      body: {
+        ro: [
+          'Dacă parfumul ales nu vi se potrivește, ne puteți contacta în 14 zile de la primire pentru retur sau schimb — flaconul trebuie să fie nedeschis și în ambalajul original.',
+          'Pentru a începe un retur, scrieți-ne prin mesagerul indicat în comandă sau folosiți pagina de urmărire a comenzii pentru a găsi datele de contact.',
+        ],
+        ru: [
+          'Если выбранный аромат не подошёл, можно обратиться в течение 14 дней с момента получения для возврата или обмена — флакон должен быть невскрытым, в оригинальной упаковке.',
+          'Чтобы оформить возврат, напишите нам в мессенджер, указанный при оформлении заказа, либо найдите контакты на странице отслеживания заказа.',
+        ],
+        en: [
+          'If the scent you chose isn’t the right fit, you can reach us within 14 days of receiving it for a return or exchange — the bottle must be unopened and in its original packaging.',
+          'To start a return, message us via the channel you used at checkout, or find our contact details on the order status page.',
+        ],
+      },
+    },
+    {
+      slug: 'contacts',
+      title: { ro: 'Contacte', ru: 'Контакты', en: 'Contacts' },
+      body: {
+        ro: [
+          'Ne găsiți în Chișinău. Pentru întrebări despre comenzi, livrare sau selecție, scrieți-ne pe unul dintre mesageriile disponibile — vă răspundem în aceeași zi lucrătoare.',
+          'Datele de contact actuale (adresă, telefon, mesagerii) sunt afișate în subsolul paginii.',
+        ],
+        ru: [
+          'Мы находимся в Кишинёве. По вопросам заказа, доставки или подбора аромата пишите в любой из доступных мессенджеров — отвечаем в течение того же рабочего дня.',
+          'Актуальные контакты (адрес, телефон, мессенджеры) — в подвале сайта.',
+        ],
+        en: [
+          'We are based in Chisinau. For questions about orders, delivery, or finding the right scent, message us on any of the available channels — we reply within the same business day.',
+          'Current contact details (address, phone, messengers) are shown in the site footer.',
+        ],
+      },
+    },
+  ]
+
+  const pageIds = new Map<string, number | string>()
+  for (const page of pages) {
+    const id = await upsertBySlug(payload, 'pages', page.slug, (locale) => ({
+      slug: page.slug,
+      title: page.title[locale],
+      body: paragraphs(...page.body[locale]),
+    }))
+    pageIds.set(page.slug, id)
+  }
+  return pageIds
+}
+
 async function seedGlobals(
   payload: Payload,
-  refs: { brandIds: Map<string, number | string>; categoryIds: Map<string, number | string> },
+  refs: {
+    brandIds: Map<string, number | string>
+    categoryIds: Map<string, number | string>
+    pageIds: Map<string, number | string>
+  },
 ) {
-  const { brandIds, categoryIds } = refs
+  const { brandIds, categoryIds, pageIds } = refs
 
   const settings: Record<Locale, Record<string, unknown>> = {
     ro: {
@@ -236,9 +341,12 @@ async function seedGlobals(
           enabled: false,
           text: settings[locale].promoText as string,
           linkLabel: settings[locale].promoLinkLabel as string,
-          linkTarget: 'delivery',
+          // 'delivery' — теперь Pages-документ (фаза 5.2), а не системная
+          // цель select — ссылка идёт через relationship, не через target.
+          linkTargetMode: 'page',
+          linkTargetPage: pageIds.get('delivery'),
         },
-      },
+      } as never,
     })
   }
 
@@ -268,8 +376,17 @@ async function seedGlobals(
 
   // Цели select+override (фаза 4.6.4): пункт «Новинки» раньше вёл на
   // /catalog?new=1, который каталог не понимает (нужен flags=isNew) —
-  // тот же баг, что чинится и в шапке.
-  const headerTargets = ['catalog', 'brands', 'catalogNew', 'about'] as const
+  // тот же баг, что чинится и в шапке. «О нас» с фазы 5.2 — Pages-документ,
+  // не системная цель select, поэтому идёт отдельной веткой (mode: 'page').
+  const headerTargets: (
+    | { mode: 'system'; target: 'catalog' | 'brands' | 'catalogNew' }
+    | { mode: 'page'; pageSlug: 'about' }
+  )[] = [
+    { mode: 'system', target: 'catalog' },
+    { mode: 'system', target: 'brands' },
+    { mode: 'system', target: 'catalogNew' },
+    { mode: 'page', pageSlug: 'about' },
+  ]
   const columnHrefs = [
     ['/catalog?flags=isNew', '/brands', '/catalog/femei', '/catalog/barbati'],
     ['/delivery', '/payment', '/returns', '/contacts'],
@@ -286,11 +403,17 @@ async function seedGlobals(
       slug: 'navigation',
       locale,
       data: {
-        header: nav[locale].header.map((label, index) => ({
-          ...(rows ? { id: rows.headerIds[index] } : {}),
-          label,
-          target: headerTargets[index],
-        })),
+        header: nav[locale].header.map((label, index) => {
+          const target = headerTargets[index]
+          return {
+            ...(rows ? { id: rows.headerIds[index] } : {}),
+            label,
+            targetMode: target.mode,
+            ...(target.mode === 'system'
+              ? { target: target.target }
+              : { targetPage: pageIds.get(target.pageSlug) }),
+          }
+        }),
         footerColumns: nav[locale].columns.map(([title, ...labels], columnIndex) => ({
           ...(rows ? { id: rows.columnIds[columnIndex] } : {}),
           title,
@@ -300,7 +423,7 @@ async function seedGlobals(
             href: columnHrefs[columnIndex][linkIndex],
           })),
         })),
-      },
+      } as never,
     })
 
     if (!rows) {

@@ -6,7 +6,7 @@ import type { Locale } from '@/i18n/routing'
 import { getPayloadClient } from '@/lib/payload'
 import { CATALOG_TAG } from '@/lib/revalidate'
 import { getBrands, getNotes } from './taxonomy'
-import { PAGE_SIZE, type CatalogQuery } from './searchParams'
+import { PAGE_SIZE, type CatalogQuery, type FlagOption } from './searchParams'
 import type { Note } from '@/payload-types'
 import { toCard } from './cards'
 import type { FacetRow, ProductCardData } from './types'
@@ -14,12 +14,14 @@ import type { FacetRow, ProductCardData } from './types'
 /** Область выдачи: категория и/или список slug-ов из поиска. */
 export type CatalogScope = {
   categoryIds?: (number | string)[]
+  brandIds?: (number | string)[]
   slugs?: string[]
 }
 
 const scopeWhere = (scope: CatalogScope): Where[] => {
   const conditions: Where[] = []
   if (scope.categoryIds?.length) conditions.push({ categories: { in: scope.categoryIds } })
+  if (scope.brandIds?.length) conditions.push({ brand: { in: scope.brandIds } })
   if (scope.slugs) {
     // Поиск ничего не нашёл: пустой список в `in` уходит в SQL пустым
     // параметром и роняет запрос (invalid byte sequence 0x00), поэтому
@@ -172,6 +174,38 @@ export async function getFacetSource(
       })
     },
     ['facet-source', key],
+    { tags: [CATALOG_TAG], revalidate: CACHE_TTL },
+  )()
+}
+
+/**
+ * Товарный ряд главной («Новинки»/«Хиты», WIREFRAMES.md §3): N товаров по
+ * одному булеву флагу, свежие сверху. Отдельно от `getProductCards` — та
+ * всегда тянет кратно `PAGE_SIZE` (листинг «показать ещё»), здесь нужен
+ * именно `limit` ряда (обычно 4), без лишней выборки.
+ */
+export async function getFlaggedProducts(
+  locale: Locale,
+  flag: FlagOption,
+  limit: number,
+): Promise<ProductCardData[]> {
+  const key = JSON.stringify({ locale, flag, limit })
+
+  return unstable_cache(
+    async () => {
+      const payload = await getPayloadClient()
+      const result = await payload.find({
+        collection: 'products',
+        locale,
+        depth: 1,
+        limit,
+        sort: '-createdAt',
+        where: { [flag]: { equals: true } },
+      })
+
+      return result.docs.map(toCard)
+    },
+    ['home-row', key],
     { tags: [CATALOG_TAG], revalidate: CACHE_TTL },
   )()
 }

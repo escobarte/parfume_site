@@ -91,7 +91,7 @@ export const Settings: GlobalConfig = {
           localized: true,
           admin: { description: 'Пусто — берётся подпись выбранной цели.' },
         },
-        { type: 'row', fields: internalLinkFields('linkTarget') },
+        ...internalLinkFields('linkTarget'),
         {
           type: 'row',
           fields: [

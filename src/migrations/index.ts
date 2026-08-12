@@ -5,6 +5,8 @@ import * as migration_20260810_063924_discounts_promo from './20260810_063924_di
 import * as migration_20260810_122918_phase4_5_fixes from './20260810_122918_phase4_5_fixes';
 import * as migration_20260811_090518_phase4_6_order_flow from './20260811_090518_phase4_6_order_flow';
 import * as migration_20260811_094105_phase4_7_order_status from './20260811_094105_phase4_7_order_status';
+import * as migration_20260811_201337_phase5_pages_collection from './20260811_201337_phase5_pages_collection';
+import * as migration_20260811_202528_phase5_link_targets_pages from './20260811_202528_phase5_link_targets_pages';
 
 export const migrations = [
   {
@@ -40,6 +42,16 @@ export const migrations = [
   {
     up: migration_20260811_094105_phase4_7_order_status.up,
     down: migration_20260811_094105_phase4_7_order_status.down,
-    name: '20260811_094105_phase4_7_order_status'
+    name: '20260811_094105_phase4_7_order_status',
+  },
+  {
+    up: migration_20260811_201337_phase5_pages_collection.up,
+    down: migration_20260811_201337_phase5_pages_collection.down,
+    name: '20260811_201337_phase5_pages_collection',
+  },
+  {
+    up: migration_20260811_202528_phase5_link_targets_pages.up,
+    down: migration_20260811_202528_phase5_link_targets_pages.down,
+    name: '20260811_202528_phase5_link_targets_pages'
   },
 ];

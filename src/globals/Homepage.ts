@@ -87,7 +87,7 @@ export const Homepage: GlobalConfig = {
                   localized: true,
                   admin: { description: 'Пусто — берётся подпись выбранной цели.' },
                 },
-                { type: 'row', fields: internalLinkFields('ctaTarget') },
+                ...internalLinkFields('ctaTarget'),
                 {
                   name: 'image',
                   type: 'upload',

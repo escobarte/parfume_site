@@ -13,6 +13,7 @@ import { Categories } from './collections/Categories'
 import { Media } from './collections/Media'
 import { Notes } from './collections/Notes'
 import { Orders } from './collections/Orders'
+import { Pages } from './collections/Pages'
 import { Products } from './collections/Products'
 import { Users } from './collections/Users'
 import { Homepage } from './globals/Homepage'
@@ -51,7 +52,7 @@ export default buildConfig({
     supportedLanguages: { en, ro, ru },
     fallbackLanguage: 'ru',
   },
-  collections: [Products, Brands, Categories, Notes, Media, Orders, Users],
+  collections: [Products, Brands, Categories, Notes, Pages, Media, Orders, Users],
   globals: [Homepage, Settings, Navigation],
   editor: lexicalEditor(),
   localization: {

@@ -1,7 +1,13 @@
 {
   "HomePage": {
-    "greeting": "Bine ai venit la MON FLACON",
-    "tagline": "Perfumes for everyone."
+    "categories": {
+      "count": "{count, plural, one {# aromă} few {# arome} other {# de arome}}"
+    },
+    "rows": {
+      "newTitle": "Noutăți",
+      "hitsTitle": "Populare",
+      "seeAll": "Vezi toate"
+    }
   },
   "Nav": {
     "home": "Acasă",
@@ -13,7 +19,20 @@
     "breadcrumbs": "Navigare"
   },
   "Footer": {
-    "contacts": "Contacte"
+    "contacts": "Contacte",
+    "trackOrder": "Verifică comanda"
+  },
+  "NotFound": {
+    "title": "Pagina nu a fost găsită",
+    "text": "Poate linkul e vechi sau adresa conține o greșeală. Explorați catalogul — sigur găsiți ceva de văzut.",
+    "cta": "Spre catalog"
+  },
+  "ErrorPage": {
+    "eyebrow": "Eroare",
+    "title": "Ceva nu a mers bine",
+    "text": "Încercați să reîncărcați pagina. Dacă problema persistă, scrieți-ne pe unul dintre mesageriile din secțiunea Contacte.",
+    "retry": "Reîncercați",
+    "home": "Spre pagina principală"
   },
   "Search": {
     "title": "Căutare",

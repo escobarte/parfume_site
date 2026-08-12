@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server'
 import type { Locale } from '@/i18n/routing'
 import { getSettings } from '@/lib/content/globals'
-import { resolveLinkHref } from '@/lib/links'
+import { resolveInternalLink } from '@/lib/links'
 import { isWithinWindow } from '@/lib/promo'
 import { PromoBannerClient } from './PromoBannerClient'
 
@@ -22,9 +22,20 @@ export async function PromoBanner({ locale }: { locale: Locale }) {
   const active = Boolean(banner?.enabled) && Boolean(banner?.text) && isWithinWindow(banner ?? {})
   if (!active || !banner?.text) return null
 
-  const linkHref = resolveLinkHref(banner.linkTarget, banner.linkTargetOverride)
+  const linkPage = typeof banner.linkTargetPage === 'object' ? banner.linkTargetPage : null
+  const linkHref = resolveInternalLink({
+    mode: banner.linkTargetMode,
+    target: banner.linkTarget,
+    page: linkPage,
+    override: banner.linkTargetOverride,
+  })
   const linkLabel =
-    banner.linkLabel || (banner.linkTarget ? tLinkTargets(banner.linkTarget) : null)
+    banner.linkLabel ||
+    (banner.linkTargetMode === 'page'
+      ? (linkPage?.title ?? null)
+      : banner.linkTarget
+        ? tLinkTargets(banner.linkTarget)
+        : null)
 
   return (
     <PromoBannerClient

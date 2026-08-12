@@ -3,7 +3,7 @@ import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { getHomepage } from '@/lib/content/globals'
-import { resolveLinkHref } from '@/lib/links'
+import { resolveInternalLink } from '@/lib/links'
 import { isWithinWindow } from '@/lib/promo'
 
 const FALLBACK = {
@@ -33,8 +33,20 @@ export async function Hero({ locale }: { locale: Locale }) {
   const promo = homepage.promoHero
   const active = Boolean(promo?.enabled) && isWithinWindow(promo ?? {})
 
-  const promoCtaHref = resolveLinkHref(promo?.ctaTarget, promo?.ctaTargetOverride)
-  const promoCtaLabel = promo?.ctaLabel || (promo?.ctaTarget ? tLinkTargets(promo.ctaTarget) : null)
+  const ctaPage = typeof promo?.ctaTargetPage === 'object' ? promo.ctaTargetPage : null
+  const promoCtaHref = resolveInternalLink({
+    mode: promo?.ctaTargetMode,
+    target: promo?.ctaTarget,
+    page: ctaPage,
+    override: promo?.ctaTargetOverride,
+  })
+  const promoCtaLabel =
+    promo?.ctaLabel ||
+    (promo?.ctaTargetMode === 'page'
+      ? (ctaPage?.title ?? null)
+      : promo?.ctaTarget
+        ? tLinkTargets(promo.ctaTarget)
+        : null)
 
   const eyebrow = (active ? promo?.eyebrow : null) || homepage.hero?.eyebrow || FALLBACK.eyebrow
   const title = (active ? promo?.title : null) || homepage.hero?.title || FALLBACK.title
