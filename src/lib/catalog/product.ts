@@ -30,6 +30,10 @@ export type ProductView = {
   pyramid: { top: string[]; heart: string[]; base: string[] }
   categoryIds: (number | string)[]
   noteIds: (number | string)[]
+  minPrice: number | null
+  maxPrice: number | null
+  inStock: boolean
+  seo: { title?: string | null; description?: string | null; image?: { url: string } | null } | null
 }
 
 const objects = <T>(value: unknown): T[] =>
@@ -72,6 +76,19 @@ function toView(doc: Product): ProductView {
     },
     categoryIds: objects<{ id: number | string }>(doc.categories).map((category) => category.id),
     noteIds: notes.map((note) => note.id),
+    minPrice: doc.minPrice ?? null,
+    maxPrice: doc.maxPrice ?? null,
+    inStock: Boolean(doc.inStock),
+    seo: doc.seo
+      ? {
+          title: doc.seo.title,
+          description: doc.seo.description,
+          image:
+            doc.seo.image && typeof doc.seo.image === 'object'
+              ? { url: (doc.seo.image as Media).url ?? '' }
+              : null,
+        }
+      : null,
   }
 }
 

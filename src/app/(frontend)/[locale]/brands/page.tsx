@@ -1,8 +1,18 @@
+import type { Metadata } from 'next'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { getAllBrands } from '@/lib/catalog/brands'
+import { buildMetadata } from '@/lib/seo/metadata'
+
+export async function generateMetadata(props: {
+  params: Promise<{ locale: Locale }>
+}): Promise<Metadata> {
+  const { locale } = await props.params
+  const t = await getTranslations({ locale, namespace: 'Nav' })
+  return buildMetadata({ locale, path: '/brands', title: t('brands') })
+}
 
 /** Алфавитный указатель брендов (WIREFRAMES.md: страница ещё не утверждена
  * пиксельно — переносит паттерны сайта: линии-разделители, типографику §3). */

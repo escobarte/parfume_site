@@ -1,6 +1,16 @@
+import type { Metadata } from 'next'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import type { Locale } from '@/i18n/routing'
+import { buildMetadata } from '@/lib/seo/metadata'
 import { OrderLookupForm } from './OrderLookupForm'
+
+export async function generateMetadata(props: {
+  params: Promise<{ locale: Locale }>
+}): Promise<Metadata> {
+  const { locale } = await props.params
+  const t = await getTranslations({ locale, namespace: 'OrderLookup' })
+  return buildMetadata({ locale, path: '/order', title: t('title'), noindex: true })
+}
 
 /**
  * Запасной путь страницы статуса заказа (фаза 4.7.2): токен потерян или

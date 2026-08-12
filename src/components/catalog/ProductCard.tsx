@@ -86,7 +86,7 @@ export async function ProductCard({
             <span className="text-ink text-body font-medium">
               {t('from')} {formatPrice(product.displayPrice, locale)}
               {product.oldPrice !== null && (
-                <span className="text-ink-subtle text-label ml-1.5 font-normal line-through">
+                <span className="text-ink-muted text-label ml-1.5 font-normal line-through">
                   {formatPrice(product.oldPrice, locale)}
                 </span>
               )}

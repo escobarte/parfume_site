@@ -1,6 +1,7 @@
 import { unstable_cache } from 'next/cache'
 import { CACHE_TTL } from '@/lib/cache'
 import type { Locale } from '@/i18n/routing'
+import type { Media } from '@/payload-types'
 import { getPayloadClient } from '@/lib/payload'
 import { TAXONOMY_TAG } from '@/lib/revalidate'
 
@@ -43,7 +44,12 @@ export const getNotes = (locale: Locale) =>
     { tags: [TAXONOMY_TAG], revalidate: CACHE_TTL },
   )()
 
-export type CategoryItem = TaxonomyItem & { parent: number | string | null; order: number }
+export type CategoryItem = TaxonomyItem & {
+  parent: number | string | null
+  order: number
+  description: string | null
+  seo: { title?: string | null; description?: string | null; image?: { url: string } | null } | null
+}
 
 export const getCategories = (locale: Locale) =>
   unstable_cache(
@@ -52,17 +58,30 @@ export const getCategories = (locale: Locale) =>
       const { docs } = await payload.find({
         collection: 'categories',
         locale,
-        depth: 0,
+        // depth: 1 — seo.image нужен объект с url, не голый id (метаданные, фаза 7.1).
+        depth: 1,
         limit: 500,
         sort: 'order',
       })
-      return docs.map((doc) => ({
-        id: doc.id,
-        slug: doc.slug,
-        title: doc.title,
-        parent: (doc.parent as number | string | null) ?? null,
-        order: doc.order ?? 0,
-      }))
+      return docs.map((doc) => {
+        const seoImage =
+          doc.seo?.image && typeof doc.seo.image === 'object' ? (doc.seo.image as Media) : null
+        return {
+          id: doc.id,
+          slug: doc.slug,
+          title: doc.title,
+          parent: (doc.parent as number | string | null) ?? null,
+          order: doc.order ?? 0,
+          description: doc.description ?? null,
+          seo: doc.seo
+            ? {
+                title: doc.seo.title,
+                description: doc.seo.description,
+                image: seoImage?.url ? { url: seoImage.url } : null,
+              }
+            : null,
+        }
+      })
     },
     ['categories', locale],
     { tags: [TAXONOMY_TAG], revalidate: CACHE_TTL },

@@ -40,14 +40,14 @@ export async function Editorial({ locale }: { locale: Locale }) {
           </Link>
         )}
       </div>
-      <div className="bg-cream flex min-h-70 items-center justify-center">
+      <div className="bg-cream relative flex min-h-70 items-center justify-center">
         {imageUrl ? (
           <Image
             src={imageUrl}
             alt={image?.alt ?? ''}
-            width={image?.width ?? 600}
-            height={image?.height ?? 600}
-            className="h-full w-full object-cover"
+            fill
+            sizes="(max-width: 767px) 100vw, 40vw"
+            className="object-cover"
           />
         ) : (
           <BrandMark className="text-navy h-35 w-auto" strokeWidth={3} />

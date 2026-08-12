@@ -1,7 +1,8 @@
-/** GA4 подключается в фазе 7; до этого dataLayer может отсутствовать. */
+/** GA4 (фаза 7.5): `gtag.js` определяет оба поля на `window` при загрузке. */
 declare global {
   interface Window {
-    dataLayer?: Record<string, unknown>[]
+    dataLayer?: unknown[]
+    gtag?: (...args: unknown[]) => void
   }
 }
 

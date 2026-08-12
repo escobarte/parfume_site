@@ -12,10 +12,13 @@ export type BrandView = {
   description: string | null
   country: string | null
   logo: { url: string; alt: string } | null
+  seo: { title?: string | null; description?: string | null; image?: { url: string } | null } | null
 }
 
 function toView(doc: Brand): BrandView {
   const logo = typeof doc.logo === 'object' && doc.logo ? (doc.logo as Media) : null
+  const seoImage =
+    doc.seo?.image && typeof doc.seo.image === 'object' ? (doc.seo.image as Media) : null
   return {
     id: doc.id,
     slug: doc.slug,
@@ -23,6 +26,13 @@ function toView(doc: Brand): BrandView {
     description: doc.description ?? null,
     country: doc.country ?? null,
     logo: logo?.url ? { url: logo.url, alt: logo.alt ?? doc.title } : null,
+    seo: doc.seo
+      ? {
+          title: doc.seo.title,
+          description: doc.seo.description,
+          image: seoImage?.url ? { url: seoImage.url } : null,
+        }
+      : null,
   }
 }
 

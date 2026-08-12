@@ -1,13 +1,20 @@
+import type { Metadata } from 'next'
 import React from 'react'
 import { hasLocale, NextIntlClientProvider } from 'next-intl'
-import { setRequestLocale } from 'next-intl/server'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
+import { ConsentBanner } from '@/components/analytics/ConsentBanner'
+import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics'
 import { Footer } from '@/components/layout/Footer'
 import { Header } from '@/components/layout/Header'
 import { PromoBanner } from '@/components/layout/PromoBanner'
+import { JsonLd } from '@/components/seo/JsonLd'
 import { inter } from '@/lib/fonts'
-import { routing } from '@/i18n/routing'
+import { routing, type Locale } from '@/i18n/routing'
+import { getSettings } from '@/lib/content/globals'
+import { organizationJsonLd } from '@/lib/seo/jsonld'
+import { localizedPaths, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/seo/config'
 import './styles.css'
 
 /**
@@ -20,9 +27,30 @@ import './styles.css'
  */
 export const dynamic = 'force-dynamic'
 
-export const metadata = {
-  description: 'MON FLACON — parfumuri pentru toată lumea.',
-  title: 'MON FLACON',
+/**
+ * `metadataBase` — единственное место, где резолвятся относительные URL из
+ * `alternates`/`openGraph` дочерних `generateMetadata` (фаза 7.1). Заголовок —
+ * шаблон: дочерние страницы задают свой `title`, сюда всегда добавляется
+ * суффикс бренда; главная (без собственного `generateMetadata`) — дефолт.
+ */
+export async function generateMetadata(props: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await props.params
+  const activeLocale = hasLocale(routing.locales, locale) ? locale : routing.defaultLocale
+  const t = await getTranslations({ locale: activeLocale, namespace: 'Seo' })
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: { default: `${SITE_NAME} — ${SITE_TAGLINE}`, template: `%s · ${SITE_NAME}` },
+    description: t('description'),
+    alternates: { canonical: `/${activeLocale}`, languages: localizedPaths('') },
+    openGraph: {
+      siteName: SITE_NAME,
+      locale: activeLocale,
+      type: 'website',
+    },
+  }
 }
 
 export function generateStaticParams() {
@@ -41,10 +69,15 @@ export default async function LocaleLayout(props: {
   }
 
   setRequestLocale(locale)
+  const settings = await getSettings(locale as Locale)
 
   return (
     <html lang={locale} className={inter.variable}>
       <body className="flex min-h-screen flex-col">
+        {/* Organization/LocalBusiness JSON-LD — сайт-wide (PLAN.md §7.2). */}
+        <JsonLd data={organizationJsonLd(settings, locale as Locale)} />
+        {/* GA4 грузится только после согласия в ConsentBanner (PLAN.md §7.5). */}
+        <GoogleAnalytics />
         <NextIntlClientProvider>
           {/* nuqs держит состояние фильтров в URL — адаптер обязателен (фаза 3.3) */}
           <NuqsAdapter>
@@ -52,6 +85,7 @@ export default async function LocaleLayout(props: {
             <Header locale={locale} />
             <main className="flex-1">{children}</main>
             <Footer locale={locale} />
+            <ConsentBanner />
           </NuqsAdapter>
         </NextIntlClientProvider>
       </body>

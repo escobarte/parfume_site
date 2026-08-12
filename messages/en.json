@@ -1,4 +1,12 @@
 {
+  "ConsentBanner": {
+    "text": "We use analytics to understand which scents visitors are interested in. Personal data is never shared with third parties.",
+    "accept": "Accept",
+    "decline": "Decline"
+  },
+  "Seo": {
+    "description": "MON FLACON is a perfume gallery in Chisinau. Explore, try, and find the scent that feels like you."
+  },
   "HomePage": {
     "categories": {
       "count": "{count, plural, one {# scent} other {# scents}}"

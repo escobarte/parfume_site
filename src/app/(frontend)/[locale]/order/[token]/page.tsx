@@ -1,7 +1,18 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import type { Locale } from '@/i18n/routing'
 import { getPayloadClient } from '@/lib/payload'
+import { buildMetadata } from '@/lib/seo/metadata'
+
+export async function generateMetadata(props: {
+  params: Promise<{ locale: Locale; token: string }>
+}): Promise<Metadata> {
+  const { locale, token } = await props.params
+  const t = await getTranslations({ locale, namespace: 'OrderStatusPage' })
+  // Приватные данные конкретного заказа — никогда не в выдаче.
+  return buildMetadata({ locale, path: `/order/${token}`, title: t('title'), noindex: true })
+}
 
 /**
  * Публичная страница статуса заказа (PLAN.md §9, 4.7.2) — без регистрации,

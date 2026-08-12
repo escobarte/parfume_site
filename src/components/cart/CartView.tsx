@@ -2,8 +2,10 @@
 
 import { Minus, Plus, X } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
+import { useEffect, useRef } from 'react'
 import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
+import { cartItemsToGaItems, cartValue, trackEvent } from '@/lib/analytics/gtag'
 import { selectTotal, useCart } from '@/lib/cart/store'
 import { formatPrice, formatVolume } from '@/lib/format'
 import { useHasHydrated } from '@/lib/useHasHydrated'
@@ -18,6 +20,19 @@ export function CartView() {
   const setQty = useCart((state) => state.setQty)
   const remove = useCart((state) => state.remove)
   const hydrated = useHasHydrated()
+  const checkoutSent = useRef(false)
+
+  // GA4 begin_checkout (PLAN.md §7.5) — один раз за визит на непустую
+  // корзину, после гидрации (до неё `items` не отражает localStorage).
+  useEffect(() => {
+    if (!hydrated || items.length === 0 || checkoutSent.current) return
+    checkoutSent.current = true
+    trackEvent('begin_checkout', {
+      currency: 'MDL',
+      value: cartValue(items),
+      items: cartItemsToGaItems(items),
+    })
+  }, [hydrated, items])
 
   // До гидрации содержимое localStorage неизвестно — рисуем пустой каркас.
   if (!hydrated) return <div className="min-h-100" />

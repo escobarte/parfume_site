@@ -1,5 +1,6 @@
 import { RichText } from '@payloadcms/richtext-lexical/react'
 import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { ProductCard } from '@/components/catalog/ProductCard'
@@ -11,6 +12,40 @@ import { routing, type Locale } from '@/i18n/routing'
 import { getProductBySlug, getSimilarProducts } from '@/lib/catalog/product'
 import { staticParamsOrEmpty } from '@/lib/catalog/staticParams'
 import { getPayloadClient } from '@/lib/payload'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { ViewItemEvent } from '@/components/product/ViewItemEvent'
+import { productJsonLd } from '@/lib/seo/jsonld'
+import { buildMetadata } from '@/lib/seo/metadata'
+
+export async function generateMetadata(props: {
+  params: Promise<{ locale: Locale; slug: string }>
+}): Promise<Metadata> {
+  const { locale, slug } = await props.params
+  const product = await getProductBySlug(slug, locale)
+  if (!product) return {}
+
+  const [tf, tc] = await Promise.all([
+    getTranslations({ locale, namespace: 'Catalog.family' }),
+    getTranslations({ locale, namespace: 'Catalog' }),
+  ])
+  const title = product.brand ? `${product.title} — ${product.brand.title}` : product.title
+  const description = [
+    product.family ? tf(product.family) : null,
+    product.notes.map((note) => note.title).join(', ') || null,
+    product.minPrice !== null ? `${tc('from')} ${product.minPrice} MDL` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  return buildMetadata({
+    locale,
+    path: `/product/${slug}`,
+    title,
+    seo: product.seo,
+    description: description || undefined,
+    image: product.images[0]?.full,
+  })
+}
 
 /** Слаг общий для всех локалей, поэтому статические пути = товары × локали. */
 export async function generateStaticParams() {
@@ -77,6 +112,13 @@ export default async function ProductPage(props: {
 
   return (
     <>
+      <JsonLd data={productJsonLd(product, locale)} />
+      <ViewItemEvent
+        productId={product.id}
+        title={product.title}
+        brandTitle={product.brand?.title ?? ''}
+        price={product.minPrice ?? product.variants[0]?.price ?? 0}
+      />
       <Breadcrumbs
         items={[
           { label: tc('title'), href: '/catalog' },

@@ -1,4 +1,12 @@
 {
+  "ConsentBanner": {
+    "text": "Folosim analitice pentru a înțelege ce arome interesează vizitatorii. Datele personale nu sunt transmise terților.",
+    "accept": "Accept",
+    "decline": "Refuz"
+  },
+  "Seo": {
+    "description": "MON FLACON — galerie de parfumuri în Chișinău. Explorați, încercați și găsiți aroma care vă reprezintă."
+  },
   "HomePage": {
     "categories": {
       "count": "{count, plural, one {# aromă} few {# arome} other {# de arome}}"

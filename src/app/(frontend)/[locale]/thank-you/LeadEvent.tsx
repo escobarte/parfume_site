@@ -1,13 +1,28 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { trackEvent } from '@/lib/analytics/gtag'
 import { useCart } from '@/lib/cart/store'
 
+export type LeadEventItem = {
+  id?: string | number | null
+  product?: number | string | { id: number | string } | null
+  title: string
+  brandTitle?: string | null
+  qty: number
+  lineTotal: number
+}
+
+const productId = (item: LeadEventItem): string | number =>
+  item.product && typeof item.product === 'object' ? item.product.id : (item.product ?? item.id ?? item.title)
+
 /**
- * Событие `generate_lead` (PLAN.md §6, §9.5) + очистка корзины после
- * успешной заявки. Скрипт GA4 и баннер согласия подключаются в фазе 7 —
- * здесь только отправка в dataLayer, если аналитика уже загружена. Дубль
- * при повторном рендере отсекаем ref-ом.
+ * Событие `generate_lead` (PLAN.md §6, §7.5) + очистка корзины после
+ * успешной заявки. Единственная точка отправки этого события — `OrderForm`
+ * намеренно его не шлёт (см. комментарий там), чтобы не задвоить: этот
+ * компонент смонтирован уже на самой странице `/thank-you`, после
+ * завершения перехода, с надёжным `transaction_id`. Дубль при повторном
+ * рендере отсекаем ref-ом.
  *
  * Корзина чистится ЗДЕСЬ, а не в OrderForm сразу после ответа API: страница
  * /cart на момент ответа ещё смонтирована, и синхронный clear() там рисовал
@@ -16,7 +31,15 @@ import { useCart } from '@/lib/cart/store'
  * в query — заход на /thank-you без него (например, вручную по адресу)
  * ничего не должен чистить.
  */
-export function LeadEvent({ orderNumber }: { orderNumber: string | null }) {
+export function LeadEvent({
+  orderNumber,
+  items,
+  total,
+}: {
+  orderNumber: string | null
+  items?: LeadEventItem[]
+  total?: number
+}) {
   const sent = useRef(false)
   const clear = useCart((state) => state.clear)
 
@@ -24,12 +47,19 @@ export function LeadEvent({ orderNumber }: { orderNumber: string | null }) {
     if (sent.current) return
     sent.current = true
     if (orderNumber) clear()
-    window.dataLayer?.push({
-      event: 'generate_lead',
+    trackEvent('generate_lead', {
       currency: 'MDL',
+      value: total,
       transaction_id: orderNumber ?? undefined,
+      items: items?.map((item) => ({
+        item_id: String(productId(item)),
+        item_name: item.title,
+        item_brand: item.brandTitle || undefined,
+        price: item.qty > 0 ? item.lineTotal / item.qty : item.lineTotal,
+        quantity: item.qty,
+      })),
     })
-  }, [orderNumber, clear])
+  }, [orderNumber, items, total, clear])
 
   return null
 }

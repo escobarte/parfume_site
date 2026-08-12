@@ -1,9 +1,20 @@
+import type { Metadata } from 'next'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import type { SearchParams } from 'nuqs/server'
 import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { getPayloadClient } from '@/lib/payload'
+import { buildMetadata } from '@/lib/seo/metadata'
 import { LeadEvent } from './LeadEvent'
+
+export async function generateMetadata(props: {
+  params: Promise<{ locale: Locale }>
+}): Promise<Metadata> {
+  const { locale } = await props.params
+  const t = await getTranslations({ locale, namespace: 'ThankYou' })
+  // Персональная страница подтверждения заказа — не для выдачи.
+  return buildMetadata({ locale, path: '/thank-you', title: t('title'), noindex: true })
+}
 
 export default async function ThankYouPage(props: {
   params: Promise<{ locale: Locale }>
@@ -23,7 +34,7 @@ export default async function ThankYouPage(props: {
 
   return (
     <section className="bg-navy px-5 py-20 text-center md:px-8 md:py-28">
-      <LeadEvent orderNumber={orderNumber} />
+      <LeadEvent orderNumber={orderNumber} items={order?.items ?? undefined} total={order?.total} />
 
       <p className="text-ink-on-dark-subtle text-eyebrow tracking-eyebrow uppercase">
         A scent for every story.

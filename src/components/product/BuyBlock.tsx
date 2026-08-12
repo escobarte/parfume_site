@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
+import { cartItemsToGaItems, trackEvent } from '@/lib/analytics/gtag'
 import { useCart } from '@/lib/cart/store'
 import type { ProductView } from '@/lib/catalog/product'
 import { formatPrice, formatVolume } from '@/lib/format'
@@ -34,15 +35,23 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
   const percent = discountPercent(variant.price, variant.oldPrice)
 
   const putInCart = () => {
+    const brandTitle = product.brand?.title ?? ''
     add({
       productId: product.id,
       slug: product.slug,
       title: product.title,
-      brandTitle: product.brand?.title ?? '',
+      brandTitle,
       sku: variant.sku,
       volume: variant.volume,
       price: variant.price,
       image,
+    })
+    trackEvent('add_to_cart', {
+      currency: 'MDL',
+      value: variant.price,
+      items: cartItemsToGaItems([
+        { productId: product.id, title: product.title, brandTitle, price: variant.price, qty: 1 },
+      ]),
     })
   }
 
@@ -93,7 +102,7 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
         </span>
         {percent !== null && (
           <>
-            <span className="text-ink-subtle text-body line-through">
+            <span className="text-ink-muted text-body line-through">
               {formatPrice(variant.oldPrice, locale)}
             </span>
             <DiscountBadge percent={percent} />
