@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { routing } from '@/i18n/routing'
+import { staticParamsOrEmpty } from '@/lib/catalog/staticParams'
 import { getPayloadClient } from '@/lib/payload'
 import { SITE_URL } from '@/lib/seo/config'
 
@@ -25,40 +26,56 @@ function entriesFor(path: string, lastModified?: Date): MetadataRoute.Sitemap {
   }))
 }
 
+/**
+ * Товарные/брендовые/категорийные/страничные записи — из БД, недоступной на
+ * этапе сборки образа (Coolify собирает Docker раньше, чем стартует Postgres,
+ * см. `docs/GOTCHAS.md`). Тот же `staticParamsOrEmpty`, что и в
+ * `generateStaticParams` остальных маршрутов: недоступность БД (нет
+ * `DATABASE_URI`/`PAYLOAD_SECRET`, обрыв соединения, отсутствующая таблица до
+ * миграций) даёт пустой список вместо падения сборки — sitemap достроится
+ * этими записями в рантайме на первом же запросе (`revalidate = 3600` ниже).
+ */
+async function loadDynamicEntries(): Promise<MetadataRoute.Sitemap> {
+  return staticParamsOrEmpty(async () => {
+    const payload = await getPayloadClient()
+    const [products, brands, categories, pages] = await Promise.all([
+      payload.find({
+        collection: 'products',
+        where: { _status: { equals: 'published' } },
+        limit: 5000,
+        pagination: false,
+        depth: 0,
+      }),
+      payload.find({ collection: 'brands', limit: 1000, pagination: false, depth: 0 }),
+      payload.find({ collection: 'categories', limit: 1000, pagination: false, depth: 0 }),
+      payload.find({ collection: 'pages', limit: 100, pagination: false, depth: 0 }),
+    ])
+
+    const entries: MetadataRoute.Sitemap = []
+    for (const product of products.docs) {
+      entries.push(...entriesFor(`/product/${product.slug}`, new Date(product.updatedAt)))
+    }
+    for (const brand of brands.docs) {
+      entries.push(...entriesFor(`/brands/${brand.slug}`, new Date(brand.updatedAt)))
+    }
+    for (const category of categories.docs) {
+      entries.push(...entriesFor(`/catalog/${category.slug}`, new Date(category.updatedAt)))
+    }
+    for (const page of pages.docs) {
+      entries.push(...entriesFor(`/${page.slug}`, new Date(page.updatedAt)))
+    }
+    return entries
+  })
+}
+
 /** Товары + бренды + категории + статические страницы × 3 локали (PLAN.md §7.3). */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const payload = await getPayloadClient()
-  const [products, brands, categories, pages] = await Promise.all([
-    payload.find({
-      collection: 'products',
-      where: { _status: { equals: 'published' } },
-      limit: 5000,
-      pagination: false,
-      depth: 0,
-    }),
-    payload.find({ collection: 'brands', limit: 1000, pagination: false, depth: 0 }),
-    payload.find({ collection: 'categories', limit: 1000, pagination: false, depth: 0 }),
-    payload.find({ collection: 'pages', limit: 100, pagination: false, depth: 0 }),
-  ])
-
-  const entries: MetadataRoute.Sitemap = [
+  // Не требуют БД — присутствуют в sitemap даже если рантайм-загрузка ниже пуста.
+  const staticEntries: MetadataRoute.Sitemap = [
     ...entriesFor(''),
     ...entriesFor('/catalog'),
     ...entriesFor('/brands'),
   ]
 
-  for (const product of products.docs) {
-    entries.push(...entriesFor(`/product/${product.slug}`, new Date(product.updatedAt)))
-  }
-  for (const brand of brands.docs) {
-    entries.push(...entriesFor(`/brands/${brand.slug}`, new Date(brand.updatedAt)))
-  }
-  for (const category of categories.docs) {
-    entries.push(...entriesFor(`/catalog/${category.slug}`, new Date(category.updatedAt)))
-  }
-  for (const page of pages.docs) {
-    entries.push(...entriesFor(`/${page.slug}`, new Date(page.updatedAt)))
-  }
-
-  return entries
+  return [...staticEntries, ...(await loadDynamicEntries())]
 }
