@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { getPayloadClient } from '@/lib/payload'
 
 /**
@@ -14,7 +15,7 @@ export async function NewOrdersCard() {
 
   return (
     <div style={{ margin: 'calc(var(--base) * 2) 0' }}>
-      <a
+      <Link
         href="/admin/collections/orders?where[status][equals]=new"
         style={{
           display: 'inline-flex',
@@ -45,7 +46,7 @@ export async function NewOrdersCard() {
           {totalDocs}
         </span>
         <span>Новых заявок</span>
-      </a>
+      </Link>
     </div>
   )
 }
