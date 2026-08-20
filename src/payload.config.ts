@@ -19,6 +19,7 @@ import { Users } from './collections/Users'
 import { Homepage } from './globals/Homepage'
 import { Navigation } from './globals/Navigation'
 import { Settings } from './globals/Settings'
+import { adminCatalogEndpoints } from './endpoints/adminCatalog'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -41,6 +42,19 @@ export default buildConfig({
       // штатная кнопка живёт в свёрнутой по умолчанию Nav-шторке и не видна
       // без клика по гамбургеру, см. LogoutAction.tsx.
       actions: ['@/components/admin/LogoutAction#LogoutAction'],
+      // Точка входа на экран импорта CSV (задача 2 фазы 8.1) — только admin,
+      // роль проверяется внутри самого компонента (ImportNavLink.tsx).
+      afterNavLinks: ['@/components/admin/ImportNavLink#ImportNavLink'],
+      views: {
+        // /admin/catalog-import — экран загрузки CSV, см. ImportView.tsx.
+        // Payload сам оборачивает зарегистрированный здесь Component в
+        // штатный DefaultTemplate (шапка/сайдбар), доступ внутри компонента.
+        catalogImport: {
+          Component: '@/components/admin/ImportView#ImportView',
+          path: '/catalog-import',
+          exact: true,
+        },
+      },
     },
   },
   // supportedLanguages задаёт РЕАЛЬНЫЙ выбор языка интерфейса /admin (фаза
@@ -54,6 +68,9 @@ export default buildConfig({
   },
   collections: [Products, Brands, Categories, Notes, Pages, Media, Orders, Users],
   globals: [Homepage, Settings, Navigation],
+  // Импорт каталога и сброс кэша витрины из /admin (задача 2 фазы 8.1) — вне
+  // пространства коллекций (не /api/<slug>, см. docs/GOTCHAS.md «Роуты и API»).
+  endpoints: [...adminCatalogEndpoints],
   editor: lexicalEditor(),
   localization: {
     locales: ['ro', 'ru', 'en'],

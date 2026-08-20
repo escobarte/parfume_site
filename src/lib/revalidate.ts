@@ -27,3 +27,16 @@ export async function revalidateTaxonomy(): Promise<void> {
   await revalidateCatalog(CATALOG_TAG)
   await revalidateCatalog(TAXONOMY_TAG)
 }
+
+/**
+ * Сброс кэша всей витрины разом — все теги, а не только каталог.
+ * Используется явной кнопкой в /admin (см. src/endpoints/adminCatalog.ts) для
+ * случаев, когда обычные хуки коллекций не сработали: CLI-импорт/`pnpm seed`
+ * (отдельный процесс, см. комментарий выше) или прямая правка БД в обход Payload.
+ */
+export async function revalidateAll(): Promise<void> {
+  await revalidateCatalog(CATALOG_TAG)
+  await revalidateCatalog(TAXONOMY_TAG)
+  await revalidateCatalog(GLOBALS_TAG)
+  await revalidateCatalog(HOMEPAGE_TAG)
+}
