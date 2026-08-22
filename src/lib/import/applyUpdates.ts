@@ -74,7 +74,7 @@ export async function applyPrices(
   }
 }
 
-/** Переводы `handle,locale,title,description` — пишем в указанную локаль. */
+/** Переводы `handle,locale,description` — пишем описание в указанную локаль. */
 export async function applyTranslations(
   payload: Payload,
   rows: ValidatedRow<TranslationRow>[],
@@ -97,10 +97,9 @@ export async function applyTranslations(
     }
 
     const data: Record<string, unknown> = {}
-    if (value.title) data.title = value.title
     if (value.description) data.description = paragraphs(value.description)
     if (!Object.keys(data).length) {
-      plan.skipped.push({ line, message: 'нет ни title, ни description — строка пропущена' })
+      plan.skipped.push({ line, message: 'нет description — строка пропущена' })
       continue
     }
 

@@ -77,14 +77,13 @@ async function runQuery(term: string, locale: Locale, limit: number): Promise<Ro
   const sql = `
     WITH q AS (SELECT to_tsquery('${config}', $1) AS ts, $2::text AS raw, $3::text AS alt)
     SELECT * FROM (
-      SELECT 'product'::text AS type, pl.title, p.slug,
-             ${rank("coalesce(pl.title, '') || ' ' || coalesce(bl.title, '')")} AS rank
+      SELECT 'product'::text AS type, p.title, p.slug,
+             ${rank("coalesce(p.title, '') || ' ' || coalesce(bl.title, '')")} AS rank
       FROM products p
-      JOIN products_locales pl ON pl._parent_id = p.id AND pl._locale = $4
       LEFT JOIN brands_locales bl ON bl._parent_id = p.brand_id AND bl._locale = $4
       CROSS JOIN q
       WHERE p._status = 'published'
-        AND ${matches("coalesce(pl.title, '') || ' ' || coalesce(bl.title, '')")}
+        AND ${matches("coalesce(p.title, '') || ' ' || coalesce(bl.title, '')")}
 
       UNION ALL
 

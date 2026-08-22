@@ -1,0 +1,6 @@
+handle,title,brand,categories,gender,family,notes,notes_top,notes_heart,notes_base,description_ro,description_ru,description_en,is_new,is_hit,volume,sku,price,old_price,stock,is_active
+MO-EXEMPLU-01,Wood Example,maison-orphee,unisex,unisex,woody,"bergamota|santal|cedru",bergamota,cedru,santal,"Lemn cald și bergamotă limpede.","Тёплое дерево и прозрачный бергамот.","Warm wood and clear bergamot.",1,0,5,MO-EX1-05,240,,12,1
+MO-EXEMPLU-01,Wood Example,maison-orphee,unisex,unisex,woody,"bergamota|santal|cedru",bergamota,cedru,santal,"Lemn cald și bergamotă limpede.","Тёплое дерево и прозрачный бергамот.","Warm wood and clear bergamot.",1,0,10,MO-EX1-10,420,,8,1
+MO-EXEMPLU-01,Wood Example,maison-orphee,unisex,unisex,woody,"bergamota|santal|cedru",bergamota,cedru,santal,"Lemn cald și bergamotă limpede.","Тёплое дерево и прозрачный бергамот.","Warm wood and clear bergamot.",1,0,30,MO-EX1-30,980,1100,4,1
+CL-EXEMPLU-02,Rose Example,casa-lumina,femei,female,floral,"trandafir|iasomie|mosc",iasomie,trandafir,mosc,"Trandafir proaspăt tăiat.","Только что срезанная роза.","Freshly cut rose.",0,1,5,CL-EX2-05,160,,11,1
+CL-EXEMPLU-02,Rose Example,casa-lumina,femei,female,floral,"trandafir|iasomie|mosc",iasomie,trandafir,mosc,"Trandafir proaspăt tăiat.","Только что срезанная роза.","Freshly cut rose.",0,1,30,CL-EX2-30,620,,4,1

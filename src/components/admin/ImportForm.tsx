@@ -111,6 +111,12 @@ export function ImportForm() {
           <option value="ru">RU</option>
           <option value="en">EN</option>
         </select>
+        <p style={{ marginTop: '.4em', fontSize: '.8rem', color: 'var(--theme-elevation-600)' }}>
+          Если в файле есть колонки <code>description_ro</code>/<code>description_ru</code>/
+          <code>description_en</code>, описание пишется сразу во все найденные локали, и этот
+          выбор на него не влияет — он используется только для одиночной колонки{' '}
+          <code>description</code>.
+        </p>
       </div>
 
       <button

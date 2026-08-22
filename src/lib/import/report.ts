@@ -11,7 +11,13 @@ export function formatReport(result: ImportResult): string {
   const { plan, errors, dryRun, ok } = result
   const lines: string[] = []
 
-  lines.push(`Формат файла: ${KIND_LABELS[plan.kind]}`)
+  let formatLine = `Формат файла: ${KIND_LABELS[plan.kind]}`
+  if (plan.kind === 'products-a' || plan.kind === 'products-b') {
+    formatLine += plan.descriptionLocales.length
+      ? ` (описания: ${plan.descriptionLocales.join(', ')})`
+      : ' (описание: выбранная локаль)'
+  }
+  lines.push(formatLine)
   lines.push(`Локаль контента: ${plan.locale}`)
   lines.push(dryRun ? 'Режим: DRY-RUN, в базу ничего не пишется' : 'Режим: боевой импорт')
   lines.push('')

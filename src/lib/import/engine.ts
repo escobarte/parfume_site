@@ -1,6 +1,6 @@
 import type { Payload, PayloadRequest } from 'payload'
 import { toTable } from './csv'
-import { detectKind } from './detect'
+import { detectDescriptionLocales, detectKind } from './detect'
 import { applyProducts, groupFormatA, groupFormatB, type ProductInput } from './applyProducts'
 import { applyPrices, applyTranslations } from './applyUpdates'
 import type { FormatARow, FormatBRow, PriceRow, TranslationRow } from './schema'
@@ -45,6 +45,9 @@ export async function runImport(
   }
 
   const plan = emptyPlan(kind, locale)
+  if (kind === 'products-a' || kind === 'products-b') {
+    plan.descriptionLocales = detectDescriptionLocales(table.header)
+  }
 
   if (!table.records.length) {
     return { ok: false, dryRun, plan, errors: [{ line: 1, message: 'в файле нет строк данных' }] }

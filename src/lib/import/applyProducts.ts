@@ -2,6 +2,7 @@ import type { Payload, PayloadRequest } from 'payload'
 import type { Product } from '@/payload-types'
 import { paragraphs } from '@/lib/seed/richText'
 import { slugify } from '@/lib/slugify'
+import { DESCRIPTION_LOCALES, type DescriptionLocale } from './detect'
 import { RelationResolver } from './relations'
 import type { FormatARow, FormatBRow } from './schema'
 import type { ImportPlan } from './types'
@@ -87,6 +88,23 @@ function mergeVariants(existing: Product['variants'], incoming: VariantInput[]) 
   return { merged, created, updated }
 }
 
+/**
+ * Мультиязычные колонки description_ro/ru/en одной строки — только те, что
+ * реально заполнены (пустая ячейка не должна затирать уже переведённую
+ * локаль). Если ни одна не заполнена — файл использует одиночную
+ * description, пишущуюся в --locale, как раньше.
+ */
+function localizedDescriptions(
+  base: Record<string, unknown>,
+): Partial<Record<DescriptionLocale, string>> {
+  const result: Partial<Record<DescriptionLocale, string>> = {}
+  for (const locale of DESCRIPTION_LOCALES) {
+    const value = base[`description_${locale}`]
+    if (typeof value === 'string' && value) result[locale] = value
+  }
+  return result
+}
+
 export async function applyProducts(
   payload: Payload,
   inputs: ProductInput[],
@@ -122,6 +140,9 @@ export async function applyProducts(
 
     const data: Record<string, unknown> = {
       handle: base.handle,
+      // title больше не localized-поле — пишется как есть, независимо от
+      // options.locale ниже (тот относится только к description и к тому,
+      // в какую локаль резолвится find/create/update).
       title: base.title,
       variants: merged.merged,
     }
@@ -143,10 +164,21 @@ export async function applyProducts(
     }
     if (base.gender) data.gender = base.gender
     if (base.family) data.family = base.family
-    if (base.description) data.description = paragraphs(base.description)
+
+    // description_ro/ru/en (если есть хоть одна) перекрывают одиночную
+    // description целиком — та в этом случае игнорируется, чтобы не было
+    // двух источников истины для одного и того же поля. Каждая заполненная
+    // локаль пишется отдельным update ниже, независимо от --locale.
+    const descriptions = localizedDescriptions(base)
+    const hasMultiLocaleDescription = Object.keys(descriptions).length > 0
+    if (!hasMultiLocaleDescription && base.description) {
+      data.description = paragraphs(base.description)
+    }
+
     if (base.is_new !== undefined) data.isNew = base.is_new
     if (base.is_hit !== undefined) data.isHit = base.is_hit
 
+    let productId = current?.id
     if (current) {
       plan.update.push(base.handle)
       if (!dryRun) {
@@ -161,11 +193,24 @@ export async function applyProducts(
     } else {
       plan.create.push(base.handle)
       if (!dryRun) {
-        await payload.create({
+        const created = await payload.create({
           collection: 'products',
           locale: locale as 'ro',
           // Новый товар публикуем сразу — прайс клиента это живой каталог.
           data: { ...data, _status: 'published' } as never,
+          req: req as PayloadRequest,
+        })
+        productId = created.id
+      }
+    }
+
+    if (hasMultiLocaleDescription && !dryRun && productId !== undefined) {
+      for (const [descLocale, text] of Object.entries(descriptions)) {
+        await payload.update({
+          collection: 'products',
+          id: productId,
+          locale: descLocale as DescriptionLocale,
+          data: { description: paragraphs(text) } as never,
           req: req as PayloadRequest,
         })
       }

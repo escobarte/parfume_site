@@ -21,6 +21,12 @@ export type ImportPlan = {
   touched: number
   /** Строки, для которых не нашлось товара (не ошибка формата, но и не изменение). */
   skipped: RowError[]
+  /**
+   * Форматы A/B: локали, для которых в заголовке файла есть колонка
+   * description_<locale>. Пусто — файл пишет одну description в --locale,
+   * как раньше. Заполняется по заголовку целиком (engine.ts), не по кайнду.
+   */
+  descriptionLocales: string[]
 }
 
 export type ImportResult = {
@@ -39,4 +45,5 @@ export const emptyPlan = (kind: ImportKind, locale: string): ImportPlan => ({
   variants: { created: 0, updated: 0 },
   touched: 0,
   skipped: [],
+  descriptionLocales: [],
 })

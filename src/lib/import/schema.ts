@@ -64,6 +64,12 @@ const productBase = {
   gender: optionalEnum(GENDER_VALUES, 'gender'),
   family: optionalEnum(FAMILY_VALUES, 'family'),
   description: trimmed.optional(),
+  // Мультиязычные колонки описания — опциональная альтернатива одиночной
+  // description: если хоть одна заполнена, каждая локаль пишется отдельно
+  // за один прогон, независимо от --locale (см. applyProducts.ts).
+  description_ro: trimmed.optional(),
+  description_ru: trimmed.optional(),
+  description_en: trimmed.optional(),
   is_new: boolFrom,
   is_hit: boolFrom,
 }
@@ -117,11 +123,10 @@ export const priceRow = z.object({
 
 export type PriceRow = z.infer<typeof priceRow>
 
-/** Переводы: одна строка = один язык одного товара. */
+/** Переводы: одна строка = один язык одного товара. Title общий на все локали, здесь не переводится. */
 export const translationRow = z.object({
   handle: trimmed.min(1, 'handle: обязателен'),
   locale: z.enum(['ro', 'ru', 'en'], { error: 'locale: допустимо ro / ru / en' }),
-  title: trimmed.optional(),
   description: trimmed.optional(),
 })
 

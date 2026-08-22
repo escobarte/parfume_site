@@ -15,9 +15,14 @@ const USAGE = `
   handle,title,brand,…,volume,sku,price,stock   — формат A (строка = вариант)
   handle,title,brand,…,variants                 — формат B (варианты JSON-колонкой)
   sku,price,stock                               — лёгкий прайс
-  handle,locale,title,description               — переводы
+  handle,locale,description                     — переводы (описание в одну локаль)
+
+В форматах A/B колонку description можно заменить на description_ro/
+description_ru/description_en — тогда все три локали пишутся за один
+прогон, независимо от --locale (см. docs/import-guide.md).
 
 Шаблон с примером: docs/import-template.csv
+Шаблон с описанием на трёх языках: docs/import-template-multilang.csv
 `
 
 async function main() {

@@ -55,7 +55,8 @@ export const Products: CollectionConfig = {
         {
           label: 'Основное',
           fields: [
-            { name: 'title', type: 'text', required: true, localized: true, index: true },
+            // Название общее на все локали (не переводится). См. GOTCHAS.
+            { name: 'title', type: 'text', required: true, index: true },
             {
               name: 'brand',
               type: 'relationship',
