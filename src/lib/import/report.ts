@@ -1,10 +1,6 @@
 import { KIND_LABELS } from './detect'
+import { list } from './format'
 import type { ImportResult } from './types'
-
-const list = (items: string[], limit = 12): string =>
-  items.length <= limit
-    ? items.join(', ')
-    : `${items.slice(0, limit).join(', ')} … и ещё ${items.length - limit}`
 
 /** Человекочитаемый отчёт для CLI — одинаковый для dry-run и боевого прогона. */
 export function formatReport(result: ImportResult): string {
@@ -40,6 +36,17 @@ export function formatReport(result: ImportResult): string {
     `Товаров обновить: ${plan.update.length}${plan.update.length ? ` — ${list(plan.update)}` : ''}`,
   )
   lines.push(`Вариантов: создано ${plan.variants.created} · обновлено ${plan.variants.updated}`)
+
+  if (plan.images.attached || plan.images.missing.length) {
+    lines.push(
+      `Фото: привязано ${plan.images.attached}` +
+        (plan.images.missing.length ? `, не найдено ${plan.images.missing.length}` : ''),
+    )
+    for (const miss of plan.images.missing.slice(0, 20)) {
+      lines.push(`  строка ${miss.line}: ${miss.message}`)
+    }
+    if (plan.images.missing.length > 20) lines.push(`  … и ещё ${plan.images.missing.length - 20}`)
+  }
 
   const auto = plan.autoCreate
   const autoTotal = auto.brands.length + auto.categories.length + auto.notes.length

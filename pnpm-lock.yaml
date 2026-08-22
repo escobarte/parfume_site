@@ -26,6 +26,9 @@ importers:
       '@payloadcms/ui':
         specifier: 3.87.0
         version: 3.87.0(@types/react@19.2.14)(monaco-editor@0.56.0)(next@16.2.6(@babel/core@7.29.7(supports-color@7.2.0))(@playwright/test@1.58.2)(babel-plugin-macros@3.1.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(sass@1.77.4))(payload@3.87.0(graphql@16.14.2)(supports-color@7.2.0)(typescript@5.7.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(supports-color@7.2.0)(typescript@5.7.3)
+      adm-zip:
+        specifier: ^0.6.0
+        version: 0.6.0
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2370,6 +2373,10 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
+  adm-zip@0.6.0:
+    resolution: {integrity: sha512-XleryMhbuksdKtofnWZ9Sk+4CUTbms4Mb/EU32SZwToAyZ5RgVos/ki8n+yr0LWHOGKuakbXTuuYNHLQjhddgg==}
+    engines: {node: '>=14.0'}
+
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
@@ -3208,6 +3215,7 @@ packages:
   eslint@9.39.5:
     resolution: {integrity: sha512-DgZS62aPLXKlnxILS/AYCoRvHaZeXceIzlXPkkGGzJWSow1aEk0lbTlxUSlyjC8jcaKxAdOnTDz+o1JFSBsyjw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -7660,6 +7668,8 @@ snapshots:
   acorn@8.16.0: {}
 
   acorn@8.18.0: {}
+
+  adm-zip@0.6.0: {}
 
   agent-base@7.1.4: {}
 

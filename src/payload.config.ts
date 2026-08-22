@@ -20,6 +20,7 @@ import { Homepage } from './globals/Homepage'
 import { Navigation } from './globals/Navigation'
 import { Settings } from './globals/Settings'
 import { adminCatalogEndpoints } from './endpoints/adminCatalog'
+import { adminMediaEndpoints } from './endpoints/adminMedia'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -68,9 +69,9 @@ export default buildConfig({
   },
   collections: [Products, Brands, Categories, Notes, Pages, Media, Orders, Users],
   globals: [Homepage, Settings, Navigation],
-  // Импорт каталога и сброс кэша витрины из /admin (задача 2 фазы 8.1) — вне
-  // пространства коллекций (не /api/<slug>, см. docs/GOTCHAS.md «Роуты и API»).
-  endpoints: [...adminCatalogEndpoints],
+  // Импорт каталога, загрузка фото архивом и сброс кэша витрины из /admin —
+  // вне пространства коллекций (не /api/<slug>, см. docs/GOTCHAS.md «Роуты и API»).
+  endpoints: [...adminCatalogEndpoints, ...adminMediaEndpoints],
   editor: lexicalEditor(),
   localization: {
     locales: ['ro', 'ru', 'en'],

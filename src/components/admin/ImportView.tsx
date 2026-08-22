@@ -1,12 +1,20 @@
 import { DefaultTemplate } from '@payloadcms/next/templates'
 import { isAdmin } from '@/access/roles'
 import { ImportForm } from './ImportForm'
+import { MediaImportForm } from './MediaImportForm'
 
 /**
- * Экран «Импорт каталога (CSV)» — /admin/catalog-import (задача 2 фазы 8.1).
- * Раньше импорт был возможен только терминалом контейнера
- * (`./node_modules/.bin/tsx scripts/import.ts`, см. docs/GOTCHAS.md) —
- * клиент физически не мог обновить каталог сам.
+ * Экран «Импорт каталога» — /admin/catalog-import (задача 2 фазы 8.1,
+ * дополнено загрузкой фото архивом). Раньше импорт был возможен только
+ * терминалом контейнера (`./node_modules/.bin/tsx scripts/import.ts`, см.
+ * docs/GOTCHAS.md) — клиент физически не мог обновить каталог сам.
+ *
+ * Два независимых блока сверху вниз — сначала фото (MediaImportForm.tsx,
+ * эндпоинт /api/media-import, см. src/endpoints/adminMedia.ts), потом CSV
+ * (ImportForm.tsx, /api/catalog-import). Намеренно не одна кнопка: колонка
+ * images в CSV ищет уже загруженные файлы по имени (src/lib/import/images.ts),
+ * поэтому порядок действий важен, а форма его не может гарантировать сама —
+ * отсюда явные подписи «Шаг 1»/«Шаг 2» в тексте экрана.
  *
  * Обёрнут в DefaultTemplate вручную. Кастомные top-level views
  * (admin.components.views) Payload матчит отдельным «catch-all»-путём
@@ -47,12 +55,29 @@ export function ImportView(props: any) {
     >
       {isAdmin(user) ? (
         <div style={{ padding: 'var(--base)', maxWidth: '48rem' }}>
-          <h1 style={{ marginBottom: 'calc(var(--base) / 2)' }}>Импорт каталога (CSV)</h1>
+          <h1 style={{ marginBottom: 'calc(var(--base) / 2)' }}>Импорт каталога</h1>
           <p style={{ color: 'var(--theme-elevation-600)', marginBottom: 'var(--base)' }}>
-            Формат файла (товары формата A/B, лёгкий прайс <code>sku,price,stock</code>, переводы)
-            определяется автоматически по заголовку — тем же движком, что и CLI (
-            <code>pnpm import</code>), выбирать формат вручную не нужно.
+            Загрузка каталога из файла. Если у товаров есть фото — сначала загрузите архив с ними
+            (шаг 1), затем CSV (шаг 2). Формат файла программа определит сама. Начните с кнопки
+            «Проверить» — она ничего не меняет в каталоге, только показывает, что произойдёт.
           </p>
+
+          <h2 style={{ marginBottom: '.5rem', fontSize: '1rem' }}>Шаг 1 — фото товаров (ZIP)</h2>
+          <p style={{ color: 'var(--theme-elevation-600)', marginBottom: 'var(--base)' }}>
+            Загрузи архив с фото ПЕРЕД импортом CSV, если он ссылается на новые файлы колонкой{' '}
+            <code>images</code> — два независимых действия, не одна кнопка.
+          </p>
+          <MediaImportForm />
+
+          <hr
+            style={{
+              margin: '2rem 0',
+              border: 'none',
+              borderTop: '1px solid var(--theme-elevation-150)',
+            }}
+          />
+
+          <h2 style={{ marginBottom: '.5rem', fontSize: '1rem' }}>Шаг 2 — CSV</h2>
           <ImportForm />
         </div>
       ) : (

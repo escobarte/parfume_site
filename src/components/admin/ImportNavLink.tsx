@@ -4,9 +4,10 @@ import { isAdmin } from '@/access/roles'
 type Props = { user?: { role?: string | null } | null }
 
 /**
- * Пункт «Импорт CSV» в боковой навигации /admin — точка входа на
- * ImportView.tsx (задача 2 фазы 8.1). Только для роли admin: менеджеру
- * раздел не нужен (товары у него и так read-only, см. src/access/roles.ts).
+ * Пункт «Импорт каталога» в боковой навигации /admin — точка входа на
+ * ImportView.tsx (CSV-импорт + загрузка фото архивом). Только для роли
+ * admin: менеджеру раздел не нужен (товары у него и так read-only, см.
+ * src/access/roles.ts).
  */
 export function ImportNavLink({ user }: Props) {
   if (!isAdmin(user)) return null
@@ -25,7 +26,7 @@ export function ImportNavLink({ user }: Props) {
         fontSize: '.95rem',
       }}
     >
-      Импорт CSV
+      Импорт каталога
     </Link>
   )
 }

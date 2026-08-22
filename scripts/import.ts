@@ -19,10 +19,13 @@ const USAGE = `
 
 В форматах A/B колонку description можно заменить на description_ro/
 description_ru/description_en — тогда все три локали пишутся за один
-прогон, независимо от --locale (см. docs/import-guide.md).
+прогон, независимо от --locale. Колонка images (имена файлов через |)
+привязывает фото, загруженные заранее ZIP-архивом через форму в браузере
+(/admin/catalog-import — у этого CLI команды для загрузки архивов нет),
+см. docs/import-guide.md.
 
 Шаблон с примером: docs/import-template.csv
-Шаблон с описанием на трёх языках: docs/import-template-multilang.csv
+Шаблон с описанием на трёх языках и фото: docs/import-template-multilang.csv
 `
 
 async function main() {

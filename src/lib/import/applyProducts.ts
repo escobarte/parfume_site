@@ -3,6 +3,7 @@ import type { Product } from '@/payload-types'
 import { paragraphs } from '@/lib/seed/richText'
 import { slugify } from '@/lib/slugify'
 import { DESCRIPTION_LOCALES, type DescriptionLocale } from './detect'
+import { ImageResolver } from './images'
 import { RelationResolver } from './relations'
 import type { FormatARow, FormatBRow } from './schema'
 import type { ImportPlan } from './types'
@@ -113,6 +114,7 @@ export async function applyProducts(
 ): Promise<void> {
   const { locale, dryRun, req } = options
   const resolver = new RelationResolver(payload, locale, dryRun, req)
+  const imageResolver = new ImageResolver(payload, req)
 
   for (const input of inputs) {
     const { base, variants } = input
@@ -137,6 +139,7 @@ export async function applyProducts(
     const topIds = await resolver.resolveMany('notes', base.notes_top)
     const heartIds = await resolver.resolveMany('notes', base.notes_heart)
     const baseIds = await resolver.resolveMany('notes', base.notes_base)
+    const { ids: imageIds, missing: missingImages } = await imageResolver.resolveMany(base.images)
 
     const data: Record<string, unknown> = {
       handle: base.handle,
@@ -164,6 +167,23 @@ export async function applyProducts(
     }
     if (base.gender) data.gender = base.gender
     if (base.family) data.family = base.family
+
+    // Пустая ячейка (колонка images отсутствует или ничего не перечислено в
+    // этой строке) — существующие фото не трогаем. Непустая ячейка — CSV
+    // источник истины, заменяет весь список целиком (даже если ни одно из
+    // перечисленных имён не нашлось — тогда список станет пустым, это
+    // осознанный выбор клиента, а не опечатка в одном имени).
+    if (base.images?.length) {
+      data.images = imageIds
+      plan.images.attached += imageIds.length
+      for (const name of missingImages) {
+        plan.images.missing.push({
+          line: input.line,
+          field: 'images',
+          message: `файл «${name}» не найден в медиатеке — сначала загрузите его архивом`,
+        })
+      }
+    }
 
     // description_ro/ru/en (если есть хоть одна) перекрывают одиночную
     // description целиком — та в этом случае игнорируется, чтобы не было

@@ -29,8 +29,8 @@ const boolFrom = z.preprocess((value) => {
   return ['1', 'true', 'yes', 'да', 'y', 'x'].includes(normalized)
 }, z.boolean().optional())
 
-/** Список slug-ов через запятую или `|`. */
-const slugList = z.preprocess(
+/** Список значений (slug-ов или имён файлов) через запятую или `|`. */
+const pipeList = z.preprocess(
   (value) =>
     typeof value === 'string'
       ? value
@@ -56,13 +56,18 @@ const productBase = {
   slug: trimmed.optional(),
   title: trimmed.min(1, 'title: обязателен'),
   brand: trimmed.min(1, 'brand: обязателен (slug бренда)'),
-  categories: slugList,
-  notes: slugList,
-  notes_top: slugList,
-  notes_heart: slugList,
-  notes_base: slugList,
+  categories: pipeList,
+  notes: pipeList,
+  notes_top: pipeList,
+  notes_heart: pipeList,
+  notes_base: pipeList,
   gender: optionalEnum(GENDER_VALUES, 'gender'),
   family: optionalEnum(FAMILY_VALUES, 'family'),
+  // Имена файлов из медиатеки (загружаются отдельно, ZIP-архивом через
+  // /admin/catalog-import) через `|`, порядок = порядок в галерее товара,
+  // первое имя — обложка. Пустая ячейка не трогает уже привязанные фото —
+  // заменяет их только непустой список (см. applyProducts.ts).
+  images: pipeList,
   description: trimmed.optional(),
   // Мультиязычные колонки описания — опциональная альтернатива одиночной
   // description: если хоть одна заполнена, каждая локаль пишется отдельно

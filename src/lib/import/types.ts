@@ -27,6 +27,8 @@ export type ImportPlan = {
    * как раньше. Заполняется по заголовку целиком (engine.ts), не по кайнду.
    */
   descriptionLocales: string[]
+  /** Форматы A/B: колонка images — сколько файлов реально привязано и какие имена не нашлись в медиатеке. */
+  images: { attached: number; missing: RowError[] }
 }
 
 export type ImportResult = {
@@ -46,4 +48,5 @@ export const emptyPlan = (kind: ImportKind, locale: string): ImportPlan => ({
   touched: 0,
   skipped: [],
   descriptionLocales: [],
+  images: { attached: 0, missing: [] },
 })
