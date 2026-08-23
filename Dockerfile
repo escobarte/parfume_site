@@ -71,8 +71,13 @@ COPY --from=build --chown=nextjs:nodejs /app/scripts ./scripts
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x docker-entrypoint.sh
 
-USER nextjs
-
+# Намеренно БЕЗ `USER nextjs` здесь: контейнер должен стартовать под root,
+# чтобы docker-entrypoint.sh мог починить владельца /app/media (Coolify
+# монтирует туда persistent volume ПОСЛЕ сборки образа, точка монтирования
+# создаётся от root — см. docs/GOTCHAS.md). Сам процесс приложения (node
+# server.js) при этом под root НЕ работает ни секунды — entrypoint сбрасывает
+# привилегии на nextjs через setpriv ДО exec "$@". Не возвращать эту строку
+# обратно не подумав — она отключит починку прав, приведёт к тому же EACCES.
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
