@@ -11,7 +11,7 @@ export function formatReport(result: ImportResult): string {
   if (plan.kind === 'products-a' || plan.kind === 'products-b') {
     formatLine += plan.descriptionLocales.length
       ? ` (описания: ${plan.descriptionLocales.join(', ')})`
-      : ' (описание: выбранная локаль)'
+      : ' (описание: одна колонка на все языки)'
   }
   lines.push(formatLine)
   lines.push(`Локаль контента: ${plan.locale}`)
@@ -56,6 +56,20 @@ export function formatReport(result: ImportResult): string {
     if (auto.categories.length) lines.push(`  категории: ${list(auto.categories)}`)
     if (auto.notes.length) lines.push(`  ноты: ${list(auto.notes)}`)
     lines.push('  ⚠ проверьте, нет ли здесь опечаток в slug-ах')
+  }
+
+  // Отдельным блоком с пустой строкой до и после — предупреждение не должно
+  // теряться между строками статистики: клиенту после такого импорта нужно
+  // руками пройтись по переводам.
+  if (plan.descriptionDuplicated) {
+    lines.push('')
+    lines.push(
+      `⚠ В файле одна колонка description — этот текст ${dryRun ? 'будет продублирован' : 'продублирован'} на все языки, где описание было пустым (${plan.descriptionDuplicated} шт).`,
+    )
+    lines.push(
+      '  Готовые переводы не тронуты. Дубли нужно перевести вручную в админке — сейчас там один и тот же текст на разных языках.',
+    )
+    lines.push('')
   }
 
   if (plan.skipped.length) {

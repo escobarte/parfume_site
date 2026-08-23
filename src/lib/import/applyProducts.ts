@@ -93,7 +93,7 @@ function mergeVariants(existing: Product['variants'], incoming: VariantInput[]) 
  * Мультиязычные колонки description_ro/ru/en одной строки — только те, что
  * реально заполнены (пустая ячейка не должна затирать уже переведённую
  * локаль). Если ни одна не заполнена — файл использует одиночную
- * description, пишущуюся в --locale, как раньше.
+ * description, которая дублируется во все пустые локали (см. ниже).
  */
 function localizedDescriptions(
   base: Record<string, unknown>,
@@ -104,6 +104,52 @@ function localizedDescriptions(
     if (typeof value === 'string' && value) result[locale] = value
   }
   return result
+}
+
+/**
+ * Есть ли в lexical-дереве хоть один непробельный текстовый узел.
+ * Спускаться нужно и в `root` (верхний узел документа), и в `children` —
+ * иначе непустое описание читается как пустое и получает дубль поверх.
+ */
+function hasText(node: unknown): boolean {
+  if (Array.isArray(node)) return node.some(hasText)
+  if (!node || typeof node !== 'object') return false
+  const record = node as Record<string, unknown>
+  if (typeof record.text === 'string' && record.text.trim()) return true
+  return hasText(record.root) || hasText(record.children)
+}
+
+const isEmptyRichText = (value: unknown): boolean => !hasText(value)
+
+/**
+ * Локали, где описание товара сейчас пустое. Именно они — и только они —
+ * получают дубль одиночной колонки description: готовый перевод, введённый
+ * руками в админке, неаккуратный импорт прайса затирать не должен.
+ *
+ * `fallbackLocale: false` обязателен: у проекта включён `fallback: true`
+ * (payload.config.ts), и без этого пустая ru-версия вернула бы ro-текст —
+ * товар выглядел бы уже переведённым, дубль не проставился бы никуда.
+ */
+async function emptyDescriptionLocales(
+  payload: Payload,
+  id: number | string,
+  req?: Partial<PayloadRequest>,
+): Promise<DescriptionLocale[]> {
+  const empty: DescriptionLocale[] = []
+
+  for (const locale of DESCRIPTION_LOCALES) {
+    const doc = await payload.findByID({
+      collection: 'products',
+      id,
+      locale,
+      fallbackLocale: false,
+      depth: 0,
+      req: req as PayloadRequest,
+    })
+    if (isEmptyRichText(doc?.description)) empty.push(locale)
+  }
+
+  return empty
 }
 
 export async function applyProducts(
@@ -191,9 +237,24 @@ export async function applyProducts(
     // локаль пишется отдельным update ниже, независимо от --locale.
     const descriptions = localizedDescriptions(base)
     const hasMultiLocaleDescription = Object.keys(descriptions).length > 0
-    if (!hasMultiLocaleDescription && base.description) {
-      data.description = paragraphs(base.description)
-    }
+    // Одиночная description в data НЕ кладётся: она уходит ниже отдельными
+    // update'ами во все локали, где описание пустое (пустое поле на витрине
+    // хуже дубля — тот хотя бы читается и виден как «надо перевести»).
+    const singleDescription =
+      !hasMultiLocaleDescription && base.description ? base.description : undefined
+
+    // Считать пустые локали нужно СТРОГО до основного update: Payload с
+    // `fallback: true` при обычном update сам проливает значение дефолтной
+    // локали в пустые (проверено вживую — ru/en у товара с пустым описанием
+    // получали копию ro без единого явного update на них). После update
+    // «пустых» локалей уже не осталось бы, и дубль не проставился бы никуда.
+    const singleDescriptionTargets: DescriptionLocale[] = !singleDescription
+      ? []
+      : current
+        ? await emptyDescriptionLocales(payload, current.id, req)
+        : [...DESCRIPTION_LOCALES]
+
+    plan.descriptionDuplicated += singleDescriptionTargets.length
 
     if (base.is_new !== undefined) data.isNew = base.is_new
     if (base.is_hit !== undefined) data.isHit = base.is_hit
@@ -231,6 +292,18 @@ export async function applyProducts(
           id: productId,
           locale: descLocale as DescriptionLocale,
           data: { description: paragraphs(text) } as never,
+          req: req as PayloadRequest,
+        })
+      }
+    }
+
+    if (singleDescription && !dryRun && productId !== undefined) {
+      for (const descLocale of singleDescriptionTargets) {
+        await payload.update({
+          collection: 'products',
+          id: productId,
+          locale: descLocale,
+          data: { description: paragraphs(singleDescription) } as never,
           req: req as PayloadRequest,
         })
       }

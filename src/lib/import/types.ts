@@ -29,6 +29,12 @@ export type ImportPlan = {
   descriptionLocales: string[]
   /** Форматы A/B: колонка images — сколько файлов реально привязано и какие имена не нашлись в медиатеке. */
   images: { attached: number; missing: RowError[] }
+  /**
+   * Форматы A/B с ОДНОЙ колонкой description: сколько локалей получит дубль
+   * этого текста (считаются только те, где описание было пустым). 0 — либо
+   * файл трёхколоночный, либо везде уже есть перевод: предупреждать не о чем.
+   */
+  descriptionDuplicated: number
 }
 
 export type ImportResult = {
@@ -49,4 +55,5 @@ export const emptyPlan = (kind: ImportKind, locale: string): ImportPlan => ({
   skipped: [],
   descriptionLocales: [],
   images: { attached: 0, missing: [] },
+  descriptionDuplicated: 0,
 })

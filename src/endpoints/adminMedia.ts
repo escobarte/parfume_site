@@ -35,8 +35,8 @@ const humanizeAlt = (filename: string): string => {
 
 function formatMediaReport(plan: MediaPlan): string {
   const lines: string[] = []
-  lines.push('Загрузка фото из архива')
-  lines.push('')
+  // Заголовок («Загрузка фото из архива») рисует шапка ReportPanel в форме —
+  // в самом тексте он дублировался бы.
   lines.push(
     `Принято новых файлов: ${plan.created.length}${plan.created.length ? ` — ${list(plan.created)}` : ''}`,
   )
@@ -187,7 +187,17 @@ export const adminMediaEndpoints: Endpoint[] = [
         plan.created.push(name)
       }
 
-      return Response.json({ ok: true, reportText: formatMediaReport(plan) })
+      // stats — только для оформления отчёта на экране (успех vs успех с
+      // замечаниями, см. ReportPanel.tsx); на саму загрузку не влияет.
+      return Response.json({
+        ok: true,
+        reportText: formatMediaReport(plan),
+        stats: {
+          created: plan.created.length,
+          reused: plan.reused.length,
+          skipped: plan.skipped.length,
+        },
+      })
     },
   },
 ]

@@ -1,10 +1,44 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { ReportPanel, type ReportStatus } from './ReportPanel'
 
 type MediaImportResponse = {
   ok: boolean
   reportText: string
+  stats?: { created: number; reused: number; skipped: number }
+}
+
+/** Успех / успех с пропущенными файлами / ошибка — по счётчикам ответа. */
+function mediaReportView(response: MediaImportResponse): {
+  status: ReportStatus
+  title: string
+  note: string
+} {
+  if (!response.ok) {
+    return {
+      status: 'error',
+      title: 'Архив не загружен',
+      note: 'В медиатеку ничего не добавлено — исправьте причину и попробуйте снова.',
+    }
+  }
+
+  const { created = 0, reused = 0, skipped = 0 } = response.stats ?? {}
+  const added = `Добавлено новых файлов: ${created}` + (reused ? `, переиспользовано: ${reused}` : '')
+
+  if (skipped) {
+    return {
+      status: 'warning',
+      title: `Архив загружен, но ${skipped} ${skipped === 1 ? 'файл пропущен' : 'файл(ов) пропущено'}`,
+      note: `${added}. Причины пропуска — в списке ниже: эти фото в медиатеку НЕ попали.`,
+    }
+  }
+
+  return {
+    status: 'success',
+    title: 'Архив загружен полностью',
+    note: `${added}. Теперь можно грузить CSV с колонкой images.`,
+  }
 }
 
 /**
@@ -88,28 +122,18 @@ export function MediaImportForm() {
         <p style={{ marginTop: '1rem', color: 'var(--color-danger)' }}>{networkError}</p>
       )}
 
-      {response && (
-        <div
-          style={{
-            marginTop: '1.5rem',
-            padding: 'var(--base)',
-            border: `1px solid ${response.ok ? 'var(--theme-elevation-150)' : 'var(--color-danger)'}`,
-            borderRadius: 'var(--style-radius-m)',
-            background: response.ok ? 'var(--theme-elevation-50)' : 'transparent',
-          }}
-        >
-          <pre
-            style={{
-              whiteSpace: 'pre-wrap',
-              fontFamily: 'var(--font-mono, monospace)',
-              fontSize: '.85rem',
-              margin: 0,
-            }}
-          >
-            {response.reportText}
-          </pre>
-        </div>
-      )}
+      {response &&
+        (() => {
+          const view = mediaReportView(response)
+          return (
+            <ReportPanel
+              status={view.status}
+              title={view.title}
+              note={view.note}
+              text={response.reportText}
+            />
+          )
+        })()}
     </div>
   )
 }

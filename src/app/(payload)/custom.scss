@@ -35,3 +35,118 @@
 :root[data-theme='dark'] .brand-logo {
   color: var(--color-cream);
 }
+
+/*
+ * ── Уведомления (тосты) ────────────────────────────────────────────────
+ * Правка приёмки 2026-08-23: тост о сохранении терялся на широком мониторе.
+ * Позиция (top-center) и длительность (6с) заданы штатно в payload.config.ts,
+ * здесь — только размер и контраст. Классы .payload-toast-* / .toast-* —
+ * публичные хуки Payload (задаются им же в providers/ToastContainer через
+ * sonner `classNames`), внутренние компоненты не подменяются.
+ *
+ * Собственные стили Payload лежат в `@layer payload-default`, эти правила —
+ * вне слоя, поэтому выигрывают по каскаду без !important.
+ *
+ * Смысловая развилка сохранена: цвета успех/ошибка/предупреждение остаются
+ * payload-овскими (--theme-success/error/warning-*), «ярче» здесь означает
+ * крупнее и заметнее рамку, а не «всё одинаково зелёное». Ошибке дополнительно
+ * усилена рамка — она должна читаться иначе, чем успех.
+ */
+.payload-toast-container {
+  .payload-toast-item {
+    min-width: min(32rem, calc(100vw - var(--gutter-h, 1rem) * 2));
+    padding: calc(var(--base) * 0.9) calc(var(--base) * 1.1);
+    font-size: 1.05rem;
+    border-width: 2px;
+    box-shadow:
+      0 8px 24px -6px rgb(0 2 4 / 0.18),
+      0 2px 6px 0 rgb(0 2 4 / 0.08);
+  }
+
+  .toast-title {
+    line-height: 1.35;
+  }
+
+  /* Ошибка — заметно строже успеха: более плотная рамка и полоса слева. */
+  .payload-toast-item.toast-error {
+    border-color: var(--theme-error-500);
+    border-inline-start-width: 6px;
+  }
+
+  /* 600-я ступень, а не 500: 400–500 перекрашены в navy выше по файлу —
+     полоса «успеха» должна остаться зелёной, иначе теряется сигнал. */
+  .payload-toast-item.toast-success {
+    border-inline-start-width: 6px;
+    border-inline-start-color: var(--theme-success-600);
+  }
+}
+
+/*
+ * ── Панель массовых действий в списке коллекции ────────────────────────
+ * «3 selected — Edit Delete»: Payload рисует обе кнопки одинаковым
+ * подчёркнутым текстом цвета служебных надписей рядом — глазами не найти.
+ * Delete — красный (необратимое действие), Edit — акцент темы. Оба обретают
+ * вид кликабельного элемента (рамка + фон), логика не трогается.
+ *
+ * Селекторы — публичные классы Payload: .list-selection__button (общий),
+ * .delete-documents__toggle (Delete), .edit-many__toggle (обёртка Edit).
+ */
+.list-selection {
+  /* Payload держит панель одной строкой (`margin-left: auto`) — на узкой
+     ширине хвост с «Удалить» уходил за край ещё до этой правки, а кнопки
+     с рамкой и отступами делают строку шире. Перенос по словам решает и то,
+     и другое; на широком экране ничего не меняется — переносить нечего. */
+  flex-wrap: wrap;
+
+  &__actions {
+    flex-wrap: wrap;
+  }
+
+  &__button {
+    padding: calc(var(--base) * 0.25) calc(var(--base) * 0.6);
+    border: 1px solid currentColor;
+    border-radius: var(--style-radius-s, 3px);
+    text-decoration: none;
+    font-weight: 600;
+    line-height: 1.4;
+    transition:
+      background-color 100ms ease,
+      color 100ms ease;
+  }
+
+  /* Edit — акцентный, но не тревожный: --theme-success-500 в этом проекте
+     перекрашен в navy (см. верх файла), то есть это бренд-акцент, не зелёный. */
+  &__button:not(.delete-documents__toggle) {
+    color: var(--theme-success-500);
+
+    &:hover,
+    &:focus-visible {
+      background-color: var(--theme-success-100);
+    }
+  }
+
+  /* Delete — красный: необратимо. */
+  &__button.delete-documents__toggle {
+    color: var(--theme-error-500);
+
+    &:hover,
+    &:focus-visible {
+      background-color: var(--theme-error-100);
+    }
+  }
+}
+
+/*
+ * Тёмная тема: navy-акцент (--theme-success-500) на тёмном фоне почти не
+ * читается — поймано скриншотом при проверке. На тёмном роль акцента играет
+ * cream, ровно как у логотипа выше по файлу. Delete не трогаем: красный
+ * читается в обеих темах.
+ */
+:root[data-theme='dark'] .list-selection__button:not(.delete-documents__toggle) {
+  color: var(--color-cream);
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--color-line-on-dark-soft);
+  }
+}

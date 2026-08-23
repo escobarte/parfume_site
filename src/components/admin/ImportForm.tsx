@@ -1,11 +1,68 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { ReportPanel, type ReportStatus } from './ReportPanel'
 
 type ImportResponse = {
   ok: boolean
   dryRun: boolean
   reportText: string
+  plan?: {
+    create?: string[]
+    update?: string[]
+    images?: { missing?: unknown[] }
+    skipped?: unknown[]
+  }
+}
+
+/**
+ * Шапка отчёта CSV-импорта. Главное, что должно считываться первым (баг
+ * приёмки 2026-08-23): записано ли что-то в боевую базу или это была
+ * проверка — владелец принял успешный реальный импорт за dry-run, потому
+ * что отчёты выглядели одинаково. Поэтому режим — в заголовке и в цвете,
+ * а не строкой «Режим:» в середине текста.
+ *
+ * Замечания (ненайденные фото, пропущенные строки) поднимают статус до
+ * warning: раньше они тонули в общем сером блоке.
+ */
+function importReportView(response: ImportResponse): {
+  status: ReportStatus
+  title: string
+  note: string
+} {
+  if (!response.ok) {
+    return {
+      status: 'error',
+      title: 'Импорт не выполнен',
+      note: 'В базу не записано ничего — файл применяется целиком или никак. Исправьте ошибки ниже и прогоните проверку заново.',
+    }
+  }
+
+  const plan = response.plan
+  const created = plan?.create?.length ?? 0
+  const updated = plan?.update?.length ?? 0
+  const missingImages = plan?.images?.missing?.length ?? 0
+  const skippedRows = plan?.skipped?.length ?? 0
+  const remarks = missingImages + skippedRows
+
+  const counts = `Товаров: создать ${created}, обновить ${updated}`
+  const remarksNote = remarks
+    ? ` Есть замечания (${remarks}) — разберите список ниже, эти данные не применились.`
+    : ''
+
+  if (response.dryRun) {
+    return {
+      status: remarks ? 'warning' : 'neutral',
+      title: 'Проверка — в базу ничего не записано',
+      note: `${counts} — так будет выглядеть боевой прогон.${remarksNote} Чтобы применить, переключите режим на «Реальный импорт».`,
+    }
+  }
+
+  return {
+    status: remarks ? 'warning' : 'success',
+    title: 'Импорт выполнен — данные записаны в базу',
+    note: `${counts}. Кэш витрины сброшен автоматически.${remarksNote}`,
+  }
 }
 
 /**
@@ -112,10 +169,12 @@ export function ImportForm() {
           <option value="en">EN</option>
         </select>
         <p style={{ marginTop: '.4em', fontSize: '.8rem', color: 'var(--theme-elevation-600)' }}>
-          Язык описаний в этом файле, если в нём одна колонка <code>description</code>. Названия
-          товаров не переводятся — они всегда общие для всех локалей. Если в файле есть колонки{' '}
-          <code>description_ro</code>/<code>description_ru</code>/<code>description_en</code>,
-          этот выбор не используется — язык каждого описания берётся из своей колонки.
+          На описания больше не влияет. Если в файле одна колонка <code>description</code>, её
+          текст попадёт сразу во все языки, где описание пустое (готовые переводы не затираются) —
+          потом их нужно отредактировать вручную. Если есть колонки <code>description_ro</code>/
+          <code>description_ru</code>/<code>description_en</code>, язык берётся из самой колонки.
+          Названия товаров не переводятся — они всегда общие. Выбор используется только для
+          названий брендов, категорий и нот, которые импорт заводит автоматически.
         </p>
       </div>
 
@@ -138,28 +197,18 @@ export function ImportForm() {
         <p style={{ marginTop: '1rem', color: 'var(--color-danger)' }}>{networkError}</p>
       )}
 
-      {response && (
-        <div
-          style={{
-            marginTop: '1.5rem',
-            padding: 'var(--base)',
-            border: `1px solid ${response.ok ? 'var(--theme-elevation-150)' : 'var(--color-danger)'}`,
-            borderRadius: 'var(--style-radius-m)',
-            background: response.ok ? 'var(--theme-elevation-50)' : 'transparent',
-          }}
-        >
-          <pre
-            style={{
-              whiteSpace: 'pre-wrap',
-              fontFamily: 'var(--font-mono, monospace)',
-              fontSize: '.85rem',
-              margin: 0,
-            }}
-          >
-            {response.reportText}
-          </pre>
-        </div>
-      )}
+      {response &&
+        (() => {
+          const view = importReportView(response)
+          return (
+            <ReportPanel
+              status={view.status}
+              title={view.title}
+              note={view.note}
+              text={response.reportText}
+            />
+          )
+        })()}
 
       <hr
         style={{
