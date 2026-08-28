@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import { ConsentBanner } from '@/components/analytics/ConsentBanner'
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics'
+import { CartToast } from '@/components/cart/CartToast'
 import { Footer } from '@/components/layout/Footer'
 import { Header } from '@/components/layout/Header'
 import { PromoBanner } from '@/components/layout/PromoBanner'
@@ -86,6 +87,8 @@ export default async function LocaleLayout(props: {
             <main className="flex-1">{children}</main>
             <Footer locale={locale} />
             <ConsentBanner />
+            {/* Тост «добавлено в корзину» — поверх любой страницы (фаза 9.1). */}
+            <CartToast />
           </NuqsAdapter>
         </NextIntlClientProvider>
       </body>

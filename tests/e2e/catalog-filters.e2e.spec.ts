@@ -3,6 +3,23 @@ import { gotoAndWaitForFooter } from '../helpers/cart'
 
 const cardsOf = (page: import('@playwright/test').Page) => page.locator('article a[href*="/product/"]')
 
+/**
+ * С фазы 9.1 фильтры на всех разрешениях спрятаны в дровер: сначала кнопка
+ * «Filtre», потом уже фасеты внутри диалога.
+ */
+const openFilters = async (page: import('@playwright/test').Page) => {
+  const dialog = page.getByRole('dialog')
+  // Клик до окончания гидрации в dev теряется (см. GOTCHAS.md) — жмём,
+  // пока диалог действительно не откроется.
+  await expect(async () => {
+    if (!(await dialog.isVisible())) {
+      await page.getByRole('button', { name: /^filtre/i }).click()
+    }
+    await expect(dialog).toBeVisible()
+  }).toPass({ timeout: 10000 })
+  return dialog
+}
+
 test.describe('Каталог: фильтры и URL-состояние', () => {
   test('фильтр по бренду сужает выдачу, уходит в URL и воспроизводится по ссылке', async ({
     page,
@@ -12,9 +29,8 @@ test.describe('Каталог: фильтры и URL-состояние', () => 
     const totalAll = await cardsOf(page).count()
     expect(totalAll).toBeGreaterThan(0)
 
-    // Клик до окончания гидрации в dev теряется (см. GOTCHAS.md) — жмём,
-    // пока выдача не изменится.
-    const checkbox = page.getByRole('checkbox').first()
+    const dialog = await openFilters(page)
+    const checkbox = dialog.getByRole('checkbox').first()
     let filtered = totalAll
     await expect(async () => {
       if (!(await checkbox.isChecked())) await checkbox.check()
@@ -30,8 +46,26 @@ test.describe('Каталог: фильтры и URL-состояние', () => 
     const shared = await context.newPage()
     await gotoAndWaitForFooter(shared, url)
     await expect(cardsOf(shared)).toHaveCount(filtered)
-    await expect(shared.getByRole('checkbox').first()).toBeChecked()
+    const sharedDialog = await openFilters(shared)
+    await expect(sharedDialog.getByRole('checkbox').first()).toBeChecked()
     await shared.close()
+  })
+
+  test('дровер закрывается и не двигает сетку товаров по ширине', async ({ page }) => {
+    await gotoAndWaitForFooter(page, '/ro/catalog')
+    const grid = cardsOf(page).first()
+    const before = await grid.boundingBox()
+
+    const dialog = await openFilters(page)
+    const during = await grid.boundingBox()
+    expect(during?.x).toBe(before?.x)
+    expect(during?.width).toBe(before?.width)
+
+    await dialog.getByRole('button', { name: /arată rezultatele/i }).click()
+    await expect(dialog).toBeHidden()
+    const after = await grid.boundingBox()
+    expect(after?.x).toBe(before?.x)
+    expect(after?.width).toBe(before?.width)
   })
 
   test('комбинация фильтров из URL и сброс возвращают ожидаемую выдачу', async ({ page }) => {
@@ -46,13 +80,14 @@ test.describe('Каталог: фильтры и URL-состояние', () => 
     expect(page.url()).toContain('gender=unisex')
     expect(page.url()).toContain('volume=30')
 
+    // Сброс доступен и снаружи дровера — строкой активных фильтров. Она же
+    // после сброса исчезает вместе с кнопкой, поэтому повторно жмём только
+    // пока кнопка на месте (клик до гидрации в dev теряется, см. GOTCHAS.md).
     const resetButton = page.getByRole('button', { name: /resetează tot/i }).first()
-    let afterReset = comboCount
     await expect(async () => {
-      await resetButton.click()
-      afterReset = await cardsOf(page).count()
-      expect(afterReset).toBe(totalAll)
+      if (await resetButton.isVisible()) await resetButton.click()
+      expect(page.url()).not.toContain('brand=')
     }).toPass({ timeout: 10000 })
-    expect(page.url()).not.toContain('brand=')
+    await expect(cardsOf(page)).toHaveCount(totalAll)
   })
 })

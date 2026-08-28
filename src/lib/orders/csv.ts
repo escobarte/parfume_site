@@ -12,6 +12,11 @@ export const CSV_COLUMNS = [
   'name',
   'phone',
   'messenger',
+  // Способ оформления и адрес (фаза 9.1). В таблице шапка фиксированная,
+  // поэтому «опускать пустое поле» здесь = пустая ячейка, а не исчезающая
+  // колонка: иначе файл перестанет открываться единой таблицей в Excel.
+  'checkoutMode',
+  'address',
   'product',
   'brand',
   'volume',
@@ -21,6 +26,12 @@ export const CSV_COLUMNS = [
   'sum',
   'comment',
 ] as const
+
+/** Подписи способа оформления в CSV — по-русски, как весь файл заявки. */
+const CHECKOUT_MODE_CSV: Record<string, string> = {
+  standard: '',
+  noCall: 'БЕЗ ЗВОНКА',
+}
 
 const SEPARATOR = ';'
 const BOM = '﻿'
@@ -46,6 +57,8 @@ function orderRows(order: Order): string[] {
         customer?.name ?? '',
         customer?.phone ?? '',
         customer?.messenger ?? '',
+        CHECKOUT_MODE_CSV[order.checkoutMode ?? 'standard'] ?? '',
+        customer?.address ?? '',
         item.title,
         item.brandTitle ?? '',
         item.volume ?? '',
@@ -59,7 +72,9 @@ function orderRows(order: Order): string[] {
   }
 
   // Итоговая строка: сумма заявки в колонке sum, остальное пусто.
-  rows.push(row([date, customer?.name ?? '', '', '', 'ИТОГО', '', '', '', '', '', order.total, '']))
+  rows.push(
+    row([date, customer?.name ?? '', '', '', '', '', 'ИТОГО', '', '', '', '', '', order.total, '']),
+  )
 
   return rows
 }

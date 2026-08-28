@@ -16,6 +16,14 @@ export const ORDER_STATUSES = [
   { label: 'Отменена', value: 'cancelled' },
 ] as const
 
+// Способ оформления (фаза 9.1). `noCall` — «заказать без звонка»: телефон
+// всё равно обязателен, меняется только пометка менеджеру. Значения те же,
+// что в src/lib/orders/schema.ts::CHECKOUT_MODES.
+export const CHECKOUT_MODE_OPTIONS = [
+  { label: 'Обычная заявка (перезвонить)', value: 'standard' },
+  { label: 'Без звонка — НЕ ЗВОНИТЬ', value: 'noCall' },
+] as const
+
 export const Orders: CollectionConfig = {
   slug: 'orders',
   labels: { singular: 'Заявка', plural: 'Заявки' },
@@ -29,6 +37,7 @@ export const Orders: CollectionConfig = {
       'createdAt',
       'customer.name',
       'customer.phone',
+      'checkoutMode',
       'total',
       'status',
     ],
@@ -142,6 +151,21 @@ export const Orders: CollectionConfig = {
       },
     },
     {
+      // Пометка «не звонить» должна быть заметна менеджеру сразу — поэтому
+      // и в сайдбаре карточки, и колонкой в списке заявок (defaultColumns).
+      name: 'checkoutMode',
+      label: 'Способ оформления',
+      type: 'select',
+      required: true,
+      defaultValue: 'standard',
+      index: true,
+      options: [...CHECKOUT_MODE_OPTIONS],
+      admin: {
+        position: 'sidebar',
+        description: 'Без звонка = клиент просил не звонить. Телефон обязателен в обоих случаях.',
+      },
+    },
+    {
       name: 'locale',
       type: 'select',
       options: [
@@ -173,6 +197,12 @@ export const Orders: CollectionConfig = {
           name: 'email',
           type: 'email',
           admin: { description: 'Необязательно — для письма-подтверждения и ссылки на статус заказа.' },
+        },
+        {
+          name: 'address',
+          label: 'Адрес',
+          type: 'text',
+          admin: { description: 'Необязательно — адрес доставки или выдачи.' },
         },
         {
           name: 'messenger',

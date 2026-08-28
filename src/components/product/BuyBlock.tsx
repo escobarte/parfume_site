@@ -9,6 +9,7 @@ import { useCart } from '@/lib/cart/store'
 import type { ProductView } from '@/lib/catalog/product'
 import { formatPrice, formatVolume } from '@/lib/format'
 import { discountPercent } from '@/lib/pricing'
+import { useToast } from '@/lib/ui/toast'
 import { DiscountBadge } from '@/components/catalog/DiscountBadge'
 
 /**
@@ -20,6 +21,7 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
   const t = useTranslations('Product')
   const locale = useLocale() as Locale
   const add = useCart((state) => state.add)
+  const showCartToast = useToast((state) => state.showCartToast)
   const router = useRouter()
 
   const firstAvailable = product.variants.findIndex((variant) => variant.stock > 0)
@@ -57,6 +59,14 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
 
   const addToCart = () => {
     putInCart()
+    // Подпись на кнопке — локальная реакция, тост — общая (фаза 9.1):
+    // кнопку можно не увидеть, если экран прокручен, плашку видно всегда.
+    showCartToast({
+      title: product.title,
+      brandTitle: product.brand?.title ?? '',
+      volume: variant.volume,
+      image,
+    })
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
   }

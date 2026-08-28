@@ -14,9 +14,16 @@ const SHEET = 'filters'
 const BRANDS = 'brands'
 
 /**
- * Мобильные фильтры — bottom-sheet (PLAN.md §5.3): кнопка снизу экрана,
- * панель выезжает на всю ширину, фильтр применяется сразу, «Показать
- * результаты» просто закрывает лист.
+ * Фильтры каталога — единый дровер на ВСЕХ разрешениях (правка владельца,
+ * фаза 9.1): панель скрыта по умолчанию, открывается кнопкой «Фильтр»
+ * с бейджем числа активных фильтров, закрывается крестиком, кликом по фону,
+ * «Показать результаты» и «Назад» на телефоне.
+ *
+ * Раскладка одна, различается только геометрия: на <1024 — bottom-sheet на
+ * всю ширину, на ≥1024 — боковая панель справа. И то и другое — оверлей
+ * `fixed` поверх контента, сетка товаров при открытии не двигается вообще
+ * (никакого layout shift); отсутствие сдвига от исчезающего скроллбара
+ * обеспечивает `scrollbar-gutter: stable` на html (styles.css).
  *
  * Шторка и вложенный список брендов — слои в истории браузера
  * (`useSheetLayers`): «Назад» на телефоне закрывает верхний слой и оставляет
@@ -24,7 +31,7 @@ const BRANDS = 'brands'
  * с неё. Фильтры внутри шторки пишутся в URL через replace, чтобы «Назад»
  * не превращалась в отмену последнего фильтра.
  */
-export function MobileFilters({ facets, activeCount }: { facets: Facets; activeCount: number }) {
+export function FiltersDrawer({ facets, activeCount }: { facets: Facets; activeCount: number }) {
   const t = useTranslations('Catalog.filters')
   const sheet = useSheetLayers()
   // Актуальный query шторки: пишется в момент фактического изменения URL.
@@ -76,7 +83,8 @@ export function MobileFilters({ facets, activeCount }: { facets: Facets; activeC
           sheetQuery.current = window.location.search
           sheet.open(SHEET)
         }}
-        className="border-line text-ink text-label tracking-display flex w-full items-center justify-center gap-2 rounded-sm border py-2.5 uppercase lg:hidden"
+        aria-expanded={open}
+        className="border-line text-ink hover:border-navy text-label tracking-display flex cursor-pointer items-center justify-center gap-2 rounded-sm border px-4 py-2.5 uppercase transition-colors max-lg:w-full"
       >
         <SlidersHorizontal className="size-4" strokeWidth={1.6} />
         {t('open')}
@@ -88,7 +96,7 @@ export function MobileFilters({ facets, activeCount }: { facets: Facets; activeC
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-60 lg:hidden">
+        <div className="fixed inset-0 z-60">
           <button
             type="button"
             aria-label={t('close')}
@@ -96,7 +104,15 @@ export function MobileFilters({ facets, activeCount }: { facets: Facets; activeC
             onClick={sheet.closeAll}
           />
 
-          <div className="bg-surface absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-sm">
+          {/* Геометрия задана отдельными свойствами (не inset-x/inset-y):
+              так lg-переопределения гарантированно перекрывают базовые,
+              без зависимости от порядка правил в собранном CSS. */}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('title')}
+            className="bg-surface border-line absolute top-auto right-0 bottom-0 left-0 flex max-h-[88vh] flex-col rounded-t-sm lg:top-0 lg:left-auto lg:max-h-none lg:w-100 lg:rounded-none lg:border-l"
+          >
             {/* Единственный заголовок шторки: на панели внутри он выключен,
                 чтобы «FILTRE» не дублировалось. */}
             <div className="border-line flex items-center justify-between gap-3 border-b px-5 py-4">
@@ -126,7 +142,12 @@ export function MobileFilters({ facets, activeCount }: { facets: Facets; activeC
                 >
                   {t('reset')}
                 </button>
-                <button type="button" onClick={sheet.closeAll} aria-label={t('close')}>
+                <button
+                  type="button"
+                  onClick={sheet.closeAll}
+                  aria-label={t('close')}
+                  className="cursor-pointer"
+                >
                   <X className="text-ink size-5" strokeWidth={1.6} />
                 </button>
               </div>

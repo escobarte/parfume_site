@@ -141,7 +141,8 @@
     "checkout": "Lăsați o cerere",
     "miniTitle": "În coș",
     "viewCart": "Deschide coșul",
-    "more": "și încă {count}"
+    "more": "și încă {count}",
+    "toastAdded": "Adăugat în coș"
   },
   "OrderForm": {
     "title": "Datele dumneavoastră",
@@ -161,7 +162,13 @@
     "errorEmail": "Email incorect",
     "errorRate": "Prea multe cereri. Încercați peste câteva minute.",
     "errorGeneric": "Nu am reușit să trimitem cererea. Încercați din nou.",
-    "agreement": "Trimițând cererea, sunteți de acord să fiți contactat."
+    "agreement": "Trimițând cererea, sunteți de acord să fiți contactat.",
+    "checkoutMode": "Mod de comandă",
+    "checkoutMode_standard": "Comandă obișnuită — managerul vă sună",
+    "checkoutMode_noCall": "Comandă fără apel",
+    "checkoutModeNoCallHint": "Nu vă sunăm — vă scriem. Telefonul rămâne obligatoriu pentru livrare.",
+    "address": "Adresă",
+    "addressPlaceholder": "Opțional: adresa de livrare sau ridicare"
   },
   "ThankYou": {
     "title": "Mulțumim!",

@@ -5,12 +5,20 @@ import { useState } from 'react'
 import { useRouter } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { useCart } from '@/lib/cart/store'
-import { MESSENGERS } from '@/lib/orders/schema'
+import { CHECKOUT_MODES, type CheckoutMode, MESSENGERS } from '@/lib/orders/schema'
 import { digitsOf, PHONE_PREFIX, PhoneInput } from './PhoneInput'
 
 type Errors = Partial<Record<'name' | 'phone' | 'email' | 'form', string>>
 
-/** Форма заявки: имя, телефон с маской +373, мессенджер, комментарий. */
+/**
+ * Форма заявки: имя, телефон с маской +373, способ оформления, мессенджер,
+ * адрес и комментарий.
+ *
+ * Способ оформления (фаза 9.1) на валидацию не влияет вообще: телефон
+ * обязателен и при «без звонка» — вариант лишь ставит менеджеру пометку
+ * «не звонить». Адрес необязателен: пустой уходит как undefined и в заявку
+ * не попадает.
+ */
 export function OrderForm() {
   const t = useTranslations('OrderForm')
   const locale = useLocale() as Locale
@@ -21,6 +29,8 @@ export function OrderForm() {
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [messenger, setMessenger] = useState<(typeof MESSENGERS)[number]>('telegram')
+  const [checkoutMode, setCheckoutMode] = useState<CheckoutMode>('standard')
+  const [address, setAddress] = useState('')
   const [comment, setComment] = useState('')
   const [company, setCompany] = useState('') // honeypot
   const [errors, setErrors] = useState<Errors>({})
@@ -49,6 +59,8 @@ export function OrderForm() {
           phone: `${PHONE_PREFIX}${digitsOf(phone)}`,
           email: email.trim() || undefined,
           messenger,
+          checkoutMode,
+          address: address.trim() || undefined,
           comment: comment.trim() || undefined,
           locale,
           source: 'cart',
@@ -157,6 +169,26 @@ export function OrderForm() {
           {errors.email && <span className="text-danger text-eyebrow">{errors.email}</span>}
         </label>
 
+        <label className="flex flex-col gap-1.5">
+          <span className="text-ink-muted text-eyebrow tracking-label uppercase">
+            {t('checkoutMode')}
+          </span>
+          <select
+            value={checkoutMode}
+            onChange={(event) => setCheckoutMode(event.target.value as CheckoutMode)}
+            className={`${fieldClass()} cursor-pointer bg-transparent`}
+          >
+            {CHECKOUT_MODES.map((option) => (
+              <option key={option} value={option}>
+                {t(`checkoutMode_${option}`)}
+              </option>
+            ))}
+          </select>
+          {checkoutMode === 'noCall' && (
+            <span className="text-ink-subtle text-eyebrow">{t('checkoutModeNoCallHint')}</span>
+          )}
+        </label>
+
         <div className="flex flex-col gap-1.5">
           <span className="text-ink-muted text-eyebrow tracking-label uppercase">
             {t('messenger')}
@@ -181,6 +213,20 @@ export function OrderForm() {
             })}
           </div>
         </div>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-ink-muted text-eyebrow tracking-label uppercase">
+            {t('address')}
+          </span>
+          <input
+            type="text"
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            placeholder={t('addressPlaceholder')}
+            autoComplete="street-address"
+            className={fieldClass()}
+          />
+        </label>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-ink-muted text-eyebrow tracking-label uppercase">

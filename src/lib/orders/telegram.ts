@@ -35,7 +35,12 @@ export function buildTelegramMessage(order: Order): string {
   if (customer?.messenger) {
     lines.push(`Связь: ${MESSENGER_LABEL[customer.messenger] ?? customer.messenger}`)
   }
+  // Пустой адрес не печатаем вовсе — поле необязательное (фаза 9.1).
+  if (customer?.address) lines.push(`Адрес: ${escapeHtml(customer.address)}`)
   if (order.comment) lines.push(`Комментарий: ${escapeHtml(order.comment)}`)
+  // Пометка «не звонить» — отдельной заметной строкой; обычная заявка
+  // (дефолт) строки не занимает.
+  if (order.checkoutMode === 'noCall') lines.push('<b>⚠️ БЕЗ ЗВОНКА — НЕ ЗВОНИТЬ</b>')
   lines.push(
     `Язык заявки: ${(order.locale ?? '').toUpperCase()} · источник: ${order.source ?? '—'}`,
   )

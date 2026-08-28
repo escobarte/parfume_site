@@ -57,10 +57,12 @@ export async function POST(request: Request) {
       status: 'new',
       locale: data.locale,
       source: data.source,
+      checkoutMode: data.checkoutMode,
       customer: {
         name: data.name,
         phone: data.phone,
         email: data.email || undefined,
+        address: data.address || undefined,
         messenger: data.messenger,
       },
       comment: data.comment,

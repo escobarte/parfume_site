@@ -5,9 +5,8 @@ import { getFacetSource, getProductCards, type CatalogScope } from '@/lib/catalo
 import { countActiveFilters, PAGE_SIZE, type CatalogQuery } from '@/lib/catalog/searchParams'
 import { getBrands, getNotes } from '@/lib/catalog/taxonomy'
 import { ActiveFilters } from './ActiveFilters'
-import { FilterPanel } from './FilterPanel'
+import { FiltersDrawer } from './FiltersDrawer'
 import { LoadMore } from './LoadMore'
-import { MobileFilters } from './MobileFilters'
 import { ProductCard } from './ProductCard'
 import { SortSelect } from './SortSelect'
 
@@ -16,6 +15,10 @@ import { SortSelect } from './SortSelect'
  * и тот же экран, отличается только областью (scope) и заголовком.
  * Сетка карточек: 4 колонки ≥1280, 3 на 1024–1279, 2 на мобиле
  * (WIREFRAMES.md §3).
+ *
+ * Фильтры с фазы 9.1 живут в дровере (FiltersDrawer) на всех разрешениях,
+ * постоянного сайдбара больше нет: сетка занимает всю ширину и не меняет
+ * её при открытии фильтров.
  */
 export async function CatalogView({
   locale,
@@ -72,26 +75,16 @@ export async function CatalogView({
         </span>
       </div>
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-[260px_1fr] lg:gap-10">
-        <aside className="hidden lg:block">
-          <FilterPanel facets={facets} />
-        </aside>
-
-        <div>
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="w-full lg:hidden">
-              <MobileFilters facets={facets} activeCount={activeCount} />
-            </div>
-            <div className="hidden lg:block">
-              <ActiveFilters facets={facets} />
-            </div>
-            <SortSelect />
-          </div>
-
-          <div className="mb-5 lg:hidden">
+      <div className="mt-6">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3 max-lg:w-full">
+            <FiltersDrawer facets={facets} activeCount={activeCount} />
             <ActiveFilters facets={facets} />
           </div>
+          <SortSelect />
+        </div>
 
+        <div>
           {items.length === 0 ? (
             <div className="border-line flex flex-col items-center gap-2 border py-20 text-center">
               <p className="text-ink text-body">{t('empty')}</p>

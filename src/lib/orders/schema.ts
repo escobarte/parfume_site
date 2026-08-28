@@ -14,6 +14,17 @@ export const normalizePhone = (value: string) => {
 
 export const MESSENGERS = ['telegram', 'viber', 'whatsapp', 'call'] as const
 
+/**
+ * Способ оформления заявки (фаза 9.1):
+ * - `standard` — обычная заявка, менеджер перезванивает (дефолт);
+ * - `noCall`  — «заказать без звонка»: менеджеру ставится пометка «не звонить».
+ *
+ * На валидацию телефона НЕ влияет: телефон обязателен в обоих случаях —
+ * это единственный канал связи (см. комментарий к email ниже).
+ */
+export const CHECKOUT_MODES = ['standard', 'noCall'] as const
+export type CheckoutMode = (typeof CHECKOUT_MODES)[number]
+
 export const orderItemSchema = z.object({
   productId: z.union([z.string(), z.number()]),
   slug: z.string().min(1),
@@ -35,6 +46,9 @@ export const orderRequestSchema = z.object({
   // WhatsApp/звонок работают без email). Если заполнен — обязан быть валидным.
   email: z.union([z.literal(''), z.string().trim().email('email')]).optional(),
   messenger: z.enum(MESSENGERS).optional(),
+  checkoutMode: z.enum(CHECKOUT_MODES).default('standard'),
+  /** Адрес доставки/выдачи — необязателен, пустой в заявку не попадает. */
+  address: z.string().trim().max(500).optional(),
   comment: z.string().trim().max(2000).optional(),
   locale: z.enum(['ro', 'ru', 'en']).default('ro'),
   source: z.string().default('cart'),

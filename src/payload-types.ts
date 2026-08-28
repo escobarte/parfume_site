@@ -448,6 +448,10 @@ export interface Order {
   statusToken?: string | null;
   status: 'new' | 'confirmed' | 'ready' | 'issued' | 'cancelled';
   /**
+   * Без звонка = клиент просил не звонить. Телефон обязателен в обоих случаях.
+   */
+  checkoutMode: 'standard' | 'noCall';
+  /**
    * Локаль, с которой пришла заявка.
    */
   locale?: ('ro' | 'ru' | 'en') | null;
@@ -462,6 +466,10 @@ export interface Order {
      * Необязательно — для письма-подтверждения и ссылки на статус заказа.
      */
     email?: string | null;
+    /**
+     * Необязательно — адрес доставки или выдачи.
+     */
+    address?: string | null;
     messenger?: ('telegram' | 'viber' | 'whatsapp' | 'call') | null;
   };
   comment?: string | null;
@@ -813,6 +821,7 @@ export interface OrdersSelect<T extends boolean = true> {
   orderNumber?: T;
   statusToken?: T;
   status?: T;
+  checkoutMode?: T;
   locale?: T;
   source?: T;
   customer?:
@@ -821,6 +830,7 @@ export interface OrdersSelect<T extends boolean = true> {
         name?: T;
         phone?: T;
         email?: T;
+        address?: T;
         messenger?: T;
       };
   comment?: T;

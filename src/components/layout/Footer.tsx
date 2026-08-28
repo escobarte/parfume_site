@@ -6,13 +6,6 @@ import { getNavigation, getSettings } from '@/lib/content/globals'
 import { resolveLinkHref } from '@/lib/links'
 import { LocaleSwitcher } from './LocaleSwitcher'
 
-// Индекс колонки «Покупателям» в footerColumns — см. WIREFRAMES.md §6
-// (Каталог / Покупателям / Контакты-хардкод вне этого массива). Пункт
-// «Track order» — системная ссылка, а не редакторский контент CMS, поэтому
-// подписи идут через messages/*.json (Footer.trackOrder), как и «Контакты»
-// ниже, а не через footerColumns.
-const CUSTOMERS_COLUMN_INDEX = 1
-
 /**
  * Футер: 4 колонки 1.3fr / 1fr / 1fr / 1.1fr (WIREFRAMES.md §6).
  * Три колонки ссылок приходят из `navigation`, четвёртая — контакты из `settings`.
@@ -48,7 +41,7 @@ export async function Footer({ locale }: { locale: Locale }) {
             )}
           </div>
 
-          {columns.map((column, index) => (
+          {columns.map((column) => (
             <div key={column.id ?? column.title}>
               <div className="text-cream text-eyebrow tracking-display mb-3.5 uppercase">
                 {column.title}
@@ -62,14 +55,6 @@ export async function Footer({ locale }: { locale: Locale }) {
                   {link.label}
                 </Link>
               ))}
-              {index === CUSTOMERS_COLUMN_INDEX && (
-                <Link
-                  href={resolveLinkHref('orderLookup', null) ?? '/order'}
-                  className="text-ink-on-dark-muted hover:text-cream text-link block py-1 transition-colors"
-                >
-                  {t('trackOrder')}
-                </Link>
-              )}
             </div>
           ))}
 
@@ -94,6 +79,18 @@ export async function Footer({ locale }: { locale: Locale }) {
             {contacts?.workingHours && (
               <p className="text-ink-on-dark-faint text-eyebrow py-1">{contacts.workingHours}</p>
             )}
+            {/* «Отследить заказ» — системная ссылка, а не редакторский контент
+                CMS, поэтому и подпись из messages/*.json, и место — в этой,
+                всегда отрисовываемой колонке. Раньше пункт жил внутри
+                columns.map() по индексу колонки «Покупателям»: стоило
+                footerColumns остаться пустым (как на проде сейчас), и вход
+                в отслеживание заказа пропадал с сайта целиком. */}
+            <Link
+              href={resolveLinkHref('orderLookup', null) ?? '/order'}
+              className="text-ink-on-dark-muted hover:text-cream text-link mt-2 block py-1 underline underline-offset-4 transition-colors"
+            >
+              {t('trackOrder')}
+            </Link>
           </div>
         </div>
 

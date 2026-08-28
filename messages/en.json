@@ -141,7 +141,8 @@
     "checkout": "Place a request",
     "miniTitle": "In cart",
     "viewCart": "Go to cart",
-    "more": "and {count} more"
+    "more": "and {count} more",
+    "toastAdded": "Added to cart"
   },
   "OrderForm": {
     "title": "Your details",
@@ -161,7 +162,13 @@
     "errorEmail": "Invalid email",
     "errorRate": "Too many requests. Try again in a few minutes.",
     "errorGeneric": "Could not send the request. Please try again.",
-    "agreement": "By sending the request you agree to be contacted."
+    "agreement": "By sending the request you agree to be contacted.",
+    "checkoutMode": "Checkout method",
+    "checkoutMode_standard": "Standard request — the manager calls you",
+    "checkoutMode_noCall": "Order without a call",
+    "checkoutModeNoCallHint": "We will not call — we will text. The phone number is still required for delivery.",
+    "address": "Address",
+    "addressPlaceholder": "Optional: delivery or pickup address"
   },
   "ThankYou": {
     "title": "Thank you!",

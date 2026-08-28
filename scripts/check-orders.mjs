@@ -97,7 +97,7 @@ check('CSV начинается с BOM', csv.charCodeAt(0) === 0xfeff, `перв
 check(
   'разделитель «;» и нужные колонки',
   lines[0]?.replace('﻿', '') ===
-    'date;name;phone;messenger;product;brand;volume;sku;qty;price;sum;comment',
+    'date;name;phone;messenger;checkoutMode;address;product;brand;volume;sku;qty;price;sum;comment',
   lines[0]?.replace('﻿', ''),
 )
 check(
@@ -111,7 +111,54 @@ check(
 )
 check(
   'поле с «;» взято в кавычки или экранировано',
-  !(lines[1] ?? '').split(';').some((cell, index) => index === 11 && cell.includes(';')),
+  !(lines[1] ?? '').split(';').some((cell, index) => index === 13 && cell.includes(';')),
+)
+
+// ── Способ оформления и адрес (фаза 9.1) ──────────────────────────────────
+check(
+  'обычная заявка не помечена «без звонка» ни в БД, ни в CSV',
+  order?.checkoutMode === 'standard' && !csv.includes('БЕЗ ЗВОНКА'),
+  `checkoutMode ${order?.checkoutMode}`,
+)
+check(
+  'пустой адрес не превращается в мусор в CSV',
+  !order?.customer?.address && (lines[1] ?? '').split(';')[5] === '',
+  `адрес «${(lines[1] ?? '').split(';')[5]}»`,
+)
+
+const noCall = await post(
+  validOrder({ checkoutMode: 'noCall', address: 'Chișinău, str. Ismail 98, ap. 12' }),
+)
+const noCallBody = await noCall.json()
+check('заявка «без звонка» с адресом принята', noCall.status === 200 && noCallBody.ok === true)
+
+const noCallOrder = await fetch(
+  `${BASE}/api/orders?where[orderNumber][equals]=${noCallBody.orderNumber}&depth=0`,
+  { headers: { Authorization: `JWT ${token}` } },
+)
+  .then((response) => response.json())
+  .then((data) => data.docs?.[0])
+check('флаг «без звонка» сохранён в заявке', noCallOrder?.checkoutMode === 'noCall')
+check(
+  'адрес сохранён в заявке',
+  noCallOrder?.customer?.address === 'Chișinău, str. Ismail 98, ap. 12',
+  noCallOrder?.customer?.address,
+)
+
+const noCallCsvLine = (noCallOrder?.exportCsv ?? '').split('\r\n')[1] ?? ''
+check(
+  'CSV показывает «БЕЗ ЗВОНКА» и адрес',
+  noCallCsvLine.split(';')[4] === 'БЕЗ ЗВОНКА' &&
+    noCallCsvLine.includes('Chișinău, str. Ismail 98, ap. 12'),
+  noCallCsvLine.slice(0, 120),
+)
+
+// Телефон обязателен и при «без звонка» — способ оформления валидацию не ослабляет.
+const noCallBadPhone = await post(validOrder({ checkoutMode: 'noCall', phone: '+7 999 123 45 67' }))
+check(
+  'телефон остаётся обязательным при «без звонка»',
+  noCallBadPhone.status === 400,
+  `HTTP ${noCallBadPhone.status}`,
 )
 
 // ── Email клиента (фаза 4.6.1/4.6.2) ────────────────────────────────────────
@@ -239,6 +286,16 @@ await goto('/ro/thank-you')
 check(
   'thank-you без query-параметра order работает без падения (без блока деталей)',
   (await page.content()).includes('Mulțumim'),
+)
+
+// ── Вход в отслеживание заказа из футера (регрессия фазы 9.1) ─────────────
+await goto('/ro')
+const trackLink = page.locator('footer').getByRole('link', { name: /comand/i })
+check(
+  'ссылка «отследить заказ» есть в футере независимо от контента CMS',
+  (await trackLink.count()) > 0 &&
+    (await trackLink.first().getAttribute('href'))?.includes('/order'),
+  (await trackLink.first().getAttribute('href')) ?? 'ссылки нет',
 )
 
 // ── Навигация: «Noutăți» ведёт на flags=isNew (фаза 4.6.4) ─────────────────

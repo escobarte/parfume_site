@@ -27,6 +27,21 @@ const goto = async (target, tab = page) => {
 }
 const cards = () => page.locator('article a[href*="/product/"]')
 
+/**
+ * С фазы 9.1 фильтры на всех разрешениях живут в дровере — сначала кнопка.
+ * Клик до окончания гидрации в dev теряется (GOTCHAS.md), поэтому жмём,
+ * пока диалог действительно не откроется.
+ */
+const openFilters = async (tab = page) => {
+  const dialog = tab.getByRole('dialog')
+  for (let attempt = 0; attempt < 10 && !(await dialog.isVisible()); attempt += 1) {
+    await tab.getByRole('button', { name: /^filtre/i }).click()
+    await dialog.waitFor({ timeout: 1000 }).catch(() => {})
+  }
+  await dialog.waitFor({ timeout: 5000 })
+  return dialog
+}
+
 /** nuqs обновляет выдачу через RSC-навигацию: networkidle срабатывает раньше,
  *  чем приходит новая разметка, поэтому ждём именно изменения числа карточек. */
 const waitForCards = async (previous) => {
@@ -42,7 +57,7 @@ const waitForCards = async (previous) => {
 await goto(`${BASE}/ro/catalog`)
 const totalAll = await cards().count()
 
-await page.getByRole('checkbox').first().check()
+await (await openFilters()).getByRole('checkbox').first().check()
 const filtered = await waitForCards(totalAll)
 const url = page.url()
 check(
@@ -56,7 +71,7 @@ check('состояние фильтра ушло в URL', url.includes('brand='
 const shared = await context.newPage()
 await goto(url, shared)
 const sharedCount = await shared.locator('article a[href*="/product/"]').count()
-const sharedChecked = await shared.getByRole('checkbox').first().isChecked()
+const sharedChecked = await (await openFilters(shared)).getByRole('checkbox').first().isChecked()
 check(
   'ссылка с фильтром открывается тем же экраном',
   sharedCount === filtered && sharedChecked,
@@ -66,7 +81,7 @@ await shared.close()
 
 // ── Счётчик фасета совпадает с выдачей ────────────────────────────────────
 await goto(`${BASE}/ro/catalog`)
-const firstRow = page.locator('aside label').first()
+const firstRow = (await openFilters()).locator('label').first()
 const facetCount = Number((await firstRow.locator('span.tabular-nums').innerText()).trim())
 await firstRow.locator('input').check()
 const facetShown = await waitForCards(totalAll)

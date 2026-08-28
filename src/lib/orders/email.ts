@@ -45,9 +45,15 @@ function buildHtml(order: Order): string {
       Имя: ${customer?.name ?? ''}<br>
       Телефон: ${customer?.phone ?? ''}<br>
       Связь: ${customer?.messenger ?? '—'}<br>
+      ${customer?.address ? `Адрес: ${customer.address}<br>` : ''}
       ${order.comment ? `Комментарий: ${order.comment}<br>` : ''}
       Язык заявки: ${(order.locale ?? '').toUpperCase()}
     </p>
+    ${
+      order.checkoutMode === 'noCall'
+        ? `<p style="font-size:15px;color:#B3453C"><b>⚠️ БЕЗ ЗВОНКА — НЕ ЗВОНИТЬ</b></p>`
+        : ''
+    }
     <p style="font-size:12px;color:#4A5A6B">Файл заявки — во вложении (CSV, открывается в Excel).</p>
   </div>`
 }
@@ -112,7 +118,9 @@ export async function sendEmail(order: Order, csv: string): Promise<NotifyResult
       body: JSON.stringify({
         from,
         to: [to],
-        subject: `Новая заявка ${order.orderNumber ?? ''} — ${order.total} MDL`,
+        subject: `Новая заявка ${order.orderNumber ?? ''} — ${order.total} MDL${
+          order.checkoutMode === 'noCall' ? ' — БЕЗ ЗВОНКА' : ''
+        }`,
         html: buildHtml(order),
         attachments: [
           {
