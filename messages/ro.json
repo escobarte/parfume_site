@@ -42,6 +42,10 @@
     "retry": "Reîncercați",
     "home": "Spre pagina principală"
   },
+  "Maintenance": {
+    "title": "Site-ul este în construcție",
+    "text": "Lucrăm la magazinul nostru online. Revenim foarte curând cu parfumuri originale."
+  },
   "Search": {
     "title": "Căutare",
     "placeholder": "Căutați un parfum, brand sau categorie",

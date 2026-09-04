@@ -17,6 +17,9 @@ const CREAM = '#E8CFB0'
  */
 export function GET(request: NextRequest) {
   const title = request.nextUrl.searchParams.get('title')?.slice(0, 90) || SITE_NAME
+  // Подпись под линией по умолчанию — дескриптор бренда; заглушка «сайт в
+  // разработке» (фаза 9.2) переопределяет её на «Find your signature.».
+  const subtitle = request.nextUrl.searchParams.get('subtitle')?.slice(0, 60) || SITE_TAGLINE
 
   return new ImageResponse(
     (
@@ -74,7 +77,7 @@ export function GET(request: NextRequest) {
             textTransform: 'uppercase',
           }}
         >
-          {SITE_TAGLINE}
+          {subtitle}
         </div>
       </div>
     ),

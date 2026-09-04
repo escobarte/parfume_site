@@ -42,6 +42,10 @@
     "retry": "Try again",
     "home": "Go home"
   },
+  "Maintenance": {
+    "title": "Site under construction",
+    "text": "We are building our online store. We will be back very soon with original fragrances."
+  },
   "Search": {
     "title": "Search",
     "placeholder": "Scent, brand or category",
