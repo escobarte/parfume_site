@@ -1,10 +1,12 @@
 import { getTranslations } from 'next-intl/server'
 import type { Locale } from '@/i18n/routing'
 import { computeFacets } from '@/lib/catalog/facets'
+import type { CatalogNavKey } from '@/lib/catalog/navSections'
 import { getFacetSource, getProductCards, type CatalogScope } from '@/lib/catalog/queries'
 import { countActiveFilters, PAGE_SIZE, type CatalogQuery } from '@/lib/catalog/searchParams'
 import { getBrands, getNotes } from '@/lib/catalog/taxonomy'
 import { ActiveFilters } from './ActiveFilters'
+import { CatalogNavColumn } from './CatalogNavColumn'
 import { FiltersDrawer } from './FiltersDrawer'
 import { LoadMore } from './LoadMore'
 import { ProductCard } from './ProductCard'
@@ -26,12 +28,18 @@ export async function CatalogView({
   scope,
   title,
   subtitle,
+  showCategoryNav = false,
+  activeNavKey,
 }: {
   locale: Locale
   query: CatalogQuery
   scope: CatalogScope
   title: string
   subtitle?: string
+  // Левая колонка навигации (задача 1, фаза 11.1) — только на страницах
+  // каталога/категорий, не на страницах бренда (те тоже рендерят CatalogView).
+  showCategoryNav?: boolean
+  activeNavKey?: CatalogNavKey
 }) {
   const [t, tGender, tFlags, brands, notes] = await Promise.all([
     getTranslations('Catalog'),
@@ -53,6 +61,7 @@ export async function CatalogView({
       female: tGender('female'),
       male: tGender('male'),
       unisex: tGender('unisex'),
+      kids: tGender('kids'),
     },
     flags: {
       isNew: tFlags('isNew'),
@@ -75,39 +84,43 @@ export async function CatalogView({
         </span>
       </div>
 
-      <div className="mt-6">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3 max-lg:w-full">
-            <FiltersDrawer facets={facets} activeCount={activeCount} />
-            <ActiveFilters facets={facets} />
-          </div>
-          <SortSelect />
-        </div>
+      <div className="mt-6 lg:flex lg:items-start lg:gap-8">
+        {showCategoryNav && <CatalogNavColumn query={query} activeKey={activeNavKey} />}
 
-        <div>
-          {items.length === 0 ? (
-            <div className="border-line flex flex-col items-center gap-2 border py-20 text-center">
-              <p className="text-ink text-body">{t('empty')}</p>
-              <p className="text-ink-muted text-body-sm">{t('emptyHint')}</p>
+        <div className="min-w-0 flex-1">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3 max-lg:w-full">
+              <FiltersDrawer facets={facets} activeCount={activeCount} />
+              <ActiveFilters facets={facets} />
             </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 xl:grid-cols-4">
-                {items.map((product, index) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    locale={locale}
-                    priority={index < 4}
-                  />
-                ))}
-              </div>
+            <SortSelect />
+          </div>
 
-              <div className="mt-10 flex justify-center">
-                <LoadMore shown={items.length} total={total} />
+          <div>
+            {items.length === 0 ? (
+              <div className="border-line flex flex-col items-center gap-2 border py-20 text-center">
+                <p className="text-ink text-body">{t('empty')}</p>
+                <p className="text-ink-muted text-body-sm">{t('emptyHint')}</p>
               </div>
-            </>
-          )}
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 xl:grid-cols-4">
+                  {items.map((product, index) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      locale={locale}
+                      priority={index < 4}
+                    />
+                  ))}
+                </div>
+
+                <div className="mt-10 flex justify-center">
+                  <LoadMore shown={items.length} total={total} />
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

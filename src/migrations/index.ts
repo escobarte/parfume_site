@@ -9,6 +9,7 @@ import * as migration_20260811_201337_phase5_pages_collection from './20260811_2
 import * as migration_20260811_202528_phase5_link_targets_pages from './20260811_202528_phase5_link_targets_pages';
 import * as migration_20260822_140412_phase8_1_title_not_localized from './20260822_140412_phase8_1_title_not_localized';
 import * as migration_20260827_104719_phase9_1_checkout_mode_address from './20260827_104719_phase9_1_checkout_mode_address';
+import * as migration_20260905_084956_phase11_1_gender_kids_product_category from './20260905_084956_phase11_1_gender_kids_product_category';
 
 export const migrations = [
   {
@@ -64,6 +65,11 @@ export const migrations = [
   {
     up: migration_20260827_104719_phase9_1_checkout_mode_address.up,
     down: migration_20260827_104719_phase9_1_checkout_mode_address.down,
-    name: '20260827_104719_phase9_1_checkout_mode_address'
+    name: '20260827_104719_phase9_1_checkout_mode_address',
+  },
+  {
+    up: migration_20260905_084956_phase11_1_gender_kids_product_category.up,
+    down: migration_20260905_084956_phase11_1_gender_kids_product_category.down,
+    name: '20260905_084956_phase11_1_gender_kids_product_category'
   },
 ];

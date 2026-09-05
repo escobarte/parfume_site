@@ -2,7 +2,7 @@ import { FLAG_OPTIONS, type CatalogQuery, type FlagOption } from './searchParams
 import type { FacetCount, FacetRow, Facets } from './types'
 import type { TaxonomyItem } from './taxonomy'
 
-const GENDERS = ['female', 'male', 'unisex'] as const
+const GENDERS = ['female', 'male', 'unisex', 'kids'] as const
 
 /**
  * Счётчик фасета честный: он показывает, сколько товаров останется, если

@@ -39,7 +39,7 @@ export default async function CatalogPage(props: {
   return (
     <>
       <Breadcrumbs items={[{ label: t('title') }]} />
-      <CatalogView locale={locale} query={query} scope={{}} title={t('title')} />
+      <CatalogView locale={locale} query={query} scope={{}} title={t('title')} showCategoryNav />
     </>
   )
 }

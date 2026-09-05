@@ -146,11 +146,15 @@ export interface Product {
   title: string;
   brand: number | Brand;
   categories?: (number | Category)[] | null;
-  gender?: ('female' | 'male' | 'unisex') | null;
+  gender?: ('female' | 'male' | 'unisex' | 'kids') | null;
   /**
    * Ольфакторное семейство.
    */
   family?: ('floral' | 'woody' | 'oriental' | 'fresh' | 'fougere' | 'chypre') | null;
+  /**
+   * Раздел каталога (не «Кому») — влияет на левую навигацию каталога.
+   */
+  productCategory: 'perfume' | 'bodyCare';
   description?: {
     root: {
       type: string;
@@ -647,6 +651,7 @@ export interface ProductsSelect<T extends boolean = true> {
   categories?: T;
   gender?: T;
   family?: T;
+  productCategory?: T;
   description?: T;
   images?: T;
   variants?:

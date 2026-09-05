@@ -16,12 +16,16 @@ export type CatalogScope = {
   categoryIds?: (number | string)[]
   brandIds?: (number | string)[]
   slugs?: string[]
+  // Раздел каталога (`Products.productCategory`, фаза 11.1) — не «Кому»,
+  // используется левой навигационной колонкой для «Уход за телом».
+  productCategory?: string
 }
 
 const scopeWhere = (scope: CatalogScope): Where[] => {
   const conditions: Where[] = []
   if (scope.categoryIds?.length) conditions.push({ categories: { in: scope.categoryIds } })
   if (scope.brandIds?.length) conditions.push({ brand: { in: scope.brandIds } })
+  if (scope.productCategory) conditions.push({ productCategory: { equals: scope.productCategory } })
   if (scope.slugs) {
     // Поиск ничего не нашёл: пустой список в `in` уходит в SQL пустым
     // параметром и роняет запрос (invalid byte sequence 0x00), поэтому

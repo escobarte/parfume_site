@@ -94,7 +94,8 @@
     "gender": {
       "female": "For her",
       "male": "For him",
-      "unisex": "Unisex"
+      "unisex": "Unisex",
+      "kids": "Kids"
     },
     "family": {
       "floral": "floral",
@@ -109,6 +110,18 @@
       "isHit": "Bestseller",
       "hasDiscount": "Sale"
     }
+  },
+  "CatalogNav": {
+    "title": "Catalog navigation",
+    "mobileHeading": "Catalog",
+    "forHer": "For her",
+    "forHim": "For him",
+    "bodyCare": "Body care",
+    "kids": "Kids",
+    "giftCertificates": "Gift certificates",
+    "giftBox": "Gift box",
+    "brands": "Brands",
+    "about": "About us"
   },
   "Product": {
     "addToCart": "Add to cart",

@@ -18,6 +18,15 @@ export const GENDERS = [
   { label: 'Она', value: 'female' },
   { label: 'Он', value: 'male' },
   { label: 'Унисекс', value: 'unisex' },
+  { label: 'Детям', value: 'kids' },
+] as const
+
+// Тип товара — не «Кому» (пол), а категория назначения. Дефолт совпадает
+// с прежним неявным поведением (все текущие ~100+ товаров — парфюмерия),
+// поэтому обратная миграция бэкфилится без ручной сверки (фаза 11, задача 1).
+export const PRODUCT_CATEGORIES = [
+  { label: 'Парфюмерия', value: 'perfume' },
+  { label: 'Уход за телом', value: 'bodyCare' },
 ] as const
 
 export const Products: CollectionConfig = {
@@ -89,6 +98,17 @@ export const Products: CollectionConfig = {
                   admin: { width: '50%', description: 'Ольфакторное семейство.' },
                 },
               ],
+            },
+            {
+              name: 'productCategory',
+              type: 'select',
+              index: true,
+              required: true,
+              defaultValue: 'perfume',
+              options: [...PRODUCT_CATEGORIES],
+              admin: {
+                description: 'Раздел каталога (не «Кому») — влияет на левую навигацию каталога.',
+              },
             },
             { name: 'description', type: 'richText', localized: true },
             {

@@ -94,7 +94,8 @@
     "gender": {
       "female": "Ea",
       "male": "El",
-      "unisex": "Unisex"
+      "unisex": "Unisex",
+      "kids": "Copii"
     },
     "family": {
       "floral": "floral",
@@ -109,6 +110,18 @@
       "isHit": "Populare",
       "hasDiscount": "Sale"
     }
+  },
+  "CatalogNav": {
+    "title": "Navigare catalog",
+    "mobileHeading": "Catalog",
+    "forHer": "Pentru ea",
+    "forHim": "Pentru el",
+    "bodyCare": "Îngrijire corporală",
+    "kids": "Copii",
+    "giftCertificates": "Certificate cadou",
+    "giftBox": "Gift box",
+    "brands": "Branduri",
+    "about": "Despre noi"
   },
   "Product": {
     "addToCart": "Adaugă în coș",

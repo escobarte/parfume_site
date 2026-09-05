@@ -94,7 +94,8 @@
     "gender": {
       "female": "Она",
       "male": "Он",
-      "unisex": "Унисекс"
+      "unisex": "Унисекс",
+      "kids": "Детям"
     },
     "family": {
       "floral": "цветочный",
@@ -109,6 +110,18 @@
       "isHit": "Хит",
       "hasDiscount": "Sale"
     }
+  },
+  "CatalogNav": {
+    "title": "Навигация по каталогу",
+    "mobileHeading": "Каталог",
+    "forHer": "Для неё",
+    "forHim": "Для него",
+    "bodyCare": "Уход за телом",
+    "kids": "Детям",
+    "giftCertificates": "Подарочные сертификаты",
+    "giftBox": "Gift box",
+    "brands": "Бренды",
+    "about": "О нас"
   },
   "Product": {
     "addToCart": "Добавить в корзину",

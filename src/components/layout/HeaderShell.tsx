@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { useScrolled } from '@/lib/useScrolled'
 import { Link, usePathname } from '@/i18n/navigation'
 import { MiniCart } from '@/components/cart/MiniCart'
+import { CATALOG_NAV_ITEMS } from '@/lib/catalog/navSections'
 import { LocaleSwitcher } from './LocaleSwitcher'
 import { SearchBox } from './SearchBox'
 import { Wordmark } from './Wordmark'
@@ -19,6 +20,7 @@ export type NavLink = { label: string; href: string }
  */
 export function HeaderShell({ links }: { links: NavLink[] }) {
   const t = useTranslations('Nav')
+  const tCatalogNav = useTranslations('CatalogNav')
   const pathname = usePathname()
   const compact = useScrolled()
 
@@ -112,6 +114,23 @@ export function HeaderShell({ links }: { links: NavLink[] }) {
                 className="text-cream text-label tracking-display py-4 uppercase"
               >
                 {link.label}
+              </Link>
+            ))}
+          </nav>
+          {/* Секция «Каталог» (фаза 11.1, задача 1) — фиксированный список,
+              не CMS-контент, тот же CATALOG_NAV_ITEMS, что у десктопной
+              левой колонки (`CatalogNavColumn`), см. `navSections.ts`. */}
+          <p className="border-line-on-dark-soft text-ink-on-dark-subtle text-eyebrow tracking-label border-t px-5 pt-4 uppercase">
+            {tCatalogNav('mobileHeading')}
+          </p>
+          <nav className="divide-line-on-dark-soft flex flex-col divide-y px-5">
+            {CATALOG_NAV_ITEMS.map((item) => (
+              <Link
+                key={item.key}
+                href={item.href}
+                className="text-cream text-label tracking-display py-4 uppercase"
+              >
+                {tCatalogNav(item.key)}
               </Link>
             ))}
           </nav>
