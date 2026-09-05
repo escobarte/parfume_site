@@ -54,7 +54,14 @@ function toView(doc: Product): ProductView {
     gender: doc.gender ?? null,
     description: doc.description ?? null,
     images: objects<Media>(doc.images).map((image) => ({
-      url: image.sizes?.card?.url ?? image.url ?? '',
+      // `card` (600×600, Media.ts) — жёсткий центр-кроп (`cover`), у широких/
+      // асимметричных фото (например, gift box) обрезает бока. Галерея
+      // товара (в отличие от карточки листинга) должна показывать кадр
+      // целиком — `full` (1200px, только ширина, без кропа) не режет
+      // содержимое, а `object-contain` в Gallery.tsx уже сам вписывает
+      // любые пропорции в квадрат без искажений. Бэкенд/кроп не трогаем —
+      // просто берём уже готовый некропнутый размер вместо кропнутого.
+      url: image.sizes?.full?.url ?? image.url ?? '',
       full: image.sizes?.full?.url ?? image.url ?? '',
       alt: image.alt ?? doc.title,
     })),
