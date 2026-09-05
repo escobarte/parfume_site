@@ -75,6 +75,7 @@ export interface Config {
     pages: Page;
     media: Media;
     orders: Order;
+    'promo-codes': PromoCode;
     users: User;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -91,6 +92,7 @@ export interface Config {
     pages: PagesSelect<false> | PagesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
+    'promo-codes': PromoCodesSelect<false> | PromoCodesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -519,6 +521,14 @@ export interface Order {
    */
   checkoutMode: 'standard' | 'noCall';
   /**
+   * При доставке в customer.address обязателен адрес.
+   */
+  deliveryMethod: 'pickup' | 'delivery';
+  /**
+   * Не онлайн-оплата — отметка для курьера/самовывоза.
+   */
+  paymentMethod: 'cash' | 'card';
+  /**
    * Локаль, с которой пришла заявка.
    */
   locale?: ('ro' | 'ru' | 'en') | null;
@@ -534,7 +544,7 @@ export interface Order {
      */
     email?: string | null;
     /**
-     * Необязательно — адрес доставки или выдачи.
+     * Обязательно при доставке, для самовывоза не нужен.
      */
     address?: string | null;
     messenger?: ('telegram' | 'viber' | 'whatsapp' | 'call') | null;
@@ -566,13 +576,55 @@ export interface Order {
       }[]
     | null;
   /**
-   * Итог заявки, MDL.
+   * Итог заявки со скидкой, MDL.
    */
   total: number;
+  /**
+   * Применённый код, если был.
+   */
+  promoCode?: string | null;
+  promoDiscountPercent?: number | null;
+  /**
+   * Не считая подарочных сертификатов/Gift box — скидка на них не действует.
+   */
+  promoDiscountAmount?: number | null;
   /**
    * CSV заявки для Excel (UTF-8 с BOM, разделитель «;»).
    */
   exportCsv?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "promo-codes".
+ */
+export interface PromoCode {
+  id: number;
+  /**
+   * Хранится и сравнивается без учёта регистра (авто-UPPERCASE при сохранении).
+   */
+  code: string;
+  /**
+   * Скидка, % от суммы заказа без учёта подарочных товаров.
+   */
+  percent: number;
+  /**
+   * Снять, чтобы отключить код, не удаляя его.
+   */
+  isActive?: boolean | null;
+  /**
+   * Выставляется автоматически после успешного оформления заявки — руками не трогать.
+   */
+  isUsed?: boolean | null;
+  /**
+   * Необязательно — срок клиент не оговаривал, логика проверки готова.
+   */
+  expiresAt?: string | null;
+  /**
+   * Заявка, в которой код был применён — для трейсинга.
+   */
+  usedInOrder?: (number | null) | Order;
   updatedAt: string;
   createdAt: string;
 }
@@ -661,6 +713,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'orders';
         value: number | Order;
+      } | null)
+    | ({
+        relationTo: 'promo-codes';
+        value: number | PromoCode;
       } | null)
     | ({
         relationTo: 'users';
@@ -921,6 +977,8 @@ export interface OrdersSelect<T extends boolean = true> {
   statusToken?: T;
   status?: T;
   checkoutMode?: T;
+  deliveryMethod?: T;
+  paymentMethod?: T;
   locale?: T;
   source?: T;
   customer?:
@@ -947,7 +1005,24 @@ export interface OrdersSelect<T extends boolean = true> {
         id?: T;
       };
   total?: T;
+  promoCode?: T;
+  promoDiscountPercent?: T;
+  promoDiscountAmount?: T;
   exportCsv?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "promo-codes_select".
+ */
+export interface PromoCodesSelect<T extends boolean = true> {
+  code?: T;
+  percent?: T;
+  isActive?: T;
+  isUsed?: T;
+  expiresAt?: T;
+  usedInOrder?: T;
   updatedAt?: T;
   createdAt?: T;
 }

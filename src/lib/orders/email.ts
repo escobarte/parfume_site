@@ -9,6 +9,18 @@ import type { NotifyResult } from './telegram'
 const isPlaceholder = (value: string | undefined) =>
   !value || value.startsWith('CHANGEME') || value.trim() === ''
 
+// Фаза 11.2, задача 5 — значения src/collections/Orders.ts::DELIVERY_METHOD_OPTIONS.
+const DELIVERY_METHOD_LABEL: Record<string, string> = {
+  pickup: 'Самовывоз',
+  delivery: 'Доставка',
+}
+
+// Фаза 11.2, задача 6 — значения src/collections/Orders.ts::PAYMENT_METHOD_OPTIONS.
+const PAYMENT_METHOD_LABEL: Record<string, string> = {
+  cash: 'Наличными',
+  card: 'Картой (курьеру)',
+}
+
 const CUSTOMER_EMAIL_MESSAGES = { ro, ru, en }
 
 const statusUrl = (order: Order) => {
@@ -40,11 +52,18 @@ function buildHtml(order: Order): string {
       Новая заявка ${order.orderNumber ?? ''}
     </h2>
     <table style="border-collapse:collapse;font-size:14px">${rows}</table>
+    ${
+      order.promoCode
+        ? `<p style="font-size:14px">Промокод: <b>${order.promoCode}</b> (-${order.promoDiscountPercent}%, -${order.promoDiscountAmount} MDL)</p>`
+        : ''
+    }
     <p style="font-size:15px"><b>Итого: ${order.total} MDL</b></p>
     <p style="font-size:14px;line-height:1.7">
       Имя: ${customer?.name ?? ''}<br>
       Телефон: ${customer?.phone ?? ''}<br>
       Связь: ${customer?.messenger ?? '—'}<br>
+      Способ получения: ${DELIVERY_METHOD_LABEL[order.deliveryMethod ?? 'pickup'] ?? order.deliveryMethod}<br>
+      Способ оплаты: ${PAYMENT_METHOD_LABEL[order.paymentMethod ?? 'cash'] ?? order.paymentMethod}<br>
       ${customer?.address ? `Адрес: ${customer.address}<br>` : ''}
       ${order.comment ? `Комментарий: ${order.comment}<br>` : ''}
       Язык заявки: ${(order.locale ?? '').toUpperCase()}

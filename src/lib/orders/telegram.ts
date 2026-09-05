@@ -7,6 +7,18 @@ const MESSENGER_LABEL: Record<string, string> = {
   call: 'Звонок',
 }
 
+// Фаза 11.2, задача 5 — значения src/collections/Orders.ts::DELIVERY_METHOD_OPTIONS.
+const DELIVERY_METHOD_LABEL: Record<string, string> = {
+  pickup: 'Самовывоз',
+  delivery: 'Доставка',
+}
+
+// Фаза 11.2, задача 6 — значения src/collections/Orders.ts::PAYMENT_METHOD_OPTIONS.
+const PAYMENT_METHOD_LABEL: Record<string, string> = {
+  cash: 'Наличными',
+  card: 'Картой (курьеру)',
+}
+
 const escapeHtml = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
@@ -28,6 +40,13 @@ export function buildTelegramMessage(order: Order): string {
   }
 
   lines.push('')
+  // Промокод (фаза 11.2, задача 7) — печатается перед «Итого», чтобы было
+  // видно, ПОЧЕМУ сумма меньше суммы позиций (скидка не на Gift-items).
+  if (order.promoCode) {
+    lines.push(
+      `Промокод: <b>${escapeHtml(order.promoCode)}</b> (-${order.promoDiscountPercent}%, -${order.promoDiscountAmount} MDL)`,
+    )
+  }
   lines.push(`<b>Итого: ${order.total} MDL</b>`)
   lines.push('')
   lines.push(`Имя: ${escapeHtml(customer?.name ?? '')}`)
@@ -35,7 +54,13 @@ export function buildTelegramMessage(order: Order): string {
   if (customer?.messenger) {
     lines.push(`Связь: ${MESSENGER_LABEL[customer.messenger] ?? customer.messenger}`)
   }
-  // Пустой адрес не печатаем вовсе — поле необязательное (фаза 9.1).
+  lines.push(
+    `Способ получения: ${DELIVERY_METHOD_LABEL[order.deliveryMethod ?? 'pickup'] ?? order.deliveryMethod}`,
+  )
+  lines.push(
+    `Способ оплаты: ${PAYMENT_METHOD_LABEL[order.paymentMethod ?? 'cash'] ?? order.paymentMethod}`,
+  )
+  // Пустой адрес не печатаем вовсе — поле необязательное при самовывозе.
   if (customer?.address) lines.push(`Адрес: ${escapeHtml(customer.address)}`)
   if (order.comment) lines.push(`Комментарий: ${escapeHtml(order.comment)}`)
   // Пометка «не звонить» — отдельной заметной строкой; обычная заявка

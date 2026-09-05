@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server'
 import type { Order } from '@/payload-types'
 import { buildOrderCsv } from '@/lib/orders/csv'
 import { logNotifyReport, notifyOrder } from '@/lib/orders/notify'
+import { claimPromoCode, resolvePromoCode } from '@/lib/orders/promo'
 import { checkRateLimit, clientIp } from '@/lib/orders/rateLimit'
 import { orderRequestSchema, type OrderRequest } from '@/lib/orders/schema'
 import { getPayloadClient } from '@/lib/payload'
+import { promoDiscountAmount } from '@/lib/pricing'
 
 /**
  * Приём заявки. Путь намеренно НЕ `/api/orders`: там живёт REST-эндпоинт
@@ -44,12 +46,31 @@ export async function POST(request: Request) {
 
   // Цены и названия берём из БД, а не из тела запроса: клиент может прислать
   // что угодно, а в заявке должен лежать честный снапшот каталога.
-  const items = await buildItems(payload, data)
+  const { items, discountableSubtotal } = await buildItems(payload, data)
   if (!items.length) {
     return NextResponse.json({ ok: false, error: 'items_unavailable' }, { status: 400 })
   }
 
-  const total = items.reduce((sum, item) => sum + item.lineTotal, 0)
+  const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0)
+
+  // Промокод (фаза 11.2, задача 7) — переоценивается заново здесь, клиентский
+  // percent из /api/promo-code-check не принимается вообще (только сам код).
+  // Невалидный/протухший между проверкой и оформлением код — не тихо
+  // игнорируется, а отклоняет заявку явной ошибкой (не молчать, по заданию).
+  let promo: Awaited<ReturnType<typeof resolvePromoCode>> | null = null
+  let discount = 0
+  if (data.promoCode) {
+    promo = await resolvePromoCode(payload, data.promoCode)
+    if (!promo.ok) {
+      return NextResponse.json(
+        { ok: false, error: 'promo_invalid', promoError: promo.error },
+        { status: 400 },
+      )
+    }
+    discount = promoDiscountAmount(discountableSubtotal, promo.percent)
+  }
+
+  const total = subtotal - discount
 
   const order = (await payload.create({
     collection: 'orders',
@@ -58,6 +79,8 @@ export async function POST(request: Request) {
       locale: data.locale,
       source: data.source,
       checkoutMode: data.checkoutMode,
+      deliveryMethod: data.deliveryMethod,
+      paymentMethod: data.paymentMethod,
       customer: {
         name: data.name,
         phone: data.phone,
@@ -68,8 +91,23 @@ export async function POST(request: Request) {
       comment: data.comment,
       items,
       total,
+      ...(promo?.ok
+        ? { promoCode: promo.code, promoDiscountPercent: promo.percent, promoDiscountAmount: discount }
+        : {}),
     },
   })) as Order
+
+  // Код помечается использованным ТОЛЬКО после того, как заказ реально создан
+  // (не в момент проверки) — см. комментарий в src/lib/orders/promo.ts.
+  if (promo?.ok) {
+    const claimed = await claimPromoCode(payload, promo.id, order.id)
+    if (!claimed) {
+      // Крайне маловероятная гонка (два одновременных оформления одним кодом)
+      // — заказ уже создан со скидкой, откатывать его ради этого не стоит,
+      // просто фиксируем в логе (см. GOTCHAS.md).
+      payload.logger.warn(`Промокод ${promo.code} не удалось пометить использованным (гонка?)`)
+    }
+  }
 
   const csv = buildOrderCsv(order)
   await payload.update({
@@ -92,6 +130,9 @@ type PayloadClient = Awaited<ReturnType<typeof getPayloadClient>>
 
 async function buildItems(payload: PayloadClient, data: OrderRequest) {
   const items: NonNullable<Order['items']> = []
+  // Скидка по промокоду не действует на подарочные сертификаты/Gift box
+  // (фаза 11.2, задача 7) — считаем базу скидки отдельно, не по всем items.
+  let discountableSubtotal = 0
 
   for (const requested of data.items) {
     if (requested.kind === 'gift') {
@@ -152,7 +193,8 @@ async function buildItems(payload: PayloadClient, data: OrderRequest) {
       qty,
       lineTotal: variant.price * qty,
     })
+    discountableSubtotal += variant.price * qty
   }
 
-  return items
+  return { items, discountableSubtotal }
 }

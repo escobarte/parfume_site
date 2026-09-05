@@ -5,31 +5,46 @@ import { useState } from 'react'
 import { useRouter } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { useCart } from '@/lib/cart/store'
-import { CHECKOUT_MODES, type CheckoutMode, MESSENGERS } from '@/lib/orders/schema'
+import {
+  CHECKOUT_MODES,
+  type CheckoutMode,
+  DELIVERY_METHODS,
+  type DeliveryMethod,
+  MESSENGERS,
+  PAYMENT_METHODS,
+  type PaymentMethod,
+} from '@/lib/orders/schema'
+import { usePromo } from '@/lib/orders/promoStore'
 import { digitsOf, PHONE_PREFIX, PhoneInput } from './PhoneInput'
 
-type Errors = Partial<Record<'name' | 'phone' | 'email' | 'form', string>>
+type Errors = Partial<Record<'name' | 'phone' | 'email' | 'address' | 'form', string>>
 
 /**
- * Форма заявки: имя, телефон с маской +373, способ оформления, мессенджер,
- * адрес и комментарий.
+ * Форма заявки: имя, телефон с маской +373, способ оформления, способ
+ * получения, мессенджер, адрес и комментарий.
  *
  * Способ оформления (фаза 9.1) на валидацию не влияет вообще: телефон
  * обязателен и при «без звонка» — вариант лишь ставит менеджеру пометку
- * «не звонить». Адрес необязателен: пустой уходит как undefined и в заявку
- * не попадает.
+ * «не звонить».
+ *
+ * Адрес (фаза 11.2, задача 5) — обязателен ТОЛЬКО при способе получения
+ * «Доставка»; при «Самовывоз» поле не рендерится вовсе и в заявку не уходит.
  */
 export function OrderForm() {
   const t = useTranslations('OrderForm')
   const locale = useLocale() as Locale
   const router = useRouter()
   const items = useCart((state) => state.items)
+  const promoCode = usePromo((state) => state.code)
+  const clearPromo = usePromo((state) => state.clear)
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [messenger, setMessenger] = useState<(typeof MESSENGERS)[number]>('telegram')
   const [checkoutMode, setCheckoutMode] = useState<CheckoutMode>('standard')
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('pickup')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [address, setAddress] = useState('')
   const [comment, setComment] = useState('')
   const [company, setCompany] = useState('') // honeypot
@@ -46,6 +61,7 @@ export function OrderForm() {
     if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       next.email = t('errorEmail')
     }
+    if (deliveryMethod === 'delivery' && !address.trim()) next.address = t('errorAddress')
     setErrors(next)
     if (Object.keys(next).length) return
 
@@ -60,11 +76,14 @@ export function OrderForm() {
           email: email.trim() || undefined,
           messenger,
           checkoutMode,
-          address: address.trim() || undefined,
+          deliveryMethod,
+          paymentMethod,
+          address: deliveryMethod === 'delivery' ? address.trim() : undefined,
           comment: comment.trim() || undefined,
           locale,
           source: 'cart',
           company,
+          promoCode: promoCode ?? undefined,
           items: items.map((item) => ({
             kind: item.kind ?? 'product',
             productId: item.productId,
@@ -87,13 +106,27 @@ export function OrderForm() {
       }
 
       if (!response.ok || !data.ok) {
-        setErrors({
-          form: data.error === 'rate_limit' ? t('errorRate') : t('errorGeneric'),
-          ...(data.error === 'validation' && data.fields?.includes('email')
+        // Код стал невалидным между проверкой в корзине и отправкой (истёк /
+        // использован кем-то ещё) — заявку не проводим молча без скидки,
+        // явно просим убрать код и повторить (см. ПРОМПТ 11B, задача 7).
+        if (data.error === 'promo_invalid') clearPromo()
+
+        const fieldError =
+          data.error === 'validation' && data.fields?.includes('email')
             ? { email: t('errorEmail') }
-            : data.error === 'validation'
-              ? { phone: t('errorPhone') }
-              : {}),
+            : data.error === 'validation' && data.fields?.includes('address')
+              ? { address: t('errorAddress') }
+              : data.error === 'validation'
+                ? { phone: t('errorPhone') }
+                : {}
+        setErrors({
+          form:
+            data.error === 'rate_limit'
+              ? t('errorRate')
+              : data.error === 'promo_invalid'
+                ? t('errorPromoInvalid')
+                : t('errorGeneric'),
+          ...fieldError,
         })
         setSending(false)
         return
@@ -190,6 +223,40 @@ export function OrderForm() {
           )}
         </label>
 
+        <label className="flex flex-col gap-1.5">
+          <span className="text-ink-muted text-eyebrow tracking-label uppercase">
+            {t('deliveryMethod')}
+          </span>
+          <select
+            value={deliveryMethod}
+            onChange={(event) => setDeliveryMethod(event.target.value as DeliveryMethod)}
+            className={`${fieldClass()} cursor-pointer bg-transparent`}
+          >
+            {DELIVERY_METHODS.map((option) => (
+              <option key={option} value={option}>
+                {t(`deliveryMethod_${option}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-ink-muted text-eyebrow tracking-label uppercase">
+            {t('paymentMethod')}
+          </span>
+          <select
+            value={paymentMethod}
+            onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
+            className={`${fieldClass()} cursor-pointer bg-transparent`}
+          >
+            {PAYMENT_METHODS.map((option) => (
+              <option key={option} value={option}>
+                {t(`paymentMethod_${option}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <div className="flex flex-col gap-1.5">
           <span className="text-ink-muted text-eyebrow tracking-label uppercase">
             {t('messenger')}
@@ -215,19 +282,23 @@ export function OrderForm() {
           </div>
         </div>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-ink-muted text-eyebrow tracking-label uppercase">
-            {t('address')}
-          </span>
-          <input
-            type="text"
-            value={address}
-            onChange={(event) => setAddress(event.target.value)}
-            placeholder={t('addressPlaceholder')}
-            autoComplete="street-address"
-            className={fieldClass()}
-          />
-        </label>
+        {deliveryMethod === 'delivery' && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-ink-muted text-eyebrow tracking-label uppercase">
+              {t('address')}
+            </span>
+            <input
+              type="text"
+              value={address}
+              onChange={(event) => setAddress(event.target.value)}
+              placeholder={t('addressPlaceholder')}
+              autoComplete="street-address"
+              aria-invalid={Boolean(errors.address) || undefined}
+              className={fieldClass(Boolean(errors.address))}
+            />
+            {errors.address && <span className="text-danger text-eyebrow">{errors.address}</span>}
+          </label>
+        )}
 
         <label className="flex flex-col gap-1.5">
           <span className="text-ink-muted text-eyebrow tracking-label uppercase">

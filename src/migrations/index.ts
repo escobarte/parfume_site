@@ -12,6 +12,9 @@ import * as migration_20260827_104719_phase9_1_checkout_mode_address from './202
 import * as migration_20260905_084956_phase11_1_gender_kids_product_category from './20260905_084956_phase11_1_gender_kids_product_category';
 import * as migration_20260905_091602_phase11_1_gift_items from './20260905_091602_phase11_1_gift_items';
 import * as migration_20260905_094509_phase11_1_country_of_origin from './20260905_094509_phase11_1_country_of_origin';
+import * as migration_20260905_125324_phase11_2_delivery_method from './20260905_125324_phase11_2_delivery_method';
+import * as migration_20260905_130249_phase11_2_payment_method from './20260905_130249_phase11_2_payment_method';
+import * as migration_20260905_131227_phase11_2_promo_codes from './20260905_131227_phase11_2_promo_codes';
 
 export const migrations = [
   {
@@ -82,6 +85,21 @@ export const migrations = [
   {
     up: migration_20260905_094509_phase11_1_country_of_origin.up,
     down: migration_20260905_094509_phase11_1_country_of_origin.down,
-    name: '20260905_094509_phase11_1_country_of_origin'
+    name: '20260905_094509_phase11_1_country_of_origin',
+  },
+  {
+    up: migration_20260905_125324_phase11_2_delivery_method.up,
+    down: migration_20260905_125324_phase11_2_delivery_method.down,
+    name: '20260905_125324_phase11_2_delivery_method',
+  },
+  {
+    up: migration_20260905_130249_phase11_2_payment_method.up,
+    down: migration_20260905_130249_phase11_2_payment_method.down,
+    name: '20260905_130249_phase11_2_payment_method',
+  },
+  {
+    up: migration_20260905_131227_phase11_2_promo_codes.up,
+    down: migration_20260905_131227_phase11_2_promo_codes.down,
+    name: '20260905_131227_phase11_2_promo_codes'
   },
 ];

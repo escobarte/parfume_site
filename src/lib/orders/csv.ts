@@ -16,6 +16,9 @@ export const CSV_COLUMNS = [
   // поэтому «опускать пустое поле» здесь = пустая ячейка, а не исчезающая
   // колонка: иначе файл перестанет открываться единой таблицей в Excel.
   'checkoutMode',
+  // Способ получения и оплаты (фаза 11.2, задачи 5/6) — та же логика фиксированной шапки.
+  'deliveryMethod',
+  'paymentMethod',
   'address',
   'product',
   'brand',
@@ -24,6 +27,10 @@ export const CSV_COLUMNS = [
   'qty',
   'price',
   'sum',
+  // Промокод (фаза 11.2, задача 7) — заполнено только в итоговой строке,
+  // как и sum (скидка — на заказ целиком, не на позицию).
+  'promoCode',
+  'discount',
   'comment',
 ] as const
 
@@ -31,6 +38,18 @@ export const CSV_COLUMNS = [
 const CHECKOUT_MODE_CSV: Record<string, string> = {
   standard: '',
   noCall: 'БЕЗ ЗВОНКА',
+}
+
+/** Подписи способа получения (фаза 11.2, задача 5) — по-русски, как весь файл. */
+const DELIVERY_METHOD_CSV: Record<string, string> = {
+  pickup: 'Самовывоз',
+  delivery: 'Доставка',
+}
+
+/** Подписи способа оплаты (фаза 11.2, задача 6) — по-русски, как весь файл. */
+const PAYMENT_METHOD_CSV: Record<string, string> = {
+  cash: 'Наличными',
+  card: 'Картой',
 }
 
 const SEPARATOR = ';'
@@ -58,6 +77,8 @@ function orderRows(order: Order): string[] {
         customer?.phone ?? '',
         customer?.messenger ?? '',
         CHECKOUT_MODE_CSV[order.checkoutMode ?? 'standard'] ?? '',
+        DELIVERY_METHOD_CSV[order.deliveryMethod ?? 'pickup'] ?? '',
+        PAYMENT_METHOD_CSV[order.paymentMethod ?? 'cash'] ?? '',
         customer?.address ?? '',
         item.title,
         item.brandTitle ?? '',
@@ -66,14 +87,36 @@ function orderRows(order: Order): string[] {
         item.qty,
         item.price,
         item.lineTotal,
+        '',
+        '',
         order.comment ?? '',
       ]),
     )
   }
 
-  // Итоговая строка: сумма заявки в колонке sum, остальное пусто.
+  // Итоговая строка: сумма заявки (уже со скидкой) в sum, промокод и сумма
+  // скидки — тут же, остальное пусто.
   rows.push(
-    row([date, customer?.name ?? '', '', '', '', '', 'ИТОГО', '', '', '', '', '', order.total, '']),
+    row([
+      date,
+      customer?.name ?? '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      'ИТОГО',
+      '',
+      '',
+      '',
+      '',
+      '',
+      order.total,
+      order.promoCode ?? '',
+      order.promoDiscountAmount ?? '',
+      '',
+    ]),
   )
 
   return rows

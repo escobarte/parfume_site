@@ -12,3 +12,13 @@ export function discountPercent(
   if (oldPrice <= price) return null
   return Math.round((1 - price / oldPrice) * 100)
 }
+
+/**
+ * Сумма промокодовой скидки (фаза 11.2, задача 7) — только процент, округление
+ * до целого MDL, как и остальные суммы в проекте. `discountableSubtotal` уже
+ * не должен включать подарочные товары — это фильтрует вызывающий код
+ * (`buildItems` в order-request/route.ts, по `kind !== 'gift'`), не эта функция.
+ */
+export function promoDiscountAmount(discountableSubtotal: number, percent: number): number {
+  return Math.round((discountableSubtotal * percent) / 100)
+}

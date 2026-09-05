@@ -1,4 +1,4 @@
-import type { CollectionConfig, Where } from 'payload'
+import type { CollectionConfig, TextField, Validate, Where } from 'payload'
 import crypto from 'node:crypto'
 import { adminOnly, isStaff, staffOnly } from '@/access/roles'
 import { buildOrdersCsvBulk } from '@/lib/orders/csv'
@@ -24,6 +24,19 @@ export const CHECKOUT_MODE_OPTIONS = [
   { label: 'Без звонка — НЕ ЗВОНИТЬ', value: 'noCall' },
 ] as const
 
+// Способ получения (фаза 11.2, задача 5). Значения — src/lib/orders/schema.ts::DELIVERY_METHODS.
+export const DELIVERY_METHOD_OPTIONS = [
+  { label: 'Самовывоз', value: 'pickup' },
+  { label: 'Доставка', value: 'delivery' },
+] as const
+
+// Способ оплаты (фаза 11.2, задача 6) — НЕ онлайн-оплата, отметка для
+// курьера/самовывоза. Значения — src/lib/orders/schema.ts::PAYMENT_METHODS.
+export const PAYMENT_METHOD_OPTIONS = [
+  { label: 'Наличными', value: 'cash' },
+  { label: 'Картой (курьеру)', value: 'card' },
+] as const
+
 export const Orders: CollectionConfig = {
   slug: 'orders',
   labels: { singular: 'Заявка', plural: 'Заявки' },
@@ -38,6 +51,9 @@ export const Orders: CollectionConfig = {
       'customer.name',
       'customer.phone',
       'checkoutMode',
+      'deliveryMethod',
+      'paymentMethod',
+      'promoCode',
       'total',
       'status',
     ],
@@ -166,6 +182,32 @@ export const Orders: CollectionConfig = {
       },
     },
     {
+      name: 'deliveryMethod',
+      label: 'Способ получения',
+      type: 'select',
+      required: true,
+      defaultValue: 'pickup',
+      index: true,
+      options: [...DELIVERY_METHOD_OPTIONS],
+      admin: {
+        position: 'sidebar',
+        description: 'При доставке в customer.address обязателен адрес.',
+      },
+    },
+    {
+      name: 'paymentMethod',
+      label: 'Способ оплаты',
+      type: 'select',
+      required: true,
+      defaultValue: 'cash',
+      index: true,
+      options: [...PAYMENT_METHOD_OPTIONS],
+      admin: {
+        position: 'sidebar',
+        description: 'Не онлайн-оплата — отметка для курьера/самовывоза.',
+      },
+    },
+    {
       name: 'locale',
       type: 'select',
       options: [
@@ -202,7 +244,16 @@ export const Orders: CollectionConfig = {
           name: 'address',
           label: 'Адрес',
           type: 'text',
-          admin: { description: 'Необязательно — адрес доставки или выдачи.' },
+          // Обязателен только при deliveryMethod === 'delivery' (фаза 11.2,
+          // задача 5) — deliveryMethod лежит на верхнем уровне документа, не
+          // в этой group, поэтому проверка через data, а не siblingData.
+          validate: ((value, { data }) => {
+            if (data?.deliveryMethod === 'delivery' && !String(value ?? '').trim()) {
+              return 'Адрес обязателен при способе получения «Доставка».'
+            }
+            return true
+          }) satisfies Validate<string, Partial<Order>, unknown, TextField>,
+          admin: { description: 'Обязательно при доставке, для самовывоза не нужен.' },
         },
         {
           name: 'messenger',
@@ -263,7 +314,38 @@ export const Orders: CollectionConfig = {
       name: 'total',
       type: 'number',
       required: true,
-      admin: { description: 'Итог заявки, MDL.' },
+      admin: { description: 'Итог заявки со скидкой, MDL.' },
+    },
+    {
+      // Промокод (фаза 11.2, задача 7) — снапшот на момент заявки, не
+      // relationship: код мог измениться/исчезнуть, а заявка должна помнить,
+      // что было применено. Само поле пустое, если код не использовался.
+      name: 'promoCode',
+      label: 'Промокод',
+      type: 'text',
+      admin: { position: 'sidebar', description: 'Применённый код, если был.' },
+    },
+    {
+      type: 'row',
+      admin: { condition: (data) => Boolean(data?.promoCode) },
+      fields: [
+        {
+          name: 'promoDiscountPercent',
+          label: 'Скидка, %',
+          type: 'number',
+          admin: { position: 'sidebar', width: '50%' },
+        },
+        {
+          name: 'promoDiscountAmount',
+          label: 'Скидка, MDL',
+          type: 'number',
+          admin: {
+            position: 'sidebar',
+            width: '50%',
+            description: 'Не считая подарочных сертификатов/Gift box — скидка на них не действует.',
+          },
+        },
+      ],
     },
     {
       // Файл заявки в нашем формате (не 1С): менеджер скачивает его кнопкой

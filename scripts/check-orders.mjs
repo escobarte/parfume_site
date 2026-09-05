@@ -97,7 +97,7 @@ check('CSV начинается с BOM', csv.charCodeAt(0) === 0xfeff, `перв
 check(
   'разделитель «;» и нужные колонки',
   lines[0]?.replace('﻿', '') ===
-    'date;name;phone;messenger;checkoutMode;address;product;brand;volume;sku;qty;price;sum;comment',
+    'date;name;phone;messenger;checkoutMode;deliveryMethod;paymentMethod;address;product;brand;volume;sku;qty;price;sum;promoCode;discount;comment',
   lines[0]?.replace('﻿', ''),
 )
 check(
@@ -111,7 +111,7 @@ check(
 )
 check(
   'поле с «;» взято в кавычки или экранировано',
-  !(lines[1] ?? '').split(';').some((cell, index) => index === 13 && cell.includes(';')),
+  !(lines[1] ?? '').split(';').some((cell, index) => index === 15 && cell.includes(';')),
 )
 
 // ── Способ оформления и адрес (фаза 9.1) ──────────────────────────────────
@@ -122,9 +122,234 @@ check(
 )
 check(
   'пустой адрес не превращается в мусор в CSV',
-  !order?.customer?.address && (lines[1] ?? '').split(';')[5] === '',
-  `адрес «${(lines[1] ?? '').split(';')[5]}»`,
+  !order?.customer?.address && (lines[1] ?? '').split(';')[7] === '',
+  `адрес «${(lines[1] ?? '').split(';')[7]}»`,
 )
+
+// ── Способ получения и обязательность адреса (фаза 11.2, задача 5) ────────
+check(
+  'заявка без deliveryMethod — pickup по умолчанию, адрес не требуется',
+  order?.deliveryMethod === 'pickup',
+  `deliveryMethod ${order?.deliveryMethod}`,
+)
+check(
+  'CSV показывает «Самовывоз» для pickup-заявки',
+  (lines[1] ?? '').split(';')[5] === 'Самовывоз',
+  (lines[1] ?? '').split(';')[5],
+)
+
+const deliveryNoAddress = await post(validOrder({ deliveryMethod: 'delivery' }))
+const deliveryNoAddressBody = await deliveryNoAddress.json()
+check(
+  'заявка «доставка» без адреса отклонена',
+  deliveryNoAddress.status === 400 && deliveryNoAddressBody.fields?.includes('address'),
+  JSON.stringify(deliveryNoAddressBody),
+)
+
+const delivery = await post(
+  validOrder({ deliveryMethod: 'delivery', address: 'Chișinău, bd. Dacia 12' }),
+)
+const deliveryBody = await delivery.json()
+check('заявка «доставка» с адресом принята', delivery.status === 200 && deliveryBody.ok === true)
+
+const deliveryOrder = await fetch(
+  `${BASE}/api/orders?where[orderNumber][equals]=${deliveryBody.orderNumber}&depth=0`,
+  { headers: { Authorization: `JWT ${token}` } },
+)
+  .then((response) => response.json())
+  .then((data) => data.docs?.[0])
+check('deliveryMethod «delivery» сохранён в заявке', deliveryOrder?.deliveryMethod === 'delivery')
+check(
+  'адрес доставки сохранён в заявке',
+  deliveryOrder?.customer?.address === 'Chișinău, bd. Dacia 12',
+  deliveryOrder?.customer?.address,
+)
+const deliveryCsvLine = (deliveryOrder?.exportCsv ?? '').split('\r\n')[1] ?? ''
+check(
+  'CSV показывает «Доставка» и адрес доставки',
+  deliveryCsvLine.split(';')[5] === 'Доставка' &&
+    deliveryCsvLine.includes('Chișinău, bd. Dacia 12'),
+  deliveryCsvLine.slice(0, 120),
+)
+
+// ── Способ оплаты (фаза 11.2, задача 6) ────────────────────────────────────
+check(
+  'заявка без paymentMethod — cash по умолчанию',
+  order?.paymentMethod === 'cash',
+  `paymentMethod ${order?.paymentMethod}`,
+)
+
+const cardOrderRes = await post(validOrder({ paymentMethod: 'card' }))
+const cardOrderBody = await cardOrderRes.json()
+check('заявка с оплатой картой принята', cardOrderRes.status === 200 && cardOrderBody.ok === true)
+
+const cardOrder = await fetch(
+  `${BASE}/api/orders?where[orderNumber][equals]=${cardOrderBody.orderNumber}&depth=0`,
+  { headers: { Authorization: `JWT ${token}` } },
+)
+  .then((response) => response.json())
+  .then((data) => data.docs?.[0])
+check('paymentMethod «card» сохранён в заявке', cardOrder?.paymentMethod === 'card')
+
+const cardCsvLine = (cardOrder?.exportCsv ?? '').split('\r\n')[1] ?? ''
+check(
+  'CSV показывает «Картой» для paymentMethod card',
+  cardCsvLine.split(';')[6] === 'Картой',
+  cardCsvLine.split(';')[6],
+)
+
+// ── Промокоды (фаза 11.2, задача 7) ────────────────────────────────────────
+const promoRest = (method, path, body) =>
+  fetch(`${BASE}/api${path}`, {
+    method,
+    headers: { 'Content-Type': 'application/json', Authorization: `JWT ${token}` },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  })
+
+const promoCheck = (code) =>
+  fetch(`${BASE}/api/promo-code-check`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  })
+
+// Код TEST10PROMO — 10%, для основного сценария; создан через REST (staff),
+// как и создал бы его владелец из /admin.
+const promoCreate = await promoRest('POST', '/promo-codes', {
+  code: 'test10promo',
+  percent: 10,
+  isActive: true,
+})
+const promoDoc = (await promoCreate.json()).doc
+check(
+  'промокод создан, код нормализован в верхний регистр',
+  promoDoc?.code === 'TEST10PROMO',
+  promoDoc?.code,
+)
+
+const promoNotFound = await promoCheck('NOPE-CODE')
+check('проверка кода: несуществующий → not_found', promoNotFound.status === 404)
+
+const promoOkCheck = await promoCheck('test10promo') // регистронезависимо
+const promoOkCheckBody = await promoOkCheck.json()
+check(
+  'проверка кода: регистронезависимо, percent отдаётся',
+  promoOkCheck.status === 200 && promoOkCheckBody.percent === 10,
+  JSON.stringify(promoOkCheckBody),
+)
+
+// Подарочный товар — для проверки, что скидка НЕ считается от его суммы.
+const giftForPromo = await promoRest(
+  'POST',
+  '/gift-items?locale=ro',
+  {
+    title: 'TEST Promo Gift',
+    slug: 'test-promo-gift',
+    type: 'certificate',
+    isActive: true,
+    variants: [{ amount: 500, sku: 'TEST-PROMO-GIFT-500', stock: 5, isActive: true }],
+  },
+)
+const giftForPromoDoc = (await giftForPromo.json()).doc
+check('временный gift-item для теста промокода создан', Boolean(giftForPromoDoc?.id))
+
+const promoOrderRes = await post(
+  validOrder({
+    promoCode: 'test10promo',
+    items: [
+      ...validOrder().items,
+      {
+        kind: 'gift',
+        productId: giftForPromoDoc?.id ?? 0,
+        slug: 'test-promo-gift',
+        title: 'TEST Promo Gift',
+        brandTitle: '',
+        sku: 'TEST-PROMO-GIFT-500',
+        price: 500,
+        qty: 1,
+      },
+    ],
+  }),
+)
+const promoOrderBody = await promoOrderRes.json()
+check(
+  'заявка с промокодом (товар + gift-item) принята',
+  promoOrderRes.status === 200 && promoOrderBody.ok === true,
+  JSON.stringify(promoOrderBody),
+)
+
+const promoOrder = await fetch(
+  `${BASE}/api/orders?where[orderNumber][equals]=${promoOrderBody.orderNumber}&depth=0`,
+  { headers: { Authorization: `JWT ${token}` } },
+)
+  .then((response) => response.json())
+  .then((data) => data.docs?.[0])
+// 480 (духи, 10% скидки = 48) + 500 (gift, скидка не действует) = 932.
+check(
+  'скидка не считается от суммы gift-item — итог 932, не 882',
+  promoOrder?.total === 932,
+  `total ${promoOrder?.total}`,
+)
+check(
+  'промокод и сумма скидки сохранены в заявке',
+  promoOrder?.promoCode === 'TEST10PROMO' &&
+    promoOrder?.promoDiscountPercent === 10 &&
+    promoOrder?.promoDiscountAmount === 48,
+  `${promoOrder?.promoCode} -${promoOrder?.promoDiscountPercent}% -${promoOrder?.promoDiscountAmount}`,
+)
+
+const promoCsvLastLine = (promoOrder?.exportCsv ?? '').split('\r\n').filter(Boolean).at(-1) ?? ''
+check(
+  'CSV итоговой строки показывает промокод и сумму скидки',
+  promoCsvLastLine.split(';')[15] === 'TEST10PROMO' && promoCsvLastLine.split(';')[16] === '48',
+  promoCsvLastLine,
+)
+
+// Код одноразовый — второе применение отклоняется на этапе оформления.
+const promoUsedCheck = await promoCheck('test10promo')
+check('код после применения — used при повторной проверке', promoUsedCheck.status === 404)
+
+const promoReuseOrder = await post(validOrder({ promoCode: 'test10promo' }))
+const promoReuseBody = await promoReuseOrder.json()
+check(
+  'повторное применение того же кода отклонено при оформлении',
+  promoReuseOrder.status === 400 &&
+    promoReuseBody.error === 'promo_invalid' &&
+    promoReuseBody.promoError === 'used',
+  JSON.stringify(promoReuseBody),
+)
+
+// Неактивный и просроченный код — отдельные коды, чтобы не путать с одноразовостью.
+await promoRest('POST', '/promo-codes', { code: 'test-inactive', percent: 5, isActive: false })
+const promoInactiveCheck = await promoCheck('test-inactive')
+const promoInactiveBody = await promoInactiveCheck.json()
+check(
+  'неактивный код отклонён с error=inactive',
+  promoInactiveCheck.status === 404 && promoInactiveBody.error === 'inactive',
+  JSON.stringify(promoInactiveBody),
+)
+
+await promoRest('POST', '/promo-codes', {
+  code: 'test-expired',
+  percent: 5,
+  isActive: true,
+  expiresAt: '2020-01-01T00:00:00.000Z',
+})
+const promoExpiredCheck = await promoCheck('test-expired')
+const promoExpiredBody = await promoExpiredCheck.json()
+check(
+  'просроченный код отклонён с error=expired',
+  promoExpiredCheck.status === 404 && promoExpiredBody.error === 'expired',
+  JSON.stringify(promoExpiredBody),
+)
+
+// Уборка тестовых промокодов и gift-item.
+for (const code of ['test10promo', 'test-inactive', 'test-expired']) {
+  const found = await promoRest('GET', `/promo-codes?where[code][equals]=${code.toUpperCase()}`)
+  const doc = (await found.json()).docs?.[0]
+  if (doc) await promoRest('DELETE', `/promo-codes/${doc.id}`)
+}
+if (giftForPromoDoc?.id) await promoRest('DELETE', `/gift-items/${giftForPromoDoc.id}`)
 
 const noCall = await post(
   validOrder({ checkoutMode: 'noCall', address: 'Chișinău, str. Ismail 98, ap. 12' }),

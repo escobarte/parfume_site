@@ -16,6 +16,7 @@ import { Notes } from './collections/Notes'
 import { Orders } from './collections/Orders'
 import { Pages } from './collections/Pages'
 import { Products } from './collections/Products'
+import { PromoCodes } from './collections/PromoCodes'
 import { Users } from './collections/Users'
 import { Homepage } from './globals/Homepage'
 import { Navigation } from './globals/Navigation'
@@ -77,7 +78,7 @@ export default buildConfig({
     supportedLanguages: { en, ro, ru },
     fallbackLanguage: 'ru',
   },
-  collections: [Products, Brands, Categories, Notes, GiftItems, Pages, Media, Orders, Users],
+  collections: [Products, Brands, Categories, Notes, GiftItems, Pages, Media, Orders, PromoCodes, Users],
   globals: [Homepage, Settings, Navigation],
   // Импорт каталога, загрузка фото архивом и сброс кэша витрины из /admin —
   // вне пространства коллекций (не /api/<slug>, см. docs/GOTCHAS.md «Роуты и API»).

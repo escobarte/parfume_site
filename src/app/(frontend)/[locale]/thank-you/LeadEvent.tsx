@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { trackEvent } from '@/lib/analytics/gtag'
 import { useCart } from '@/lib/cart/store'
+import { usePromo } from '@/lib/orders/promoStore'
 
 export type LeadEventItem = {
   id?: string | number | null
@@ -42,11 +43,19 @@ export function LeadEvent({
 }) {
   const sent = useRef(false)
   const clear = useCart((state) => state.clear)
+  const clearPromo = usePromo((state) => state.clear)
 
   useEffect(() => {
     if (sent.current) return
     sent.current = true
-    if (orderNumber) clear()
+    // Промокод — одноразовый, использованный код всё равно больше не пройдёт
+    // проверку повторно, но стор чистим сразу же, чтобы следующая заявка
+    // случайно не унаследовала показанную скидку от предыдущей (фаза 11.2,
+    // задача 7).
+    if (orderNumber) {
+      clear()
+      clearPromo()
+    }
     trackEvent('generate_lead', {
       currency: 'MDL',
       value: total,
@@ -59,7 +68,7 @@ export function LeadEvent({
         quantity: item.qty,
       })),
     })
-  }, [orderNumber, items, total, clear])
+  }, [orderNumber, items, total, clear, clearPromo])
 
   return null
 }

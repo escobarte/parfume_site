@@ -176,7 +176,19 @@
     "miniTitle": "În coș",
     "viewCart": "Deschide coșul",
     "more": "și încă {count}",
-    "toastAdded": "Adăugat în coș"
+    "toastAdded": "Adăugat în coș",
+    "promoPlaceholder": "Cod promoțional",
+    "promoApply": "Aplică",
+    "promoChecking": "Verificăm…",
+    "promoApplied": "Codul {code} este aplicat: −{percent}%",
+    "promoRemove": "Elimină",
+    "promoDiscount": "Reducere ({code}, −{percent}%)",
+    "promoError_not_found": "Cod negăsit",
+    "promoError_inactive": "Cod inactiv",
+    "promoError_used": "Codul a fost deja folosit",
+    "promoError_expired": "Codul a expirat",
+    "promoError_rate_limit": "Prea multe încercări, reveniți mai târziu",
+    "promoError_generic": "Nu am putut verifica codul, încercați din nou"
   },
   "OrderForm": {
     "title": "Datele dumneavoastră",
@@ -196,13 +208,21 @@
     "errorEmail": "Email incorect",
     "errorRate": "Prea multe cereri. Încercați peste câteva minute.",
     "errorGeneric": "Nu am reușit să trimitem cererea. Încercați din nou.",
+    "errorPromoInvalid": "Codul promoțional nu mai este valabil — eliminați-l în coș și retrimiteți.",
     "agreement": "Trimițând cererea, sunteți de acord să fiți contactat.",
     "checkoutMode": "Mod de comandă",
     "checkoutMode_standard": "Comandă obișnuită — managerul vă sună",
     "checkoutMode_noCall": "Comandă fără apel",
     "checkoutModeNoCallHint": "Nu vă sunăm — vă scriem. Telefonul rămâne obligatoriu pentru livrare.",
+    "deliveryMethod": "Modalitate de primire",
+    "deliveryMethod_pickup": "Ridicare personală",
+    "deliveryMethod_delivery": "Livrare",
+    "paymentMethod": "Modalitate de plată",
+    "paymentMethod_cash": "Numerar",
+    "paymentMethod_card": "Card (la curier)",
     "address": "Adresă",
-    "addressPlaceholder": "Opțional: adresa de livrare sau ridicare"
+    "addressPlaceholder": "Stradă, casă, oraș",
+    "errorAddress": "Indicați adresa de livrare"
   },
   "ThankYou": {
     "title": "Mulțumim!",

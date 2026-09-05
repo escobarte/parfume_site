@@ -176,7 +176,19 @@
     "miniTitle": "В корзине",
     "viewCart": "Перейти в корзину",
     "more": "и ещё {count}",
-    "toastAdded": "Добавлено в корзину"
+    "toastAdded": "Добавлено в корзину",
+    "promoPlaceholder": "Промокод",
+    "promoApply": "Применить",
+    "promoChecking": "Проверяем…",
+    "promoApplied": "Промокод {code} применён: −{percent}%",
+    "promoRemove": "Убрать",
+    "promoDiscount": "Скидка ({code}, −{percent}%)",
+    "promoError_not_found": "Код не найден",
+    "promoError_inactive": "Код неактивен",
+    "promoError_used": "Код уже использован",
+    "promoError_expired": "Срок действия кода истёк",
+    "promoError_rate_limit": "Слишком много попыток, попробуйте позже",
+    "promoError_generic": "Не удалось проверить код, попробуйте ещё раз"
   },
   "OrderForm": {
     "title": "Ваши данные",
@@ -196,13 +208,21 @@
     "errorEmail": "Неверный email",
     "errorRate": "Слишком много заявок. Попробуйте через несколько минут.",
     "errorGeneric": "Не удалось отправить заявку. Попробуйте ещё раз.",
+    "errorPromoInvalid": "Промокод больше не действует — уберите его в корзине и повторите отправку.",
     "agreement": "Отправляя заявку, вы соглашаетесь на связь с вами.",
     "checkoutMode": "Способ оформления",
     "checkoutMode_standard": "Обычная заявка — менеджер перезвонит",
     "checkoutMode_noCall": "Заказать без звонка",
     "checkoutModeNoCallHint": "Звонить не будем — напишем. Телефон всё равно нужен для доставки.",
+    "deliveryMethod": "Способ получения",
+    "deliveryMethod_pickup": "Самовывоз",
+    "deliveryMethod_delivery": "Доставка",
+    "paymentMethod": "Способ оплаты",
+    "paymentMethod_cash": "Наличными",
+    "paymentMethod_card": "Картой (курьеру)",
     "address": "Адрес",
-    "addressPlaceholder": "Необязательно: адрес доставки или выдачи"
+    "addressPlaceholder": "Улица, дом, город",
+    "errorAddress": "Укажите адрес доставки"
   },
   "ThankYou": {
     "title": "Спасибо!",

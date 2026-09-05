@@ -176,7 +176,19 @@
     "miniTitle": "In cart",
     "viewCart": "Go to cart",
     "more": "and {count} more",
-    "toastAdded": "Added to cart"
+    "toastAdded": "Added to cart",
+    "promoPlaceholder": "Promo code",
+    "promoApply": "Apply",
+    "promoChecking": "Checking…",
+    "promoApplied": "Code {code} applied: −{percent}%",
+    "promoRemove": "Remove",
+    "promoDiscount": "Discount ({code}, −{percent}%)",
+    "promoError_not_found": "Code not found",
+    "promoError_inactive": "Code inactive",
+    "promoError_used": "Code already used",
+    "promoError_expired": "Code has expired",
+    "promoError_rate_limit": "Too many attempts, try again later",
+    "promoError_generic": "Could not check the code, try again"
   },
   "OrderForm": {
     "title": "Your details",
@@ -196,13 +208,21 @@
     "errorEmail": "Invalid email",
     "errorRate": "Too many requests. Try again in a few minutes.",
     "errorGeneric": "Could not send the request. Please try again.",
+    "errorPromoInvalid": "The promo code is no longer valid — remove it in the cart and resend.",
     "agreement": "By sending the request you agree to be contacted.",
     "checkoutMode": "Checkout method",
     "checkoutMode_standard": "Standard request — the manager calls you",
     "checkoutMode_noCall": "Order without a call",
     "checkoutModeNoCallHint": "We will not call — we will text. The phone number is still required for delivery.",
+    "deliveryMethod": "Delivery method",
+    "deliveryMethod_pickup": "Pickup",
+    "deliveryMethod_delivery": "Delivery",
+    "paymentMethod": "Payment method",
+    "paymentMethod_cash": "Cash",
+    "paymentMethod_card": "Card (to courier)",
     "address": "Address",
-    "addressPlaceholder": "Optional: delivery or pickup address"
+    "addressPlaceholder": "Street, house, city",
+    "errorAddress": "Enter the delivery address"
   },
   "ThankYou": {
     "title": "Thank you!",

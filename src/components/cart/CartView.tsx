@@ -8,8 +8,11 @@ import type { Locale } from '@/i18n/routing'
 import { cartItemsToGaItems, cartValue, trackEvent } from '@/lib/analytics/gtag'
 import { selectTotal, useCart } from '@/lib/cart/store'
 import { formatPrice, formatVolume } from '@/lib/format'
+import { promoDiscountAmount } from '@/lib/pricing'
+import { usePromo } from '@/lib/orders/promoStore'
 import { useHasHydrated } from '@/lib/useHasHydrated'
 import { OrderForm } from './OrderForm'
+import { PromoCodeInput } from './PromoCodeInput'
 
 /** Страница корзины: позиции с количеством, итог и форма заявки рядом. */
 export function CartView() {
@@ -21,6 +24,16 @@ export function CartView() {
   const remove = useCart((state) => state.remove)
   const hydrated = useHasHydrated()
   const checkoutSent = useRef(false)
+  const promoCode = usePromo((state) => state.code)
+  const promoPercent = usePromo((state) => state.percent)
+
+  // Скидка не действует на подарочные сертификаты/Gift box (фаза 11.2,
+  // задача 7) — та же база, что сервер считает в buildItems() при оформлении.
+  const discountableSubtotal = items
+    .filter((item) => (item.kind ?? 'product') !== 'gift')
+    .reduce((sum, item) => sum + item.price * item.qty, 0)
+  const discount = promoPercent ? promoDiscountAmount(discountableSubtotal, promoPercent) : 0
+  const totalWithDiscount = total - discount
 
   // GA4 begin_checkout (PLAN.md §7.5) — один раз за визит на непустую
   // корзину, после гидрации (до неё `items` не отражает localStorage).
@@ -116,9 +129,24 @@ export function CartView() {
           ))}
         </ul>
 
-        <div className="mt-5 flex items-baseline justify-between">
+        <div className="mt-5">
+          <PromoCodeInput />
+        </div>
+
+        {promoCode && (
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-ink-muted text-eyebrow tracking-label uppercase">
+              {t('promoDiscount', { code: promoCode, percent: promoPercent ?? 0 })}
+            </span>
+            <span className="text-ink text-body-sm">−{formatPrice(discount, locale)}</span>
+          </div>
+        )}
+
+        <div className="mt-3 flex items-baseline justify-between">
           <span className="text-ink-muted text-eyebrow tracking-label uppercase">{t('total')}</span>
-          <span className="text-ink text-display font-medium">{formatPrice(total, locale)}</span>
+          <span className="text-ink text-display font-medium">
+            {formatPrice(totalWithDiscount, locale)}
+          </span>
         </div>
       </div>
 
