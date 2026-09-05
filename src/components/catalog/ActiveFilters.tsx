@@ -25,15 +25,10 @@ export function ActiveFilters({ facets }: { facets: Facets }) {
       label: label(facets.gender, value),
       clear: () => toggleInList('gender', value),
     })),
-    ...query.notes.map((slug) => ({
-      key: `notes-${slug}`,
-      label: label(facets.notes, slug),
-      clear: () => toggleInList('notes', slug),
-    })),
-    ...query.volume.map((value) => ({
-      key: `volume-${value}`,
-      label: `${value} ml`,
-      clear: () => toggleInList('volume', value),
+    ...query.country.map((value) => ({
+      key: `country-${value}`,
+      label: label(facets.country, value),
+      clear: () => toggleInList('country', value),
     })),
     ...query.flags.map((flag: FlagOption) => ({
       key: `flag-${flag}`,

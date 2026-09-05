@@ -36,7 +36,7 @@ export function useCatalogQuery(
   }
 
   const toggleInList = <T extends string | number>(
-    key: 'brand' | 'gender' | 'notes' | 'volume' | 'flags',
+    key: 'brand' | 'gender' | 'country' | 'flags',
     value: T,
   ) => {
     const current = query[key] as T[]
@@ -50,8 +50,7 @@ export function useCatalogQuery(
     setQuery({
       brand: null,
       gender: null,
-      notes: null,
-      volume: null,
+      country: null,
       flags: null,
       priceMin: null,
       priceMax: null,

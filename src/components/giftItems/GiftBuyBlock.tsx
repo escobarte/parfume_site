@@ -6,73 +6,68 @@ import { useRouter } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { cartItemsToGaItems, trackEvent } from '@/lib/analytics/gtag'
 import { useCart } from '@/lib/cart/store'
-import type { ProductView } from '@/lib/catalog/product'
-import { formatPrice, formatVolume } from '@/lib/format'
-import { discountPercent } from '@/lib/pricing'
+import type { GiftItemView } from '@/lib/giftItems/queries'
+import { formatPrice } from '@/lib/format'
 import { useToast } from '@/lib/ui/toast'
-import { DiscountBadge } from '@/components/catalog/DiscountBadge'
 
 /**
- * Переключатель объёма и кнопки покупки. Смена объёма меняет цену, SKU
- * и наличие без перезагрузки — состояние живёт в клиенте (PLAN.md §5.4).
- * Вариант с нулевым остатком выбрать нельзя.
+ * Выбор номинала и покупка подарочного товара (фаза 11.1, задача 2) — копия
+ * структуры `BuyBlock.tsx` (переключатель вариантов, тост, «в 1 клик»), но
+ * без ml-объёма и скидок: номинал сам по себе и есть цена, показывать его
+ * дважды (в чипе и отдельной строкой цены) было бы просто дублированием.
  */
-export function BuyBlock({ product, image }: { product: ProductView; image: string | null }) {
+export function GiftBuyBlock({
+  item,
+  image,
+  typeLabel,
+}: {
+  item: GiftItemView
+  image: string | null
+  typeLabel: string
+}) {
   const t = useTranslations('Product')
+  const tg = useTranslations('GiftItem')
   const locale = useLocale() as Locale
   const add = useCart((state) => state.add)
   const showCartToast = useToast((state) => state.showCartToast)
   const router = useRouter()
 
-  const firstAvailable = product.variants.findIndex((variant) => variant.stock > 0)
+  const firstAvailable = item.variants.findIndex((variant) => variant.stock > 0)
   const [index, setIndex] = useState(firstAvailable >= 0 ? firstAvailable : 0)
   const [added, setAdded] = useState(false)
 
-  const variant = product.variants[index]
+  const variant = item.variants[index]
   if (!variant) return null
 
   const available = variant.stock > 0
-  // Пересчитывается при каждом переключении объёма — index меняет variant,
-  // а не хранится отдельным состоянием (PLAN.md §4.5).
-  const percent = discountPercent(variant.price, variant.oldPrice)
 
   const putInCart = () => {
-    const brandTitle = product.brand?.title ?? ''
     add({
-      kind: 'product',
-      productId: product.id,
-      slug: product.slug,
-      title: product.title,
-      brandTitle,
+      kind: 'gift',
+      productId: item.id,
+      slug: item.slug,
+      title: item.title,
+      brandTitle: typeLabel,
       sku: variant.sku,
-      volume: variant.volume,
-      price: variant.price,
+      price: variant.amount,
       image,
     })
     trackEvent('add_to_cart', {
       currency: 'MDL',
-      value: variant.price,
+      value: variant.amount,
       items: cartItemsToGaItems([
-        { productId: product.id, title: product.title, brandTitle, price: variant.price, qty: 1 },
+        { productId: item.id, title: item.title, brandTitle: typeLabel, price: variant.amount, qty: 1 },
       ]),
     })
   }
 
   const addToCart = () => {
     putInCart()
-    // Подпись на кнопке — локальная реакция, тост — общая (фаза 9.1):
-    // кнопку можно не увидеть, если экран прокручен, плашку видно всегда.
-    showCartToast({
-      title: product.title,
-      brandTitle: product.brand?.title ?? '',
-      volume: variant.volume,
-      image,
-    })
+    showCartToast({ title: item.title, brandTitle: typeLabel, image })
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
   }
 
-  /** «В 1 клик» — то же добавление, но сразу к форме заявки. */
   const oneClick = () => {
     putInCart()
     router.push('/cart')
@@ -81,15 +76,15 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
   return (
     <div>
       <div className="text-ink-muted text-eyebrow tracking-display mb-2 uppercase">
-        {t('volume')}
+        {tg('amount')}
       </div>
       <div className="flex flex-wrap gap-2">
-        {product.variants.map((item, itemIndex) => {
-          const disabled = item.stock === 0
+        {item.variants.map((variantItem, itemIndex) => {
+          const disabled = variantItem.stock === 0
           const active = itemIndex === index
           return (
             <button
-              key={item.sku}
+              key={variantItem.sku}
               type="button"
               disabled={disabled}
               onClick={() => setIndex(itemIndex)}
@@ -101,24 +96,13 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
                     : 'border-line text-ink hover:border-navy cursor-pointer'
               }`}
             >
-              {formatVolume(item.volume)}
+              {formatPrice(variantItem.amount, locale)}
             </button>
           )
         })}
       </div>
 
       <div className="border-line mt-6 flex flex-wrap items-baseline gap-3 border-t pt-6">
-        <span className="text-ink text-display font-medium">
-          {formatPrice(variant.price, locale)}
-        </span>
-        {percent !== null && (
-          <>
-            <span className="text-ink-muted text-body line-through">
-              {formatPrice(variant.oldPrice, locale)}
-            </span>
-            <DiscountBadge percent={percent} />
-          </>
-        )}
         <span
           className={`text-eyebrow tracking-label ml-auto uppercase ${
             available ? 'text-ink-muted' : 'text-danger'

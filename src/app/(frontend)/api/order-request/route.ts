@@ -94,6 +94,38 @@ async function buildItems(payload: PayloadClient, data: OrderRequest) {
   const items: NonNullable<Order['items']> = []
 
   for (const requested of data.items) {
+    if (requested.kind === 'gift') {
+      // Подарочный товар (фаза 11.1, задача 2) — та же переоценка по слагу
+      // и SKU, что у обычного товара ниже, только другая коллекция и без
+      // ml-объёма. `product` (relationship) намеренно не проставляется:
+      // связь необязательна (снапшот остаётся честным и без неё), заводить
+      // полиморфную `relationTo` ради одного поля админ-ссылки — лишнее.
+      const { docs } = await payload.find({
+        collection: 'gift-items',
+        locale: data.locale,
+        depth: 0,
+        limit: 1,
+        where: { slug: { equals: requested.slug } },
+      })
+
+      const giftItem = docs[0]
+      const variant = giftItem?.variants?.find((candidate) => candidate.sku === requested.sku)
+      if (!giftItem || giftItem.isActive === false || !variant || variant.isActive === false) {
+        continue
+      }
+
+      const qty = requested.qty
+      items.push({
+        title: giftItem.title,
+        brandTitle: '',
+        sku: variant.sku,
+        price: variant.amount,
+        qty,
+        lineTotal: variant.amount * qty,
+      })
+      continue
+    }
+
     const { docs } = await payload.find({
       collection: 'products',
       locale: data.locale,

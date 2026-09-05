@@ -71,6 +71,7 @@ export interface Config {
     brands: Brand;
     categories: Category;
     notes: Note;
+    'gift-items': GiftItem;
     pages: Page;
     media: Media;
     orders: Order;
@@ -86,6 +87,7 @@ export interface Config {
     brands: BrandsSelect<false> | BrandsSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     notes: NotesSelect<false> | NotesSelect<true>;
+    'gift-items': GiftItemsSelect<false> | GiftItemsSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
@@ -152,9 +154,13 @@ export interface Product {
    */
   family?: ('floral' | 'woody' | 'oriental' | 'fresh' | 'fougere' | 'chypre') | null;
   /**
-   * Раздел каталога (не «Кому») — влияет на левую навигацию каталога.
+   * Раздел каталога (не «Кому») — влияет на левую навигацию.
    */
   productCategory: 'perfume' | 'bodyCare';
+  /**
+   * Страна-производитель — фасет каталога.
+   */
+  countryOfOrigin: 'uae' | 'europe' | 'usa';
   description?: {
     root: {
       type: string;
@@ -398,6 +404,63 @@ export interface Note {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "gift-items".
+ */
+export interface GiftItem {
+  id: number;
+  title: string;
+  /**
+   * Латиницей, один на все локали. Пусто — соберётся из названия.
+   */
+  slug: string;
+  /**
+   * Раздел витрины: «Подарочные сертификаты» или «Gift box».
+   */
+  type: 'certificate' | 'giftBox';
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  image?: (number | null) | Media;
+  /**
+   * Тот же механизм, что у вариантов товара — сумма в MDL вместо объёма.
+   */
+  variants: {
+    /**
+     * Номинал, MDL
+     */
+    amount: number;
+    sku: string;
+    stock: number;
+    /**
+     * Показывать номинал на витрине.
+     */
+    isActive?: boolean | null;
+    id?: string | null;
+  }[];
+  /**
+   * Показывать товар на витрине.
+   */
+  isActive?: boolean | null;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  inStock?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "pages".
  */
 export interface Page {
@@ -584,6 +647,10 @@ export interface PayloadLockedDocument {
         value: number | Note;
       } | null)
     | ({
+        relationTo: 'gift-items';
+        value: number | GiftItem;
+      } | null)
+    | ({
         relationTo: 'pages';
         value: number | Page;
       } | null)
@@ -652,6 +719,7 @@ export interface ProductsSelect<T extends boolean = true> {
   gender?: T;
   family?: T;
   productCategory?: T;
+  countryOfOrigin?: T;
   description?: T;
   images?: T;
   variants?:
@@ -744,6 +812,32 @@ export interface NotesSelect<T extends boolean = true> {
   slug?: T;
   description?: T;
   group?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "gift-items_select".
+ */
+export interface GiftItemsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  type?: T;
+  description?: T;
+  image?: T;
+  variants?:
+    | T
+    | {
+        amount?: T;
+        sku?: T;
+        stock?: T;
+        isActive?: T;
+        id?: T;
+      };
+  isActive?: T;
+  minPrice?: T;
+  maxPrice?: T;
+  inStock?: T;
   updatedAt?: T;
   createdAt?: T;
 }

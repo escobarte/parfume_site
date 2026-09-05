@@ -74,8 +74,12 @@ export function MiniCart({ className }: { className?: string }) {
                       <div className="min-w-0">
                         <p className="text-ink text-body-sm truncate font-medium">{item.title}</p>
                         <p className="text-ink-muted text-eyebrow mt-0.5">
-                          {formatVolume(item.volume)} · {item.qty} ×{' '}
-                          {formatPrice(item.price, locale)}
+                          {[
+                            item.volume ? formatVolume(item.volume) : null,
+                            `${item.qty} × ${formatPrice(item.price, locale)}`,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </p>
                       </div>
                       <button

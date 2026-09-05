@@ -71,7 +71,9 @@ export function CartView() {
                   {item.title}
                 </Link>
                 <p className="text-ink-muted text-label mt-1">
-                  {formatVolume(item.volume)} · {item.sku}
+                  {[item.volume ? formatVolume(item.volume) : null, item.sku]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </p>
               </div>
 

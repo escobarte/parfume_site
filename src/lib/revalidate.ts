@@ -6,6 +6,8 @@
  * бросает исключение — оно намеренно гасится, кэша в тот момент не существует.
  */
 export const CATALOG_TAG = 'products'
+/** Подарочные сертификаты / Gift box (фаза 11.1, задача 2) — отдельная коллекция. */
+export const GIFT_TAG = 'gift-items'
 /** Справочники витрины: бренды, категории, ноты. */
 export const TAXONOMY_TAG = 'taxonomy'
 /** Глобалы: settings, navigation. */
@@ -36,6 +38,7 @@ export async function revalidateTaxonomy(): Promise<void> {
  */
 export async function revalidateAll(): Promise<void> {
   await revalidateCatalog(CATALOG_TAG)
+  await revalidateCatalog(GIFT_TAG)
   await revalidateCatalog(TAXONOMY_TAG)
   await revalidateCatalog(GLOBALS_TAG)
   await revalidateCatalog(HOMEPAGE_TAG)

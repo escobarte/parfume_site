@@ -29,8 +29,10 @@ const slugList = parseAsArrayOf(parseAsString).withDefault([])
 export const catalogSearchParams = {
   brand: slugList,
   gender: slugList,
-  notes: slugList,
-  volume: parseAsArrayOf(parseAsInteger).withDefault([]),
+  // Страна-производитель (фаза 11.1, задача 3) — новый фасет, замена
+  // убранных «Объём»/«Ноты» (см. GOTCHAS.md — не два места, а три: тут,
+  // filterWhere в queries.ts, и computeFacets в facets.ts).
+  country: slugList,
   flags: parseAsArrayOf(parseAsStringLiteral(FLAG_OPTIONS)).withDefault([]),
   priceMin: parseAsInteger,
   priceMax: parseAsInteger,
@@ -42,8 +44,7 @@ export const catalogSearchParams = {
 export type CatalogQuery = {
   brand: string[]
   gender: string[]
-  notes: string[]
-  volume: number[]
+  country: string[]
   flags: FlagOption[]
   priceMin: number | null
   priceMax: number | null
@@ -59,8 +60,7 @@ export function countActiveFilters(query: CatalogQuery): number {
   return (
     query.brand.length +
     query.gender.length +
-    query.notes.length +
-    query.volume.length +
+    query.country.length +
     query.flags.length +
     (query.priceMin !== null ? 1 : 0) +
     (query.priceMax !== null ? 1 : 0)

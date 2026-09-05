@@ -29,6 +29,15 @@ export const PRODUCT_CATEGORIES = [
   { label: 'Уход за телом', value: 'bodyCare' },
 ] as const
 
+// Страна-производитель — новый фасет каталога (фаза 11.1, задача 3). Дефолт
+// 'europe' — так же, как выше: бэкфилл существующих ~100+ товаров без ручной
+// сверки (демо-каталог сейчас преимущественно европейские бренды).
+export const PRODUCT_COUNTRIES = [
+  { label: 'ОАЭ', value: 'uae' },
+  { label: 'Европа', value: 'europe' },
+  { label: 'США', value: 'usa' },
+] as const
+
 export const Products: CollectionConfig = {
   slug: 'products',
   labels: { singular: 'Товар', plural: 'Товары' },
@@ -100,15 +109,30 @@ export const Products: CollectionConfig = {
               ],
             },
             {
-              name: 'productCategory',
-              type: 'select',
-              index: true,
-              required: true,
-              defaultValue: 'perfume',
-              options: [...PRODUCT_CATEGORIES],
-              admin: {
-                description: 'Раздел каталога (не «Кому») — влияет на левую навигацию каталога.',
-              },
+              type: 'row',
+              fields: [
+                {
+                  name: 'productCategory',
+                  type: 'select',
+                  index: true,
+                  required: true,
+                  defaultValue: 'perfume',
+                  options: [...PRODUCT_CATEGORIES],
+                  admin: {
+                    width: '50%',
+                    description: 'Раздел каталога (не «Кому») — влияет на левую навигацию.',
+                  },
+                },
+                {
+                  name: 'countryOfOrigin',
+                  type: 'select',
+                  index: true,
+                  required: true,
+                  defaultValue: 'europe',
+                  options: [...PRODUCT_COUNTRIES],
+                  admin: { width: '50%', description: 'Страна-производитель — фасет каталога.' },
+                },
+              ],
             },
             { name: 'description', type: 'richText', localized: true },
             {

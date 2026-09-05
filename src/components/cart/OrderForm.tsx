@@ -66,6 +66,7 @@ export function OrderForm() {
           source: 'cart',
           company,
           items: items.map((item) => ({
+            kind: item.kind ?? 'product',
             productId: item.productId,
             slug: item.slug,
             title: item.title,

@@ -25,13 +25,20 @@ export const MESSENGERS = ['telegram', 'viber', 'whatsapp', 'call'] as const
 export const CHECKOUT_MODES = ['standard', 'noCall'] as const
 export type CheckoutMode = (typeof CHECKOUT_MODES)[number]
 
+// Товар (духи) или подарочный товар (сертификат/Gift box, фаза 11.1, задача
+// 2) — говорит серверу, какую коллекцию резолвить заново в buildItems()
+// (route.ts). Дефолт 'product' — старые клиенты без этого поля не ломаются.
+export const ORDER_ITEM_KINDS = ['product', 'gift'] as const
+
 export const orderItemSchema = z.object({
+  kind: z.enum(ORDER_ITEM_KINDS).default('product'),
   productId: z.union([z.string(), z.number()]),
   slug: z.string().min(1),
   title: z.string().min(1),
   brandTitle: z.string().default(''),
   sku: z.string().min(1),
-  volume: z.number().positive(),
+  // Объём в мл — только у товаров-духов, у подарочных товаров нет.
+  volume: z.number().positive().optional(),
   price: z.number().nonnegative(),
   qty: z.number().int().positive().max(99),
 })

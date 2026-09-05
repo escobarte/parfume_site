@@ -29,9 +29,9 @@ export type FacetRow = {
   id: number | string
   brand: string | null
   categories: (number | string)[]
-  notes: string[]
   gender: string | null
-  volumes: number[]
+  // Страна-производитель (фаза 11.1, задача 3) — заменила «Объём»/«Ноты».
+  country: string | null
   minPrice: number | null
   flags: Record<FlagOption, boolean>
 }
@@ -41,8 +41,7 @@ export type FacetCount = { value: string; label: string; count: number }
 export type Facets = {
   brand: FacetCount[]
   gender: FacetCount[]
-  notes: FacetCount[]
-  volume: FacetCount[]
+  country: FacetCount[]
   flags: FacetCount[]
   price: { min: number; max: number } | null
 }

@@ -10,6 +10,7 @@ import sharp from 'sharp'
 
 import { Brands } from './collections/Brands'
 import { Categories } from './collections/Categories'
+import { GiftItems } from './collections/GiftItems'
 import { Media } from './collections/Media'
 import { Notes } from './collections/Notes'
 import { Orders } from './collections/Orders'
@@ -76,7 +77,7 @@ export default buildConfig({
     supportedLanguages: { en, ro, ru },
     fallbackLanguage: 'ru',
   },
-  collections: [Products, Brands, Categories, Notes, Pages, Media, Orders, Users],
+  collections: [Products, Brands, Categories, Notes, GiftItems, Pages, Media, Orders, Users],
   globals: [Homepage, Settings, Navigation],
   // Импорт каталога, загрузка фото архивом и сброс кэша витрины из /admin —
   // вне пространства коллекций (не /api/<slug>, см. docs/GOTCHAS.md «Роуты и API»).

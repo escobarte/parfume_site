@@ -72,13 +72,16 @@ test.describe('Каталог: фильтры и URL-состояние', () => 
     await gotoAndWaitForFooter(page, '/ro/catalog')
     const totalAll = await cardsOf(page).count()
 
-    await gotoAndWaitForFooter(page, '/ro/catalog?brand=maison-orphee&gender=unisex&volume=30')
+    // Объём/ноты убраны из фильтров (фаза 11.1, задача 3) — комбинация теперь
+    // бренд+кому+страна-производитель («страна» демо-каталог не сужает: все
+    // товары бэкфилились дефолтом 'europe', но параметр не должен ронять выдачу).
+    await gotoAndWaitForFooter(page, '/ro/catalog?brand=maison-orphee&gender=unisex&country=europe')
     const comboCount = await cardsOf(page).count()
     expect(comboCount).toBeGreaterThan(0)
     expect(comboCount).toBeLessThanOrEqual(totalAll)
     expect(page.url()).toContain('brand=maison-orphee')
     expect(page.url()).toContain('gender=unisex')
-    expect(page.url()).toContain('volume=30')
+    expect(page.url()).toContain('country=europe')
 
     // Сброс доступен и снаружи дровера — строкой активных фильтров. Она же
     // после сброса исчезает вместе с кнопкой, поэтому повторно жмём только

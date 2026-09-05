@@ -4,7 +4,7 @@ import { computeFacets } from '@/lib/catalog/facets'
 import type { CatalogNavKey } from '@/lib/catalog/navSections'
 import { getFacetSource, getProductCards, type CatalogScope } from '@/lib/catalog/queries'
 import { countActiveFilters, PAGE_SIZE, type CatalogQuery } from '@/lib/catalog/searchParams'
-import { getBrands, getNotes } from '@/lib/catalog/taxonomy'
+import { getBrands } from '@/lib/catalog/taxonomy'
 import { ActiveFilters } from './ActiveFilters'
 import { CatalogNavColumn } from './CatalogNavColumn'
 import { FiltersDrawer } from './FiltersDrawer'
@@ -41,12 +41,12 @@ export async function CatalogView({
   showCategoryNav?: boolean
   activeNavKey?: CatalogNavKey
 }) {
-  const [t, tGender, tFlags, brands, notes] = await Promise.all([
+  const [t, tGender, tCountry, tFlags, brands] = await Promise.all([
     getTranslations('Catalog'),
     getTranslations('Catalog.gender'),
+    getTranslations('Catalog.country'),
     getTranslations('Catalog.flags'),
     getBrands(locale),
-    getNotes(locale),
   ])
 
   const [{ items, total }, facetRows] = await Promise.all([
@@ -56,12 +56,16 @@ export async function CatalogView({
 
   const facets = computeFacets(facetRows, query, {
     brands,
-    notes,
     gender: {
       female: tGender('female'),
       male: tGender('male'),
       unisex: tGender('unisex'),
       kids: tGender('kids'),
+    },
+    country: {
+      uae: tCountry('uae'),
+      europe: tCountry('europe'),
+      usa: tCountry('usa'),
     },
     flags: {
       isNew: tFlags('isNew'),

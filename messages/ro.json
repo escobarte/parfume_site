@@ -28,7 +28,12 @@
   },
   "Footer": {
     "contacts": "Contacte",
-    "trackOrder": "Verifică comanda"
+    "trackOrder": "Verifică comanda",
+    "exchangeTitle": "Schimb și retur",
+    "exchangeText": "Retur sau schimb — în 14 zile de la primire, dacă flaconul nu a fost desigilat și ambalajul este intact.",
+    "exchangeLink": "Detalii",
+    "dataProtectionTitle": "Protecția datelor",
+    "dataProtectionText": "Datele dvs. (nume, telefon, email) sunt folosite doar pentru procesarea comenzii și pentru a lua legătura cu dvs. — nu sunt transmise terților."
   },
   "NotFound": {
     "title": "Pagina nu a fost găsită",
@@ -85,10 +90,8 @@
       "price": "Preț, MDL",
       "priceFrom": "de la",
       "priceTo": "până la",
-      "volume": "Volum",
       "gender": "Pentru cine",
-      "notes": "Note",
-      "flags": "Selecții",
+      "country": "Țara producătorului",
       "active": "Filtre active: {count}"
     },
     "gender": {
@@ -96,6 +99,11 @@
       "male": "El",
       "unisex": "Unisex",
       "kids": "Copii"
+    },
+    "country": {
+      "uae": "EAU",
+      "europe": "Europa",
+      "usa": "SUA"
     },
     "family": {
       "floral": "floral",
@@ -122,6 +130,15 @@
     "giftBox": "Gift box",
     "brands": "Branduri",
     "about": "Despre noi"
+  },
+  "GiftItem": {
+    "amount": "Valoare",
+    "type": {
+      "certificate": "Certificat cadou",
+      "giftBox": "Gift box"
+    },
+    "empty": "Deocamdată nu sunt poziții active",
+    "emptyHint": "Reveniți mai târziu — secțiunea se va completa curând."
   },
   "Product": {
     "addToCart": "Adaugă în coș",

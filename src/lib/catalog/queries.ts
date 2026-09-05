@@ -5,9 +5,8 @@ import type { Locale } from '@/i18n/routing'
 
 import { getPayloadClient } from '@/lib/payload'
 import { CATALOG_TAG } from '@/lib/revalidate'
-import { getBrands, getNotes } from './taxonomy'
+import { getBrands } from './taxonomy'
 import { PAGE_SIZE, type CatalogQuery, type FlagOption } from './searchParams'
-import type { Note } from '@/payload-types'
 import { toCard } from './cards'
 import type { FacetRow, ProductCardData } from './types'
 
@@ -38,20 +37,14 @@ const scopeWhere = (scope: CatalogScope): Where[] => {
 }
 
 /** Фильтры пользователя → Payload-условия. Пустой фильтр не сужает выдачу. */
-function filterWhere(
-  query: CatalogQuery,
-  ids: { brands: Map<string, number | string>; notes: Map<string, number | string> },
-): Where[] {
+function filterWhere(query: CatalogQuery, ids: { brands: Map<string, number | string> }): Where[] {
   const conditions: Where[] = []
 
   const brandIds = query.brand.map((slug) => ids.brands.get(slug)).filter(Boolean)
   if (brandIds.length) conditions.push({ brand: { in: brandIds as (number | string)[] } })
 
-  const noteIds = query.notes.map((slug) => ids.notes.get(slug)).filter(Boolean)
-  if (noteIds.length) conditions.push({ notes: { in: noteIds as (number | string)[] } })
-
   if (query.gender.length) conditions.push({ gender: { in: query.gender } })
-  if (query.volume.length) conditions.push({ 'variants.volume': { in: query.volume } })
+  if (query.country.length) conditions.push({ countryOfOrigin: { in: query.country } })
 
   // Диапазон цены — пересечение с ценовым интервалом товара, а не попадание
   // minPrice в интервал: товар 200–900 должен находиться и по фильтру 500–600.
@@ -83,11 +76,8 @@ export async function getProductCards(
   query: CatalogQuery,
   scope: CatalogScope = {},
 ): Promise<{ items: ProductCardData[]; total: number }> {
-  const [brands, notes] = await Promise.all([getBrands(locale), getNotes(locale)])
-  const ids = {
-    brands: new Map(brands.map((brand) => [brand.slug, brand.id])),
-    notes: new Map(notes.map((note) => [note.slug, note.id])),
-  }
+  const brands = await getBrands(locale)
+  const ids = { brands: new Map(brands.map((brand) => [brand.slug, brand.id])) }
 
   const conditions = [...scopeWhere(scope), ...filterWhere(query, ids)]
   const where: Where = conditions.length ? { and: conditions } : {}
@@ -150,9 +140,6 @@ export async function getFacetSource(
 
       return docs.map((doc): FacetRow => {
         const brand = typeof doc.brand === 'object' && doc.brand ? doc.brand : null
-        const notes = Array.isArray(doc.notes)
-          ? doc.notes.filter((note): note is Note => typeof note === 'object' && note !== null)
-          : []
         const categories = Array.isArray(doc.categories)
           ? doc.categories.map((category) =>
               typeof category === 'object' ? category.id : category,
@@ -163,11 +150,8 @@ export async function getFacetSource(
           id: doc.id,
           brand: brand?.slug ?? null,
           categories,
-          notes: notes.map((note) => note.slug),
           gender: doc.gender ?? null,
-          volumes: (doc.variants ?? [])
-            .filter((variant) => variant.isActive !== false)
-            .map((variant) => variant.volume),
+          country: doc.countryOfOrigin ?? null,
           minPrice: doc.minPrice ?? null,
           flags: {
             isNew: Boolean(doc.isNew),

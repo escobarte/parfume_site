@@ -91,11 +91,37 @@ check(
   `счётчик ${facetCount}, карточек ${facetShown}`,
 )
 
-// ── Комбинация трёх фильтров ──────────────────────────────────────────────
-await goto(`${BASE}/ro/catalog?brand=maison-orphee&gender=unisex&volume=30`)
+// ── Комбинация фильтров (фаза 11.1, задача 3: объём/ноты убраны, страна
+// добавлена — «страна» тут не сужает демо-каталог, все ~12 демо-товаров
+// достались бэкфиллом дефолта 'europe', но проверяет, что параметр не ломает
+// выдачу и не роняет страницу) ─────────────────────────────────────────────
+await goto(`${BASE}/ro/catalog?brand=maison-orphee&gender=unisex&country=europe`)
 const comboCount = await cards().count()
 const comboOk = comboCount > 0 && comboCount <= totalAll
-check('комбинация 3 фильтров даёт корректную выдачу', comboOk, `${comboCount} шт`)
+check('комбинация фильтров (бренд+кому+страна) даёт корректную выдачу', comboOk, `${comboCount} шт`)
+
+// ── Фаза 11.1, задача 3: убранные фасеты пропали из дровера, новые появились ─
+await goto(`${BASE}/ro/catalog`)
+const filterDialog = await openFilters()
+const dialogText = await filterDialog.innerText()
+check(
+  '«Объём»/«Ноты»/«Подборки» убраны из дровера фильтров',
+  !/\bvolum\b|\bnote\b|selecții/i.test(dialogText),
+)
+check(
+  '«Страна-производитель» появилась в дровере фильтров',
+  /țara producătorului/i.test(dialogText),
+)
+// Унисекс демо-каталога — гарантированно ненулевой фасет (12/12 товаров).
+const genderLabelsOrder = await filterDialog
+  .locator('label')
+  .evaluateAll((nodes) => nodes.map((n) => n.textContent?.trim() ?? ''))
+check(
+  'фасет «Кому» без «Объём»/«Ноты» рядом — гидратация дровера не сломана',
+  genderLabelsOrder.length > 0,
+  `${genderLabelsOrder.length} строк фасетов`,
+)
+await page.keyboard.press('Escape')
 
 // ── Сброс фильтров ────────────────────────────────────────────────────────
 await page

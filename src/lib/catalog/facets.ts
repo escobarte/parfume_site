@@ -2,7 +2,10 @@ import { FLAG_OPTIONS, type CatalogQuery, type FlagOption } from './searchParams
 import type { FacetCount, FacetRow, Facets } from './types'
 import type { TaxonomyItem } from './taxonomy'
 
-const GENDERS = ['female', 'male', 'unisex', 'kids'] as const
+// Порядок фасета «Кому» зафиксирован ПРОМПТ 11A задача 3: Для неё / Для
+// него / Детям / Унисекс — не порядок значений в Products.GENDERS.
+const GENDERS = ['female', 'male', 'kids', 'unisex'] as const
+const COUNTRIES = ['uae', 'europe', 'usa'] as const
 
 /**
  * Счётчик фасета честный: он показывает, сколько товаров останется, если
@@ -16,10 +19,8 @@ function predicates(query: CatalogQuery) {
     !query.brand.length || (!!row.brand && query.brand.includes(row.brand))
   const gender: Predicate = (row) =>
     !query.gender.length || (!!row.gender && query.gender.includes(row.gender))
-  const notes: Predicate = (row) =>
-    !query.notes.length || row.notes.some((note) => query.notes.includes(note))
-  const volume: Predicate = (row) =>
-    !query.volume.length || row.volumes.some((value) => query.volume.includes(value))
+  const country: Predicate = (row) =>
+    !query.country.length || (!!row.country && query.country.includes(row.country))
   const flags: Predicate = (row) =>
     !query.flags.length || query.flags.some((flag) => row.flags[flag])
   const price: Predicate = (row) => {
@@ -29,7 +30,7 @@ function predicates(query: CatalogQuery) {
     return true
   }
 
-  return { brand, gender, notes, volume, flags, price }
+  return { brand, gender, country, flags, price }
 }
 
 /** Все фильтры, кроме одного — база для счётчиков этого фасета. */
@@ -51,8 +52,8 @@ export function computeFacets(
   query: CatalogQuery,
   labels: {
     brands: TaxonomyItem[]
-    notes: TaxonomyItem[]
     gender: Record<string, string>
+    country: Record<string, string>
     flags: Record<FlagOption, string>
   },
 ): Facets {
@@ -72,22 +73,11 @@ export function computeFacets(
     count: countBy(rows, except(all, 'gender'), (row) => row.gender === value),
   })).filter((item) => item.count > 0)
 
-  const notes = sortByCount(
-    labels.notes.map((item) => ({
-      value: item.slug,
-      label: item.title,
-      count: countBy(rows, except(all, 'notes'), (row) => row.notes.includes(item.slug)),
-    })),
-  )
-
-  const volumeValues = [...new Set(rows.flatMap((row) => row.volumes))].sort((a, b) => a - b)
-  const volume = volumeValues
-    .map((value) => ({
-      value: String(value),
-      label: `${value} ml`,
-      count: countBy(rows, except(all, 'volume'), (row) => row.volumes.includes(value)),
-    }))
-    .filter((item) => item.count > 0)
+  const country = COUNTRIES.map((value) => ({
+    value,
+    label: labels.country[value] ?? value,
+    count: countBy(rows, except(all, 'country'), (row) => row.country === value),
+  })).filter((item) => item.count > 0)
 
   const flags = FLAG_OPTIONS.map((flag) => ({
     value: flag,
@@ -100,5 +90,5 @@ export function computeFacets(
   const prices = rows.map((row) => row.minPrice).filter((price): price is number => price !== null)
   const price = prices.length ? { min: Math.min(...prices), max: Math.max(...prices) } : null
 
-  return { brand, gender, notes, volume, flags, price }
+  return { brand, gender, country, flags, price }
 }

@@ -3,9 +3,8 @@
 import { ChevronRight } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { Facets } from '@/lib/catalog/types'
-import type { FlagOption } from '@/lib/catalog/searchParams'
 import { BrandFacet, BRAND_SEARCH_THRESHOLD } from './BrandFacet'
-import { ChipCount, FacetGroup, FacetRow } from './FacetRow'
+import { FacetGroup, FacetRow } from './FacetRow'
 import { useCatalogQuery } from './useCatalogQuery'
 
 export function FilterPanel({
@@ -110,32 +109,6 @@ export function FilterPanel({
         </FacetGroup>
       )}
 
-      {facets.volume.length > 0 && (
-        <FacetGroup title={t('volume')}>
-          <div className="flex flex-wrap gap-1.5">
-            {facets.volume.map((item) => {
-              const value = Number(item.value)
-              const active = query.volume.includes(value)
-              return (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() => toggleInList('volume', value)}
-                  className={`text-eyebrow cursor-pointer rounded-sm border px-2 py-1 transition-colors ${
-                    active
-                      ? 'border-navy bg-navy text-cream'
-                      : 'border-line text-ink hover:border-navy'
-                  }`}
-                >
-                  {item.label}
-                  <ChipCount count={item.count} onDark={active} />
-                </button>
-              )
-            })}
-          </div>
-        </FacetGroup>
-      )}
-
       {facets.gender.length > 0 && (
         <FacetGroup title={t('gender')}>
           {facets.gender.map((item) => (
@@ -150,31 +123,15 @@ export function FilterPanel({
         </FacetGroup>
       )}
 
-      {facets.notes.length > 0 && (
-        <FacetGroup title={t('notes')}>
-          <div className="max-h-60 overflow-y-auto">
-            {facets.notes.map((item) => (
-              <FacetRow
-                key={item.value}
-                label={item.label}
-                count={item.count}
-                checked={query.notes.includes(item.value)}
-                onToggle={() => toggleInList('notes', item.value)}
-              />
-            ))}
-          </div>
-        </FacetGroup>
-      )}
-
-      {facets.flags.length > 0 && (
-        <FacetGroup title={t('flags')}>
-          {facets.flags.map((item) => (
+      {facets.country.length > 0 && (
+        <FacetGroup title={t('country')}>
+          {facets.country.map((item) => (
             <FacetRow
               key={item.value}
               label={item.label}
               count={item.count}
-              checked={query.flags.includes(item.value as FlagOption)}
-              onToggle={() => toggleInList('flags', item.value)}
+              checked={query.country.includes(item.value)}
+              onToggle={() => toggleInList('country', item.value)}
             />
           ))}
         </FacetGroup>

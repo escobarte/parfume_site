@@ -28,7 +28,12 @@
   },
   "Footer": {
     "contacts": "Contacts",
-    "trackOrder": "Track order"
+    "trackOrder": "Track order",
+    "exchangeTitle": "Exchange & returns",
+    "exchangeText": "Returns or exchanges — within 14 days of receipt, if the bottle is unopened and the packaging is intact.",
+    "exchangeLink": "Learn more",
+    "dataProtectionTitle": "Data protection",
+    "dataProtectionText": "Your data (name, phone, email) is used only to process your order and contact you — never shared with third parties."
   },
   "NotFound": {
     "title": "Page not found",
@@ -85,10 +90,8 @@
       "price": "Price, MDL",
       "priceFrom": "from",
       "priceTo": "to",
-      "volume": "Volume",
       "gender": "For whom",
-      "notes": "Notes",
-      "flags": "Selections",
+      "country": "Country of origin",
       "active": "Active filters: {count}"
     },
     "gender": {
@@ -96,6 +99,11 @@
       "male": "For him",
       "unisex": "Unisex",
       "kids": "Kids"
+    },
+    "country": {
+      "uae": "UAE",
+      "europe": "Europe",
+      "usa": "USA"
     },
     "family": {
       "floral": "floral",
@@ -122,6 +130,15 @@
     "giftBox": "Gift box",
     "brands": "Brands",
     "about": "About us"
+  },
+  "GiftItem": {
+    "amount": "Denomination",
+    "type": {
+      "certificate": "Gift certificate",
+      "giftBox": "Gift box"
+    },
+    "empty": "No active items yet",
+    "emptyHint": "Check back later — this section is filling up soon."
   },
   "Product": {
     "addToCart": "Add to cart",
