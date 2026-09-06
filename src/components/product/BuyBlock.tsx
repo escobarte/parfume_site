@@ -107,18 +107,18 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
         })}
       </div>
 
+      {/* Зачёркнутая старая цена — слева от актуальной (промпт «новая логика
+          цены товара»), тот же порядок, что теперь и на карточке каталога. */}
       <div className="border-line mt-6 flex flex-wrap items-baseline gap-3 border-t pt-6">
+        {percent !== null && (
+          <span className="text-ink-muted text-body line-through">
+            {formatPrice(variant.oldPrice, locale)}
+          </span>
+        )}
         <span className="text-ink text-display font-medium">
           {formatPrice(variant.price, locale)}
         </span>
-        {percent !== null && (
-          <>
-            <span className="text-ink-muted text-body line-through">
-              {formatPrice(variant.oldPrice, locale)}
-            </span>
-            <DiscountBadge percent={percent} />
-          </>
-        )}
+        {percent !== null && <DiscountBadge percent={percent} />}
         <span
           className={`text-eyebrow tracking-label ml-auto uppercase ${
             available ? 'text-ink-muted' : 'text-danger'

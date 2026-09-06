@@ -46,8 +46,12 @@ const settle = async (path) => {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// 1. Скидка на карточке — «вариант B» (правка фазы 4.5): бейдж и цена
-//    всегда об одном и том же уценённом варианте, не о самом дешёвом.
+// 1. Скидка на карточке — новая логика цены товара: карточка показывает
+//    МАКСИМАЛЬНУЮ цену среди активных вариантов, без диапазона/«от».
+//    Скидка теперь на ВСЕ активные варианты сразу или ни на один (validate
+//    в Products.ts) — цена/бейдж/oldPrice всегда об одном и том же
+//    максимальном по цене варианте, «лучший уценённый» больше не ищется
+//    отдельно. Зачёркнутая цена — СЛЕВА от актуальной.
 // ═══════════════════════════════════════════════════════════════════════
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
@@ -58,9 +62,9 @@ const goto = async (path) => {
 
 await goto('/ro/catalog')
 
-// Amber Sale: 5ml −20% (200/250), 10ml без скидки, Full Size −33% (800/1200).
-// Максимальный % — на Full Size, не на самом дешёвом варианте (5ml) — карточка
-// должна показать именно Full Size целиком (цену, зачёркнутую и бейдж).
+// Amber Sale: скидка на ВСЕ 3 варианта — 5ml −20% (200/250), 10ml −16%
+// (380/450), Full Size −33% (800/1200). Full Size — максимальная цена
+// среди вариантов, карточка обязана показать именно его целиком.
 const saleCard = page
   .locator('article')
   .filter({ has: page.locator('a[href*="maison-orphee-amber-sale"]') })
@@ -70,9 +74,9 @@ const cardBadge = await saleCard
   .innerText()
   .catch(() => null)
 check(
-  'Amber Sale: бейдж — процент лучшего уценённого варианта (Full Size, −33%)',
+  'Amber Sale: бейдж — процент варианта с максимальной ценой (Full Size, −33%)',
   cardBadge === '−33%',
-  `бейдж «${cardBadge}» (5ml −20%, Full Size −33%, 10ml без скидки)`,
+  `бейдж «${cardBadge}» (5ml −20%, 10ml −16%, Full Size −33%)`,
 )
 
 const badgeStyle = await saleCard
@@ -96,21 +100,40 @@ check(
   JSON.stringify(badgeStyle),
 )
 
-const salePriceLine = await saleCard.locator('span.text-body.font-medium').first().innerText()
+// Читаем зачёркнутую цену и «остаток» текста отдельно — простой includes()
+// на конкатенированной строке ловит ложные совпадения («1.200» уже
+// содержит «200» как подстроку), поэтому вычитаем текст зачёркнутого
+// узла из полной строки перед проверкой актуальной цены.
+const priceLineParts = async (card) => {
+  const full = await card.locator('span.text-body.font-medium').first().innerText()
+  const struck = await card
+    .locator('span.text-body.font-medium span.line-through')
+    .first()
+    .innerText()
+    .catch(() => null)
+  return { full, struck, rest: struck ? full.replace(struck, '') : full }
+}
+
+const saleParts = await priceLineParts(saleCard)
 check(
-  'Amber Sale: «от» — цена того же варианта, что и бейдж (800 MDL, Full Size, не 200 MDL с 5ml)',
-  salePriceLine.includes('de la 800') && !salePriceLine.includes('de la 200'),
-  salePriceLine,
+  'Amber Sale: слово «от»/«de la» убрано с карточки',
+  !/de la|from|от\s/i.test(saleParts.full),
+  saleParts.full,
 )
 check(
-  'Amber Sale: зачёркнута старая цена того же варианта (1.200, а не 250)',
-  salePriceLine.includes('1.200') && !salePriceLine.includes('250'),
-  salePriceLine,
+  'Amber Sale: показана цена максимального варианта (800), не 5ml (200) и не 10ml (380)',
+  saleParts.rest.includes('800') && !saleParts.rest.includes('200') && !saleParts.rest.includes('380'),
+  saleParts.full,
+)
+check(
+  'Amber Sale: зачёркнутая старая цена (1.200) — СЛЕВА от актуальной (800)',
+  saleParts.struck?.includes('1.200') && saleParts.full.indexOf(saleParts.struck) === 0,
+  saleParts.full,
 )
 
-// Set Descoperire — ровно баг-репродукция из задания: скидка на Travel Size
-// (320/360, −11%), 3ml дешевле и без скидки. Бейдж/цена обязаны описывать
-// Travel Size, а не «от 180» с бейджем в никуда.
+// Set Descoperire — оба варианта уценены (3ml −10%, Travel Size −11%).
+// Travel Size — максимальная цена среди вариантов, карточка обязана
+// показать именно его.
 const setCard = page
   .locator('article')
   .filter({ has: page.locator('a[href*="casa-lumina-set-descoperire"]') })
@@ -120,20 +143,25 @@ const setBadge = await setCard
   .innerText()
   .catch(() => null)
 check(
-  'Set Descoperire: бейдж −11% (скидка на Travel Size, не на 3ml)',
+  'Set Descoperire: бейдж −11% (скидка максимального по цене Travel Size, не 3ml)',
   setBadge === '−11%',
   setBadge,
 )
-const setPriceLine = await setCard.locator('span.text-body.font-medium').first().innerText()
+const setParts = await priceLineParts(setCard)
 check(
-  'Set Descoperire: «от» — цена уценённого Travel Size (320 MDL), не самого дешёвого 3ml (180 MDL)',
-  setPriceLine.includes('de la 320') && !setPriceLine.includes('de la 180'),
-  setPriceLine,
+  'Set Descoperire: слово «от»/«de la» убрано с карточки',
+  !/de la|from|от\s/i.test(setParts.full),
+  setParts.full,
 )
 check(
-  'Set Descoperire: зачёркнута старая цена того же варианта (360)',
-  setPriceLine.includes('360'),
-  setPriceLine,
+  'Set Descoperire: показана цена максимального варианта (320), не 3ml (180)',
+  setParts.rest.includes('320') && !setParts.rest.includes('180'),
+  setParts.full,
+)
+check(
+  'Set Descoperire: зачёркнутая старая цена (360) — СЛЕВА от актуальной (320)',
+  setParts.struck?.includes('360') && setParts.full.indexOf(setParts.struck) === 0,
+  setParts.full,
 )
 // Инвариант «бейдж никогда без зачёркнутой цены, и наоборот» — проверяем
 // на ВСЕХ карточках каталога разом, а не только на двух известных.
@@ -153,31 +181,60 @@ check(
 )
 
 await goto('/ro/product/maison-orphee-amber-sale')
+// Порядок в BuyBlock.tsx — зачёркнутая цена (line-through) СЛЕВА от
+// актуальной (text-display) в разметке, читаем оба отдельными локаторами.
 const readVariantState = async () => ({
   price: await page.locator('span.text-display').first().innerText(),
+  oldPrice: await page
+    .locator('span.line-through')
+    .first()
+    .innerText()
+    .catch(() => null),
   badge: await page
     .locator('span', { hasText: /^−\d+%$/ })
     .first()
     .innerText()
     .catch(() => null),
 })
-const at5ml = await readVariantState()
-await page.getByRole('button', { name: '10ml' }).click()
-await page.waitForTimeout(400)
-const at10ml = await readVariantState()
-await page.getByRole('button', { name: 'Full Size' }).click()
-await page.waitForTimeout(400)
-const atFullSize = await readVariantState()
+// В dev клик до окончания гидрации иногда теряется (см. GOTCHAS.md) —
+// повторяем клик, пока бейдж не станет ожидаемым, вместо одного клика
+// с фиксированной паузой.
+const clickVolumeAndWait = async (name, expectedBadge) => {
+  let state = null
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await page.getByRole('button', { name, exact: true }).click()
+    await page.waitForTimeout(400)
+    state = await readVariantState()
+    if (state.badge === expectedBadge) break
+  }
+  return state
+}
 
+const at5ml = await readVariantState()
+const at10ml = await clickVolumeAndWait('10ml', '−16%')
+const atFullSize = await clickVolumeAndWait('Full Size', '−33%')
+
+// Все три варианта теперь уценены (единое правило скидки, промпт «новая
+// логика цены товара») — раньше 10ml был без скидки, это была ровно та
+// «выборочная скидка по вариантам», которую задание требует исключить.
 check('страница товара, 5ml: −20%', at5ml.badge === '−20%', at5ml.badge)
-check(
-  'страница товара, 10ml без скидки: бейджа нет',
-  at10ml.badge === null,
-  `badge=${at10ml.badge}`,
-)
+check('страница товара, 10ml: −16% (тоже уценён — правило «все или ничего»)', at10ml.badge === '−16%', at10ml.badge)
 check(
   'страница товара, Full Size: −33%, цена пересчитана',
   atFullSize.badge === '−33%' && atFullSize.price !== at5ml.price,
+)
+const priceOrder = await page.evaluate(() => {
+  const strike = document.querySelector('span.line-through')
+  const price = document.querySelector('span.text-display')
+  if (!strike || !price) return null
+  // DOCUMENT_POSITION_FOLLOWING (4) на price относительно strike значит
+  // strike идёт раньше price в разметке — то есть слева при обычном ЛТР-потоке.
+  return Boolean(strike.compareDocumentPosition(price) & Node.DOCUMENT_POSITION_FOLLOWING)
+})
+check(
+  'страница товара: зачёркнутая цена стоит в разметке РАНЬШЕ актуальной (слева)',
+  priceOrder === true,
+  `oldPrice=${at5ml.oldPrice}, price=${at5ml.price}`,
 )
 
 // ═══════════════════════════════════════════════════════════════════════

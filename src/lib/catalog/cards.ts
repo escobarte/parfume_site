@@ -16,23 +16,21 @@ export function toCard(doc: Product): ProductCardData {
 
   const variants = (doc.variants ?? []).filter((variant) => variant.isActive !== false)
 
-  // Вариант B (фаза 4.5, правка): бейдж и цена ВСЕГДА об одном и том же
-  // варианте. Среди уценённых (oldPrice > price) берём вариант с наибольшим
-  // процентом скидки и показываем именно его цену/oldPrice/процент — это
-  // не обязательно самый дешёвый объём. Если уценённых вариантов нет —
-  // обычная «от {минимальная цена}» без бейджа и зачёркивания. Инвариант:
-  // бейдж не может появиться без зачёркнутой цены, и наоборот — оба поля
-  // выводятся из одного и того же bestDiscount.
-  const discounted = variants
-    .map((variant) => ({ variant, percent: discountPercent(variant.price, variant.oldPrice) }))
-    .filter(
-      (entry): entry is { variant: (typeof variants)[number]; percent: number } =>
-        entry.percent !== null,
-    )
-  const bestDiscount = discounted.reduce<(typeof discounted)[number] | null>(
-    (best, entry) => (best === null || entry.percent > best.percent ? entry : best),
+  // Новая логика цены (промпт «новая логика цены товара»): карточка больше
+  // не показывает диапазон/«от X» — одна цена, максимальная среди активных
+  // вариантов. Скидка теперь гарантированно единая на ВСЕ активные варианты
+  // сразу или ни на один (валидация в Products.ts, `variantsDiscountConsistent`)
+  // — поэтому больше не нужно искать «лучший уценённый вариант» отдельно от
+  // максимального по цене: если скидка есть у товара, она есть и у
+  // максимального варианта, oldPrice/percent читаются прямо с него.
+  const maxPriceVariant = variants.reduce<(typeof variants)[number] | null>(
+    (best, variant) =>
+      best === null || (variant.price ?? -Infinity) > (best.price ?? -Infinity) ? variant : best,
     null,
   )
+  const percent = maxPriceVariant
+    ? discountPercent(maxPriceVariant.price, maxPriceVariant.oldPrice)
+    : null
 
   const flags: FlagOption[] = []
   if (doc.isNew) flags.push('isNew')
@@ -50,9 +48,9 @@ export function toCard(doc: Product): ProductCardData {
     volumes: [...new Set(variants.map((variant) => variant.volume).filter(Boolean))].sort(
       (a, b) => volumeOrder(a) - volumeOrder(b),
     ),
-    displayPrice: bestDiscount ? bestDiscount.variant.price : (doc.minPrice ?? null),
-    oldPrice: bestDiscount ? (bestDiscount.variant.oldPrice ?? null) : null,
-    discountPercent: bestDiscount ? bestDiscount.percent : null,
+    displayPrice: maxPriceVariant ? maxPriceVariant.price : (doc.maxPrice ?? null),
+    oldPrice: maxPriceVariant ? (maxPriceVariant.oldPrice ?? null) : null,
+    discountPercent: percent,
     image: cover?.sizes?.card?.url
       ? { url: cover.sizes.card.url, alt: cover.alt ?? doc.title }
       : cover?.url

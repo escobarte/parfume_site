@@ -20,7 +20,7 @@ export async function ProductCard({
   locale: Locale
   priority?: boolean
 }) {
-  const [t, tp] = await Promise.all([getTranslations('Catalog'), getTranslations('Product')])
+  const tp = await getTranslations('Product')
 
   // Семейство теперь свободный локализованный текст, не enum-ключ
   // (ПРОМПТ 12 v2) — показывается как есть, без перевода через messages.
@@ -76,15 +76,18 @@ export async function ProductCard({
 
           {/* Цена и наличие — одна строка: слева цена, справа плашка.
               Плашка — текст, а не подложка: линия и цвет вместо теней
-              (BRAND.md §5), «нет в наличии» уходит в приглушённый тон. */}
+              (BRAND.md §5), «нет в наличии» уходит в приглушённый тон.
+              Максимальная цена среди вариантов, без «от»/диапазона (промпт
+              «новая логика цены товара») — зачёркнутая старая цена, если
+              есть скидка, идёт СЛЕВА от актуальной. */}
           <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-ink text-body font-medium">
-              {t('from')} {formatPrice(product.displayPrice, locale)}
               {product.oldPrice !== null && (
-                <span className="text-ink-muted text-label ml-1.5 font-normal line-through">
+                <span className="text-ink-muted text-label mr-1.5 font-normal line-through">
                   {formatPrice(product.oldPrice, locale)}
                 </span>
               )}
+              {formatPrice(product.displayPrice, locale)}
             </span>
             <span
               className={`text-micro tracking-label uppercase ${

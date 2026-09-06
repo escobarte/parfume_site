@@ -26,12 +26,13 @@ export async function generateMetadata(props: {
   const product = await getProductBySlug(slug, locale)
   if (!product) return {}
 
-  const tc = await getTranslations({ locale, namespace: 'Catalog' })
   const title = product.brand ? `${product.title} — ${product.brand.title}` : product.title
   const description = [
     product.family,
     product.notes.map((note) => note.title).join(', ') || null,
-    product.minPrice !== null ? `${tc('from')} ${product.minPrice} MDL` : null,
+    // Без «от»/диапазона (промпт «новая логика цены товара») — максимальная
+    // цена среди вариантов, тот же принцип, что теперь и на карточке.
+    product.maxPrice !== null ? `${product.maxPrice} MDL` : null,
   ]
     .filter(Boolean)
     .join(' · ')

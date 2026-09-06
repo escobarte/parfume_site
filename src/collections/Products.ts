@@ -1,10 +1,34 @@
-import type { CollectionConfig } from 'payload'
+import type { ArrayFieldValidation, CollectionConfig } from 'payload'
 import { adminOnly, isStaff, staffOnly } from '@/access/roles'
 import { seoField } from '@/fields/seo'
 import { slugField } from '@/fields/slug'
 import { PRODUCT_VOLUMES } from '@/lib/catalog/volumes'
+import { discountPercent } from '@/lib/pricing'
 import { denormalizeVariants, type VariantLike } from '@/lib/products/denormalize'
 import { revalidateCatalog } from '@/lib/revalidate'
+
+/**
+ * Скидка — единое правило «на все активные варианты сразу или ни на один»
+ * (промпт «новая логика цены»): карточка каталога показывает единственную
+ * цену (максимальную по активным вариантам, без диапазона/«от»), поэтому
+ * выборочная скидка по объёмам была бы не видна на части товаров и вводила
+ * бы в заблуждение — на карточке мог оказаться недискаунтнутый максимум
+ * рядом с бейджем от совсем другого варианта. Раньше это не проверялось:
+ * `oldPrice` — независимое необязательное поле каждой строки, ничего не
+ * мешало проставить его только на части вариантов.
+ */
+export const variantsDiscountConsistent: ArrayFieldValidation = (value) => {
+  const rows = (value ?? []) as { isActive?: boolean | null; price?: number | null; oldPrice?: number | null }[]
+  const active = rows.filter((row) => row.isActive !== false)
+  const discountedCount = active.filter(
+    (row) => discountPercent(row.price, row.oldPrice) !== null,
+  ).length
+
+  if (discountedCount > 0 && discountedCount < active.length) {
+    return 'Old Price (скидка) должна быть заполнена на ВСЕХ активных вариантах товара сразу, либо ни на одном — выборочная скидка по объёмам не поддерживается.'
+  }
+  return true
+}
 
 export const GENDERS = [
   { label: 'Она', value: 'female' },
@@ -157,6 +181,7 @@ export const Products: CollectionConfig = {
                 description: 'Объём, цена и остаток. Общие для всех локалей.',
                 initCollapsed: false,
               },
+              validate: variantsDiscountConsistent,
               fields: [
                 {
                   type: 'row',
@@ -189,7 +214,10 @@ export const Products: CollectionConfig = {
                       name: 'oldPrice',
                       type: 'number',
                       min: 0,
-                      admin: { width: '25%', description: 'MDL, до скидки' },
+                      admin: {
+                        width: '25%',
+                        description: 'MDL, до скидки. Заполнено — на всех активных вариантах сразу.',
+                      },
                     },
                   ],
                 },

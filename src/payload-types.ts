@@ -193,7 +193,7 @@ export interface Product {
      */
     price: number;
     /**
-     * MDL, до скидки
+     * MDL, до скидки. Заполнено — на всех активных вариантах сразу.
      */
     oldPrice?: number | null;
     stock: number;

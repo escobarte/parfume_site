@@ -309,8 +309,11 @@ export const products: SeedProduct[] = [
       en: 'Warm amber with pepper — a seasonal edition at a reduced price.',
     },
     variants: [
+      // Скидка — единое правило «на все активные варианты сразу или ни на
+      // один» (промпт «новая логика цены товара», validate в Products.ts) —
+      // все три variant'а уценены, не только два из трёх, как было раньше.
       { volume: '5ml', sku: 'MO-AS-05', price: 200, oldPrice: 250, stock: 9 },
-      { volume: '10ml', sku: 'MO-AS-10', price: 380, stock: 6 },
+      { volume: '10ml', sku: 'MO-AS-10', price: 380, oldPrice: 450, stock: 6 },
       { volume: 'Full Size', sku: 'MO-AS-30', price: 800, oldPrice: 1200, stock: 4 },
     ],
   },
@@ -384,8 +387,9 @@ export const products: SeedProduct[] = [
     // Единственный демо-товар ровно с 2 из 5 объёмов (не полный набор) —
     // живая проверка «нет варианта → кнопки просто нет» (см. tests/e2e/
     // product-volume.e2e.spec.ts).
+    // Тот же принцип, что и у Amber Sale выше — скидка на ОБА варианта сразу.
     variants: [
-      { volume: '3ml', sku: 'CL-SD-06', price: 180, stock: 25 },
+      { volume: '3ml', sku: 'CL-SD-06', price: 180, oldPrice: 200, stock: 25 },
       { volume: 'Travel Size', sku: 'CL-SD-12', price: 320, oldPrice: 360, stock: 12 },
     ],
     isNew: true,

@@ -7,6 +7,9 @@ import { findDuplicates, validateRows } from '@/lib/import/validate'
 import { denormalizeVariants } from '@/lib/products/denormalize'
 import { discountPercent } from '@/lib/pricing'
 import { slugify } from '@/lib/slugify'
+import { variantsDiscountConsistent } from '@/collections/Products'
+import { toCard } from '@/lib/catalog/cards'
+import type { Product } from '@/payload-types'
 
 describe('парсер CSV', () => {
   it('понимает кавычки, экранированные кавычки и переводы строк в поле', () => {
@@ -194,5 +197,119 @@ describe('discountPercent', () => {
     expect(discountPercent(100, null)).toBeNull()
     expect(discountPercent(100, 100)).toBeNull()
     expect(discountPercent(100, 90)).toBeNull()
+  })
+})
+
+// Промпт «новая логика цены товара»: скидка — на ВСЕ активные варианты
+// сразу, или ни на один. Раньше oldPrice был независимым полем каждой
+// строки — ничего не мешало проставить его выборочно.
+describe('variantsDiscountConsistent (Products.ts — единое правило скидки)', () => {
+  const row = (price: number, oldPrice?: number, isActive = true) => ({ price, oldPrice, isActive })
+  // validate-функции Payload принимают options вторым аргументом — в этих
+  // юнит-тестах он не используется вообще (реализация читает только value),
+  // так что для вызова хватает пустышки, приведённой к ожидаемому типу.
+  const opts = {} as Parameters<typeof variantsDiscountConsistent>[1]
+
+  it('без скидки вовсе — валидно', () => {
+    expect(variantsDiscountConsistent([row(200), row(380), row(800)], opts)).toBe(true)
+  })
+
+  it('скидка на всех активных вариантах — валидно', () => {
+    expect(
+      variantsDiscountConsistent([row(200, 250), row(380, 450), row(800, 1200)], opts),
+    ).toBe(true)
+  })
+
+  it('скидка только на части вариантов — отклоняется с понятным текстом', () => {
+    const result = variantsDiscountConsistent([row(200, 250), row(380), row(800, 1200)], opts)
+    expect(result).not.toBe(true)
+    expect(String(result)).toMatch(/все.*вариант|один/i)
+  })
+
+  it('неактивный вариант без скидки не портит валидный расклад активных', () => {
+    // 380 неактивен и без скидки — не считается, среди активных скидка
+    // на обоих (200 и 800) → валидно.
+    expect(
+      variantsDiscountConsistent(
+        [row(200, 250), row(380, undefined, false), row(800, 1200)],
+        opts,
+      ),
+    ).toBe(true)
+  })
+
+  it('пустой список вариантов — валидно (нечего проверять)', () => {
+    expect(variantsDiscountConsistent([], opts)).toBe(true)
+  })
+})
+
+// toCard() — карточка каталога: без диапазона/«от», одна цена — максимальная
+// среди активных вариантов. Скидка (если есть — теперь гарантированно на
+// всех вариантах сразу) читается прямо с максимального по цене варианта.
+describe('toCard — новая логика цены (максимум, без диапазона)', () => {
+  const fakeProduct = (variants: Product['variants']): Product =>
+    ({
+      id: 1,
+      title: 'Test',
+      slug: 'test',
+      handle: 'TEST',
+      brand: null,
+      variants,
+      isNew: false,
+      isHit: false,
+      inStock: true,
+    }) as unknown as Product
+
+  it('без скидки — показывает МАКСИМАЛЬНУЮ цену среди вариантов, не минимальную', () => {
+    const card = toCard(
+      fakeProduct([
+        { id: 'a', volume: '5ml', sku: 'A-5', price: 200, stock: 1, isActive: true },
+        { id: 'b', volume: '10ml', sku: 'A-10', price: 380, stock: 1, isActive: true },
+        { id: 'c', volume: 'Full Size', sku: 'A-30', price: 800, stock: 1, isActive: true },
+      ] as Product['variants']),
+    )
+    expect(card.displayPrice).toBe(800)
+    expect(card.oldPrice).toBeNull()
+    expect(card.discountPercent).toBeNull()
+  })
+
+  it('со скидкой на все варианты — показывает цену/oldPrice/% максимального по цене варианта', () => {
+    const card = toCard(
+      fakeProduct([
+        { id: 'a', volume: '5ml', sku: 'A-5', price: 200, oldPrice: 250, stock: 1, isActive: true },
+        { id: 'b', volume: '10ml', sku: 'A-10', price: 380, oldPrice: 450, stock: 1, isActive: true },
+        {
+          id: 'c',
+          volume: 'Full Size',
+          sku: 'A-30',
+          price: 800,
+          oldPrice: 1200,
+          stock: 1,
+          isActive: true,
+        },
+      ] as Product['variants']),
+    )
+    expect(card.displayPrice).toBe(800)
+    expect(card.oldPrice).toBe(1200)
+    expect(card.discountPercent).toBe(33)
+  })
+
+  it('один вариант — просто его цена, без изменений в логике', () => {
+    const card = toCard(
+      fakeProduct([
+        { id: 'a', volume: 'Full Size', sku: 'A-30', price: 500, stock: 1, isActive: true },
+      ] as Product['variants']),
+    )
+    expect(card.displayPrice).toBe(500)
+    expect(card.oldPrice).toBeNull()
+  })
+
+  it('неактивный вариант с более высокой ценой не выбирается', () => {
+    const card = toCard(
+      fakeProduct([
+        { id: 'a', volume: '5ml', sku: 'A-5', price: 200, stock: 1, isActive: true },
+        { id: 'b', volume: 'Full Size', sku: 'A-30', price: 800, stock: 0, isActive: false },
+      ] as Product['variants']),
+    )
+    expect(card.displayPrice).toBe(200)
   })
 })
