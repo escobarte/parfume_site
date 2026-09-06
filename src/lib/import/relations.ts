@@ -62,6 +62,9 @@ export class RelationResolver {
       return -1
     }
 
+    // Ноты — title/description больше не localized (ПРОМПТ 13): одно
+    // название на английском видно на всех локалях сайта сразу, размножать
+    // по локалям (как раньше, ПРОМПТ 12 v2) больше не нужно.
     const doc = await this.payload.create({
       collection,
       locale: this.locale as 'ro',
@@ -70,24 +73,6 @@ export class RelationResolver {
         : { slug, title: titleFromSlug(slug) }) as never,
       req: this.req as PayloadRequest,
     })
-
-    // Ноты — заготовка получает временное название на ВСЕХ трёх локалях
-    // (не только в локали импорта), чтобы карточка товара не показывала
-    // пустую иконку с текстом только на одном языке (ПРОМПТ 12 v2, задача 2).
-    // Бренды/категории так не делают — их title всегда был single-locale-first
-    // и это поведение не менялось.
-    if (collection === 'notes') {
-      const otherLocales = (['ro', 'ru', 'en'] as const).filter((l) => l !== this.locale)
-      for (const otherLocale of otherLocales) {
-        await this.payload.update({
-          collection,
-          id: doc.id,
-          locale: otherLocale,
-          data: { title: titleFromSlug(slug) } as never,
-          req: this.req as PayloadRequest,
-        })
-      }
-    }
 
     this.cache.set(this.key(collection, slug), doc.id)
     return doc.id

@@ -6,12 +6,14 @@ import { ImageResolver } from './images'
 
 const trimmed = z.string().trim()
 
-/** Одна строка словаря нот — /admin/notes-import (ПРОМПТ 12 v2, задача 2). */
+/**
+ * Одна строка словаря нот — /admin/notes-import (ПРОМПТ 12 v2, задача 2;
+ * схема CSV сужена до одного `title` промптом 13 — title/description нот
+ * больше не localized, названия только на английском).
+ */
 const noteRow = z.object({
   slug: trimmed.min(1, 'slug: обязателен'),
-  name_ro: trimmed.optional(),
-  name_ru: trimmed.optional(),
-  name_en: trimmed.optional(),
+  title: trimmed.optional(),
   group: trimmed.optional(),
   image: trimmed.optional(),
 })
@@ -30,16 +32,11 @@ export type NotesImportResult = {
   errors: NotesImportRowError[]
 }
 
-/** Из slug делаем человекочитаемое название на случай отсутствия перевода. */
-const titleFromSlug = (slug: string) =>
-  slug
-    .split('-')
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
-
-const NOTE_LOCALES = ['ro', 'ru', 'en'] as const
-type NoteLocale = (typeof NOTE_LOCALES)[number]
+// Старая схема (ПРОМПТ 12 v2) — name_ro/name_ru/name_en. Промпт 13 убрал
+// localized у title/description нот, три колонки схлопнулись в одну `title`.
+// Файл в старом формате не должен тихо приниматься как «title везде пуст,
+// строка отклонена как без title» — это отдельная явная ошибка формата.
+const LEGACY_LOCALE_COLUMNS = ['name_ro', 'name_ru', 'name_en']
 
 /**
  * Импорт словаря нот CSV-файлом — /admin/notes-import. В отличие от
@@ -71,6 +68,18 @@ export async function applyNotesImport(
     result.ok = false
     result.errors.push({ line: 1, message: 'в файле нет строк данных' })
     return result
+  }
+
+  if (!table.header.includes('title')) {
+    const legacyColumns = LEGACY_LOCALE_COLUMNS.filter((column) => table.header.includes(column))
+    if (legacyColumns.length) {
+      result.ok = false
+      result.errors.push({
+        line: 1,
+        message: `старый формат CSV (${legacyColumns.join('/')}) больше не поддерживается — названия нот только на английском, одна колонка «title» вместо трёх`,
+      })
+      return result
+    }
   }
 
   const imageResolver = new ImageResolver(payload, req)
@@ -105,18 +114,13 @@ export async function applyNotesImport(
     // Пустая ячейка приходит из CSV как '' (toTable), не как undefined —
     // trimmed.optional() пропускает и такую строку как валидную. Отфильтровать
     // явно, иначе '' ?? fallback ничего не даёт (пустая строка — не nullish).
-    const names: Partial<Record<NoteLocale, string>> = {
-      ro: row.name_ro || undefined,
-      ru: row.name_ru || undefined,
-      en: row.name_en || undefined,
-    }
+    const title = row.title || undefined
 
     const existing = await payload.find({
       collection: 'notes',
       where: { slug: { equals: slug } },
       limit: 1,
       depth: 0,
-      locale: 'ro',
       req: req as PayloadRequest,
     })
     const current = existing.docs[0]
@@ -126,56 +130,46 @@ export async function applyNotesImport(
       if (dryRun) continue
 
       const flatData: Record<string, unknown> = {}
+      // Пустой title при обновлении не затирает уже стоящее название.
+      if (title) flatData.title = title
       if (row.group) flatData.group = row.group
       if (imageId !== undefined) flatData.image = imageId
       if (Object.keys(flatData).length) {
         await payload.update({
           collection: 'notes',
           id: current.id,
-          locale: 'ro',
           data: flatData as never,
           req: req as PayloadRequest,
         })
       }
-
-      for (const locale of NOTE_LOCALES) {
-        const name = names[locale]
-        if (!name) continue
-        await payload.update({
-          collection: 'notes',
-          id: current.id,
-          locale,
-          data: { title: name } as never,
-          req: req as PayloadRequest,
-        })
-      }
     } else {
+      // title обязателен для НОВОЙ ноты — в отличие от авто-создания при
+      // товарном импорте (relations.ts, там titleFromSlug — единственный
+      // источник названия), здесь дизайнер заполняет словарь целенаправленно,
+      // отсутствие title в новой строке — опечатка/недосмотр, а не штатный
+      // случай, поэтому строка отклоняется явной ошибкой.
+      if (!title) {
+        result.errors.push({
+          line: record.line,
+          message: `title: обязателен для новой ноты (slug «${slug}» не найден в базе)`,
+        })
+        continue
+      }
+
       result.created.push(slug)
       if (dryRun) continue
 
-      const fallbackTitle = names.ro ?? names.en ?? names.ru ?? titleFromSlug(slug)
-      const created = await payload.create({
+      await payload.create({
         collection: 'notes',
-        locale: 'ro',
         data: {
           slug,
-          title: fallbackTitle,
+          title,
           needsReview: true,
           ...(row.group ? { group: row.group } : {}),
           ...(imageId !== undefined ? { image: imageId } : {}),
         } as never,
         req: req as PayloadRequest,
       })
-
-      for (const locale of NOTE_LOCALES.filter((l) => l !== 'ro')) {
-        await payload.update({
-          collection: 'notes',
-          id: created.id,
-          locale,
-          data: { title: names[locale] ?? fallbackTitle } as never,
-          req: req as PayloadRequest,
-        })
-      }
     }
   }
 

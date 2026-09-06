@@ -118,8 +118,9 @@ export function NotesImportForm() {
         </label>
         <input id="notes-import-file" type="file" accept=".csv,text/csv" ref={fileInputRef} />
         <p style={{ marginTop: '.4em', fontSize: '.8rem', color: 'var(--theme-elevation-600)' }}>
-          Колонки: <code>slug,name_ro,name_ru,name_en,group,image</code>. <code>slug</code> —
-          обязателен, остальное можно заполнять не всё сразу. <code>image</code> — точное имя
+          Колонки: <code>slug,title,group,image</code>. <code>slug</code> — обязателен;{' '}
+          <code>title</code> — на английском, обязателен для новой ноты, при обновлении
+          существующей можно оставить пустым (не затрёт название). <code>image</code> — точное имя
           файла из архива, загруженного выше (шаг 1).
         </p>
       </div>

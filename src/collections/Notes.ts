@@ -22,9 +22,9 @@ export const Notes: CollectionConfig = {
     afterDelete: [() => revalidateTaxonomy()],
   },
   fields: [
-    { name: 'title', type: 'text', required: true, localized: true, index: true },
+    { name: 'title', type: 'text', required: true, index: true },
     slugField(),
-    { name: 'description', type: 'textarea', localized: true },
+    { name: 'description', type: 'textarea' },
     { name: 'image', type: 'upload', relationTo: 'media', admin: { description: 'Иконка ноты.' } },
     {
       name: 'needsReview',
