@@ -1,16 +1,17 @@
 import type { Payload, PayloadRequest } from 'payload'
 import type { Product } from '@/payload-types'
+import { isProductVolume, PRODUCT_VOLUMES, type ProductVolume } from '@/lib/catalog/volumes'
 import { paragraphs } from '@/lib/seed/richText'
 import { slugify } from '@/lib/slugify'
 import { DESCRIPTION_LOCALES, type DescriptionLocale } from './detect'
 import { ImageResolver } from './images'
 import { RelationResolver } from './relations'
 import type { FormatARow, FormatBRow } from './schema'
-import type { ImportPlan } from './types'
+import type { ImportPlan, RowError } from './types'
 import type { ValidatedRow } from './validate'
 
 type VariantInput = {
-  volume: number
+  volume: ProductVolume
   sku: string
   price: number
   oldPrice: number | null
@@ -24,13 +25,37 @@ export type ProductInput = {
   variants: VariantInput[]
 }
 
-/** Формат A: строки одного handle склеиваются в один товар. */
-export function groupFormatA(rows: ValidatedRow<FormatARow>[]): ProductInput[] {
+const invalidVolumeMessage = (raw: string) =>
+  `volume: значение «${raw}» не из списка (${PRODUCT_VOLUMES.join(' / ')}) — вариант пропущен`
+
+/**
+ * Формат A: строки одного handle склеиваются в один товар. Объём — не
+ * строгий zod на уровне схемы (см. schema.ts): невалидное значение здесь
+ * пропускает только ЭТУ строку (вариант), не весь файл — предупреждение
+ * уходит в invalidVolumes, остальные строки того же и других товаров
+ * применяются как обычно.
+ *
+ * Запись товара в `grouped` заводится ПЕРВОЙ строкой независимо от того,
+ * валиден её объём или нет — иначе товар, у которого именно первая строка
+ * оказалась с плохим объёмом, не попадал бы в Map вообще и пропадал бы из
+ * отчёта молча (не «пропущен с предупреждением», а просто отсутствовал бы).
+ */
+export function groupFormatA(
+  rows: ValidatedRow<FormatARow>[],
+): { inputs: ProductInput[]; invalidVolumes: RowError[] } {
   const grouped = new Map<string, ProductInput>()
+  const invalidVolumes: RowError[] = []
 
   for (const { line, value } of rows) {
     const { volume, sku, price, old_price, stock, is_active, ...base } = value
     const existing = grouped.get(base.handle)
+    if (!existing) grouped.set(base.handle, { line, base, variants: [] })
+
+    if (!isProductVolume(volume)) {
+      invalidVolumes.push({ line, field: 'volume', message: invalidVolumeMessage(volume) })
+      continue
+    }
+
     const variant: VariantInput = {
       volume,
       sku,
@@ -39,34 +64,45 @@ export function groupFormatA(rows: ValidatedRow<FormatARow>[]): ProductInput[] {
       stock: stock ?? 0,
       isActive: is_active ?? true,
     }
-
-    if (existing) {
-      existing.variants.push(variant)
-    } else {
-      grouped.set(base.handle, { line, base, variants: [variant] })
-    }
+    grouped.get(base.handle)!.variants.push(variant)
   }
 
-  return [...grouped.values()]
+  return { inputs: [...grouped.values()], invalidVolumes }
 }
 
-/** Формат B: варианты уже пришли JSON-массивом. */
-export function groupFormatB(rows: ValidatedRow<FormatBRow>[]): ProductInput[] {
-  return rows.map(({ line, value }) => {
+/** Формат B: варианты уже пришли JSON-массивом — та же терпимость к объёму. */
+export function groupFormatB(
+  rows: ValidatedRow<FormatBRow>[],
+): { inputs: ProductInput[]; invalidVolumes: RowError[] } {
+  const invalidVolumes: RowError[] = []
+
+  const inputs = rows.map(({ line, value }) => {
     const { variants, ...base } = value
-    return {
-      line,
-      base,
-      variants: variants.map((variant) => ({
+    const resolved: VariantInput[] = []
+
+    for (const variant of variants) {
+      if (!isProductVolume(variant.volume)) {
+        invalidVolumes.push({
+          line,
+          field: 'variants[].volume',
+          message: invalidVolumeMessage(variant.volume),
+        })
+        continue
+      }
+      resolved.push({
         volume: variant.volume,
         sku: variant.sku,
         price: variant.price,
         oldPrice: variant.oldPrice ?? null,
         stock: variant.stock ?? 0,
         isActive: variant.isActive ?? true,
-      })),
+      })
     }
+
+    return { line, base, variants: resolved }
   })
+
+  return { inputs, invalidVolumes }
 }
 
 /** Варианты из файла накатываются на существующие по sku; чужие не трогаем. */
@@ -191,6 +227,20 @@ export async function applyProducts(
       req: req as PayloadRequest,
     })
     const current = existing.docs[0]
+
+    // Все строки этого handle имели невалидный объём (invalidVolumes уже
+    // содержит предупреждение по каждой) — для НОВОГО товара это значит
+    // вообще ни одного варианта: payload.create упал бы на `minRows: 1`.
+    // Для уже существующего товара не проблема — merge просто не добавит
+    // новых вариантов, старые останутся как были, товар обновится по
+    // остальным полям как обычно.
+    if (!current && variants.length === 0) {
+      plan.skipped.push({
+        line: input.line,
+        message: `${base.handle}: у товара ни одной строки с валидным объёмом — товар не создан`,
+      })
+      continue
+    }
 
     const merged = mergeVariants(current?.variants, variants)
     plan.variants.created += merged.created

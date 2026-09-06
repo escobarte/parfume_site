@@ -32,7 +32,7 @@ export function buildTelegramMessage(order: Order): string {
 
   for (const item of order.items ?? []) {
     const brand = item.brandTitle ? `${escapeHtml(item.brandTitle)} · ` : ''
-    const volume = item.volume ? `${item.volume} ml` : ''
+    const volume = item.volume ?? ''
     lines.push(`• ${brand}<b>${escapeHtml(item.title)}</b>`)
     lines.push(
       `  ${volume}${volume ? ' · ' : ''}${escapeHtml(item.sku)} · ${item.qty} × ${item.price} = <b>${item.lineTotal} MDL</b>`,

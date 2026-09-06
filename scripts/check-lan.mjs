@@ -65,7 +65,7 @@ check('переключатель языка работает', switched, new UR
 await goto('/ro/product/maison-orphee-signature-wood')
 const price = page.locator('span.text-display').first()
 const priceBefore = await price.innerText()
-await page.getByRole('button', { name: '30 ml' }).first().click()
+await page.getByRole('button', { name: 'Full Size' }).first().click()
 await page.waitForTimeout(400)
 const priceAfter = await price.innerText()
 check(

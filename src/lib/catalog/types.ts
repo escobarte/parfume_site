@@ -8,7 +8,7 @@ export type ProductCardData = {
   brandTitle: string
   family: string | null
   noteTitles: string[]
-  volumes: number[]
+  volumes: string[]
   /**
    * Вариант B (фаза 4.5): если есть уценённые варианты — цена САМОГО
    * уценённого из них (может быть не минимальным объёмом товара). Если

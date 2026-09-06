@@ -12,5 +12,11 @@ export function formatPrice(value: number | null | undefined, locale: Locale): s
   return `${new Intl.NumberFormat(INTL_LOCALE[locale], { maximumFractionDigits: 0 }).format(value)} MDL`
 }
 
-/** «5 ml» — единица не переводится, так объёмы подписаны в мокапе. */
-export const formatVolume = (volume: number): string => `${volume} ml`
+/**
+ * Объём — фиксированный список из 5 значений (`PRODUCT_VOLUMES`), подпись
+ * равна самому значению («3ml», «Travel Size» и т.п.) — единица не
+ * переводится по локалям, форматировать уже нечего, функция оставлена как
+ * единая точка вызова (было — для единообразия с formatPrice, и чтобы не
+ * переписывать все места, где объём печатается).
+ */
+export const formatVolume = (volume: string): string => volume

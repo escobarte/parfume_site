@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 import { adminOnly, isStaff, staffOnly } from '@/access/roles'
 import { seoField } from '@/fields/seo'
 import { slugField } from '@/fields/slug'
+import { PRODUCT_VOLUMES } from '@/lib/catalog/volumes'
 import { denormalizeVariants, type VariantLike } from '@/lib/products/denormalize'
 import { revalidateCatalog } from '@/lib/revalidate'
 
@@ -161,11 +162,14 @@ export const Products: CollectionConfig = {
                   type: 'row',
                   fields: [
                     {
+                      // Свободное число мл выведено из системы (промпт «новая
+                      // модель объёма») — ровно 5 фиксированных значений,
+                      // в базе физически невозможно записать что-то ещё.
                       name: 'volume',
-                      type: 'number',
+                      type: 'select',
                       required: true,
-                      min: 1,
-                      admin: { width: '25%', description: 'мл' },
+                      options: [...PRODUCT_VOLUMES],
+                      admin: { width: '25%' },
                     },
                     {
                       name: 'sku',

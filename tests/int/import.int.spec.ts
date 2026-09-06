@@ -51,7 +51,9 @@ describe('определение формата', () => {
 
 describe('валидация', () => {
   const table = toTable(
-    ['handle,title,brand,volume,sku,price,old_price,stock', 'A,Название,b,5,A-5,100,,3'].join('\n'),
+    ['handle,title,brand,volume,sku,price,old_price,stock', 'A,Название,b,5ml,A-5,100,,3'].join(
+      '\n',
+    ),
   )
 
   it('пустая необязательная ячейка (old_price) не считается ошибкой', () => {
@@ -61,7 +63,7 @@ describe('валидация', () => {
   })
 
   it('сообщает номер строки файла', () => {
-    const broken = toTable('handle,title,brand,volume,sku,price\nA,,b,5,A-5,нет')
+    const broken = toTable('handle,title,brand,volume,sku,price\nA,,b,5ml,A-5,нет')
     const { errors } = validateRows('products-a', broken.records)
     expect(errors.every((error) => error.line === 2)).toBe(true)
     expect(errors.length).toBeGreaterThan(0)
@@ -84,17 +86,48 @@ describe('формат A', () => {
     const table = toTable(
       [
         'handle,title,brand,volume,sku,price,stock',
-        'A,Название,b,5,A-5,100,3',
-        'A,Название,b,30,A-30,300,1',
-        'B,Другое,b,5,B-5,150,0',
+        'A,Название,b,5ml,A-5,100,3',
+        'A,Название,b,Full Size,A-30,300,1',
+        'B,Другое,b,5ml,B-5,150,0',
       ].join('\n'),
     )
     const { rows, errors } = validateRows<never>('products-a', table.records)
     expect(errors).toHaveLength(0)
 
-    const grouped = groupFormatA(rows)
+    const { inputs: grouped, invalidVolumes } = groupFormatA(rows)
+    expect(invalidVolumes).toHaveLength(0)
     expect(grouped).toHaveLength(2)
     expect(grouped[0].variants.map((variant) => variant.sku)).toEqual(['A-5', 'A-30'])
+  })
+
+  it('объём не из списка 5 значений — вариант пропущен с предупреждением, остальные строки применяются', () => {
+    const table = toTable(
+      [
+        'handle,title,brand,volume,sku,price,stock',
+        'A,Название,b,5ml,A-5,100,3',
+        'A,Название,b,90,A-90,300,1',
+        'B,Другое,b,77,B-77,150,0',
+      ].join('\n'),
+    )
+    const { rows, errors } = validateRows<never>('products-a', table.records)
+    // Пустая/невалидная строка объёма — не ошибка формата (schema.ts принимает
+    // любую непустую строку), значит validateRows не должен спотыкаться тут.
+    expect(errors).toHaveLength(0)
+
+    const { inputs: grouped, invalidVolumes } = groupFormatA(rows)
+    expect(invalidVolumes.map((e) => e.line)).toEqual([3, 4])
+    expect(invalidVolumes.every((e) => e.message.includes('volume'))).toBe(true)
+
+    const productA = grouped.find((p) => p.base.handle === 'A')
+    const productB = grouped.find((p) => p.base.handle === 'B')
+    // A: одна хорошая строка (5ml) + одна плохая (90) — товар не пропускается
+    // целиком, у него остаётся единственный валидный вариант.
+    expect(productA?.variants.map((v) => v.sku)).toEqual(['A-5'])
+    // B: ЕДИНСТВЕННАЯ строка товара — с плохим объёмом — вариантов не остаётся
+    // вовсе, но товар всё равно присутствует в inputs (variants: []), чтобы
+    // applyProducts() мог явно пропустить его с предупреждением, а не потерять
+    // молча (см. комментарий над groupFormatA в applyProducts.ts).
+    expect(productB?.variants).toHaveLength(0)
   })
 })
 

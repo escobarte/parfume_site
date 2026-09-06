@@ -105,7 +105,9 @@ check(
 
 // Страница распроданного товара: все объёмы заблокированы
 await goto(`/ro/product/${SOLD_OUT}`)
-const volumeButtons = page.locator('button').filter({ hasText: /^\d+ ml$/ })
+const volumeButtons = page
+  .locator('button')
+  .filter({ hasText: /^(3ml|5ml|10ml|Travel Size|Full Size)$/ })
 const total = await volumeButtons.count()
 const disabled = await volumeButtons.evaluateAll((nodes) => nodes.filter((n) => n.disabled).length)
 check(

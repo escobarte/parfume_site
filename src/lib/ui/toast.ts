@@ -16,7 +16,7 @@ export type CartToast = {
   id: number
   title: string
   brandTitle?: string
-  volume?: number
+  volume?: string
   image?: string | null
 }
 

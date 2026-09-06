@@ -23,9 +23,10 @@ export type CartItem = {
   title: string
   brandTitle: string
   sku: string
-  // Объём в мл — только у товаров-духов. У подарочных товаров нет ml-объёма,
-  // номинал в MDL и так виден в `price`, поле остаётся пустым.
-  volume?: number
+  // Объём — только у товаров-духов, один из 5 фиксированных значений
+  // (PRODUCT_VOLUMES). У подарочных товаров нет объёма, номинал в MDL и так
+  // виден в `price`, поле остаётся пустым.
+  volume?: string
   price: number
   image?: string | null
   qty: number

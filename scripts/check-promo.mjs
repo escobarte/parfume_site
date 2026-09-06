@@ -58,9 +58,9 @@ const goto = async (path) => {
 
 await goto('/ro/catalog')
 
-// Amber Sale: 5 ml −20% (200/250), 10 ml без скидки, 30 ml −33% (800/1200).
-// Максимальный % — на 30 ml, не на самом дешёвом варианте (5 ml) — карточка
-// должна показать именно 30 ml целиком (цену, зачёркнутую и бейдж).
+// Amber Sale: 5ml −20% (200/250), 10ml без скидки, Full Size −33% (800/1200).
+// Максимальный % — на Full Size, не на самом дешёвом варианте (5ml) — карточка
+// должна показать именно Full Size целиком (цену, зачёркнутую и бейдж).
 const saleCard = page
   .locator('article')
   .filter({ has: page.locator('a[href*="maison-orphee-amber-sale"]') })
@@ -70,9 +70,9 @@ const cardBadge = await saleCard
   .innerText()
   .catch(() => null)
 check(
-  'Amber Sale: бейдж — процент лучшего уценённого варианта (30 ml, −33%)',
+  'Amber Sale: бейдж — процент лучшего уценённого варианта (Full Size, −33%)',
   cardBadge === '−33%',
-  `бейдж «${cardBadge}» (5 ml −20%, 30 ml −33%, 10 ml без скидки)`,
+  `бейдж «${cardBadge}» (5ml −20%, Full Size −33%, 10ml без скидки)`,
 )
 
 const badgeStyle = await saleCard
@@ -98,7 +98,7 @@ check(
 
 const salePriceLine = await saleCard.locator('span.text-body.font-medium').first().innerText()
 check(
-  'Amber Sale: «от» — цена того же варианта, что и бейдж (800 MDL, 30 ml, не 200 MDL с 5 ml)',
+  'Amber Sale: «от» — цена того же варианта, что и бейдж (800 MDL, Full Size, не 200 MDL с 5ml)',
   salePriceLine.includes('de la 800') && !salePriceLine.includes('de la 200'),
   salePriceLine,
 )
@@ -108,9 +108,9 @@ check(
   salePriceLine,
 )
 
-// Set Descoperire — ровно баг-репродукция из задания: скидка на 12 ml
-// (320/360, −11%), 6 ml дешевле и без скидки. Бейдж/цена обязаны описывать
-// 12 ml, а не «от 180» с бейджем в никуда.
+// Set Descoperire — ровно баг-репродукция из задания: скидка на Travel Size
+// (320/360, −11%), 3ml дешевле и без скидки. Бейдж/цена обязаны описывать
+// Travel Size, а не «от 180» с бейджем в никуда.
 const setCard = page
   .locator('article')
   .filter({ has: page.locator('a[href*="casa-lumina-set-descoperire"]') })
@@ -119,10 +119,14 @@ const setBadge = await setCard
   .first()
   .innerText()
   .catch(() => null)
-check('Set Descoperire: бейдж −11% (скидка на 12 ml, не на 6 ml)', setBadge === '−11%', setBadge)
+check(
+  'Set Descoperire: бейдж −11% (скидка на Travel Size, не на 3ml)',
+  setBadge === '−11%',
+  setBadge,
+)
 const setPriceLine = await setCard.locator('span.text-body.font-medium').first().innerText()
 check(
-  'Set Descoperire: «от» — цена уценённого 12 ml (320 MDL), не самого дешёвого 6 ml (180 MDL)',
+  'Set Descoperire: «от» — цена уценённого Travel Size (320 MDL), не самого дешёвого 3ml (180 MDL)',
   setPriceLine.includes('de la 320') && !setPriceLine.includes('de la 180'),
   setPriceLine,
 )
@@ -158,22 +162,22 @@ const readVariantState = async () => ({
     .catch(() => null),
 })
 const at5ml = await readVariantState()
-await page.getByRole('button', { name: '10 ml' }).click()
+await page.getByRole('button', { name: '10ml' }).click()
 await page.waitForTimeout(400)
 const at10ml = await readVariantState()
-await page.getByRole('button', { name: '30 ml' }).click()
+await page.getByRole('button', { name: 'Full Size' }).click()
 await page.waitForTimeout(400)
-const at30ml = await readVariantState()
+const atFullSize = await readVariantState()
 
-check('страница товара, 5 ml: −20%', at5ml.badge === '−20%', at5ml.badge)
+check('страница товара, 5ml: −20%', at5ml.badge === '−20%', at5ml.badge)
 check(
-  'страница товара, 10 ml без скидки: бейджа нет',
+  'страница товара, 10ml без скидки: бейджа нет',
   at10ml.badge === null,
   `badge=${at10ml.badge}`,
 )
 check(
-  'страница товара, 30 ml: −33%, цена пересчитана',
-  at30ml.badge === '−33%' && at30ml.price !== at5ml.price,
+  'страница товара, Full Size: −33%, цена пересчитана',
+  atFullSize.badge === '−33%' && atFullSize.price !== at5ml.price,
 )
 
 // ═══════════════════════════════════════════════════════════════════════

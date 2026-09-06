@@ -197,7 +197,7 @@ export default async function UiKitPage(props: { params: Promise<{ locale: strin
                   <h3 className="text-ink text-body font-medium">{title}</h3>
                   <p className="text-ink-muted text-label">древесный · сандал, кедр</p>
                   <div className="mt-1 flex gap-1.5">
-                    {['5 ml', '10 ml', '30 ml'].map((volume) => (
+                    {['5ml', '10ml', 'Full Size'].map((volume) => (
                       <span
                         key={volume}
                         className="border-line text-ink-muted text-eyebrow rounded-sm border px-1.5 py-0.5"

@@ -2,6 +2,7 @@ import type { Media, Note, Product } from '@/payload-types'
 import { discountPercent } from '@/lib/pricing'
 import type { FlagOption } from './searchParams'
 import type { ProductCardData } from './types'
+import { volumeOrder } from './volumes'
 
 /** Документ Payload → данные эталонной карточки (WIREFRAMES.md §3). */
 export function toCard(doc: Product): ProductCardData {
@@ -44,7 +45,11 @@ export function toCard(doc: Product): ProductCardData {
     brandTitle: brand?.title ?? '',
     family: doc.family ?? null,
     noteTitles: notes.map((note) => note.title),
-    volumes: [...new Set(variants.map((variant) => variant.volume))].sort((a, b) => a - b),
+    // Boolean(v) — вариант без объёма (легаси-строка, ещё не переустановлена
+    // после смены модели) не должен показывать пустой чип на карточке.
+    volumes: [...new Set(variants.map((variant) => variant.volume).filter(Boolean))].sort(
+      (a, b) => volumeOrder(a) - volumeOrder(b),
+    ),
     displayPrice: bestDiscount ? bestDiscount.variant.price : (doc.minPrice ?? null),
     oldPrice: bestDiscount ? (bestDiscount.variant.oldPrice ?? null) : null,
     discountPercent: bestDiscount ? bestDiscount.percent : null,

@@ -186,10 +186,7 @@ export interface Product {
    * Объём, цена и остаток. Общие для всех локалей.
    */
   variants: {
-    /**
-     * мл
-     */
-    volume: number;
+    volume: '3ml' | '5ml' | '10ml' | 'Travel Size' | 'Full Size';
     sku: string;
     /**
      * MDL
@@ -570,10 +567,7 @@ export interface Order {
         title: string;
         brandTitle?: string | null;
         sku: string;
-        /**
-         * мл
-         */
-        volume?: number | null;
+        volume?: ('3ml' | '5ml' | '10ml' | 'Travel Size' | 'Full Size') | null;
         /**
          * MDL
          */

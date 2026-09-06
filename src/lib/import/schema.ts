@@ -43,6 +43,14 @@ const pipeList = z.preprocess(
 
 export const GENDER_VALUES = ['female', 'male', 'unisex'] as const
 
+// Объём — «пермиссивная» строка на уровне схемы (промпт «новая модель
+// объёма»): строгая сверка со списком из 5 значений происходит ПОЗЖЕ, в
+// applyProducts.ts, той же стадией, что уже даёт построчные предупреждения
+// для ненайденных фото (не ошибка формата, блокирующая весь файл) — опечатка
+// в объёме одной строки не должна ронять прайс на 100+ позиций. Здесь схема
+// только требует непустое значение.
+const volumeToken = (label: string) => trimmed.min(1, `${label}: обязателен`)
+
 const optionalEnum = <T extends readonly [string, ...string[]]>(values: T, label: string) =>
   z.preprocess(
     (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
@@ -86,7 +94,7 @@ const productBase = {
 /** Формат A: одна строка = один вариант, группировка по handle. */
 export const formatARow = z.object({
   ...productBase,
-  volume: numberFrom('volume'),
+  volume: volumeToken('volume'),
   sku: trimmed.min(1, 'sku: обязателен'),
   price: numberFrom('price'),
   old_price: optionalNumber('old_price'),
@@ -97,7 +105,7 @@ export const formatARow = z.object({
 export type FormatARow = z.infer<typeof formatARow>
 
 export const variantJson = z.object({
-  volume: z.number().positive('variants[].volume: ожидается число > 0'),
+  volume: volumeToken('variants[].volume'),
   sku: z.string().min(1, 'variants[].sku: обязателен'),
   price: z.number().nonnegative('variants[].price: ожидается число ≥ 0'),
   oldPrice: z.number().nonnegative().optional(),

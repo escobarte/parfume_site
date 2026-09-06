@@ -16,7 +16,12 @@ export type ImportPlan = {
   update: string[]
   /** Справочники, которые будут заведены автоматически. */
   autoCreate: { brands: string[]; categories: string[]; notes: string[] }
-  variants: { created: number; updated: number }
+  /**
+   * `invalidVolume` — форматы A/B: строки/варианты с volume не из списка 5
+   * значений (новая модель объёма) — предупреждение, не ошибка формата,
+   * строка/вариант просто пропускается, остальной файл продолжает грузиться.
+   */
+  variants: { created: number; updated: number; invalidVolume: RowError[] }
   /** Для лёгкого прайса и переводов. */
   touched: number
   /** Строки, для которых не нашлось товара (не ошибка формата, но и не изменение). */
@@ -50,7 +55,7 @@ export const emptyPlan = (kind: ImportKind, locale: string): ImportPlan => ({
   create: [],
   update: [],
   autoCreate: { brands: [], categories: [], notes: [] },
-  variants: { created: 0, updated: 0 },
+  variants: { created: 0, updated: 0, invalidVolume: [] },
   touched: 0,
   skipped: [],
   descriptionLocales: [],

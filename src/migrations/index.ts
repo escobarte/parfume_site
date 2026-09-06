@@ -17,6 +17,7 @@ import * as migration_20260905_130249_phase11_2_payment_method from './20260905_
 import * as migration_20260905_131227_phase11_2_promo_codes from './20260905_131227_phase11_2_promo_codes';
 import * as migration_20260905_173146_phase12_notes_review_image_group_text from './20260905_173146_phase12_notes_review_image_group_text';
 import * as migration_20260906_122443_phase13_notes_title_description_not_localized from './20260906_122443_phase13_notes_title_description_not_localized';
+import * as migration_20260906_142023_new_volume_model from './20260906_142023_new_volume_model';
 
 export const migrations = [
   {
@@ -112,6 +113,11 @@ export const migrations = [
   {
     up: migration_20260906_122443_phase13_notes_title_description_not_localized.up,
     down: migration_20260906_122443_phase13_notes_title_description_not_localized.down,
-    name: '20260906_122443_phase13_notes_title_description_not_localized'
+    name: '20260906_122443_phase13_notes_title_description_not_localized',
+  },
+  {
+    up: migration_20260906_142023_new_volume_model.up,
+    down: migration_20260906_142023_new_volume_model.down,
+    name: '20260906_142023_new_volume_model'
   },
 ];

@@ -37,7 +37,7 @@ function buildHtml(order: Order): string {
         <td style="padding:6px 10px;border-bottom:1px solid #E3DACA">
           ${item.brandTitle ? `${item.brandTitle} · ` : ''}${item.title}
         </td>
-        <td style="padding:6px 10px;border-bottom:1px solid #E3DACA">${item.volume ? `${item.volume} ml` : ''}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #E3DACA">${item.volume ?? ''}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #E3DACA">${item.sku}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #E3DACA">${item.qty}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #E3DACA">${item.lineTotal} MDL</td>
@@ -92,7 +92,7 @@ function buildCustomerHtml(order: Order): string {
         <td style="padding:6px 10px;border-bottom:1px solid #E3DACA">
           ${item.brandTitle ? `${item.brandTitle} · ` : ''}${item.title}
         </td>
-        <td style="padding:6px 10px;border-bottom:1px solid #E3DACA">${item.volume ? `${item.volume} ml` : ''}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #E3DACA">${item.volume ?? ''}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #E3DACA">${item.qty}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #E3DACA">${item.lineTotal} MDL</td>
       </tr>`,

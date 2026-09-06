@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { PRODUCT_VOLUMES } from '@/lib/catalog/volumes'
 
 /**
  * Молдавский номер: +373 и восемь цифр. На вход принимаем как есть — с
@@ -54,8 +55,11 @@ export const orderItemSchema = z.object({
   title: z.string().min(1),
   brandTitle: z.string().default(''),
   sku: z.string().min(1),
-  // Объём в мл — только у товаров-духов, у подарочных товаров нет.
-  volume: z.number().positive().optional(),
+  // Объём — только у товаров-духов, у подарочных товаров нет. Фиксированный
+  // список из 5 значений (новая модель объёма) — авторитетно берётся с
+  // сервера (buildItems() в route.ts), не от клиента, но схема всё равно
+  // проверяет форму на случай прямого вызова API.
+  volume: z.enum(PRODUCT_VOLUMES).optional(),
   price: z.number().nonnegative(),
   qty: z.number().int().positive().max(99),
 })

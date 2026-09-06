@@ -5,6 +5,7 @@ import type { Locale } from '@/i18n/routing'
 import type { Media, Note, Product } from '@/payload-types'
 import { getPayloadClient } from '@/lib/payload'
 import { CATALOG_TAG } from '@/lib/revalidate'
+import { volumeOrder } from './volumes'
 import { toCardList } from './cards'
 import type { ProductCardData } from './types'
 
@@ -12,7 +13,7 @@ export type PyramidNote = { slug: string; title: string; image: string | null }
 
 export type VariantView = {
   sku: string
-  volume: number
+  volume: string
   price: number
   oldPrice: number | null
   stock: number
@@ -76,15 +77,19 @@ function toView(doc: Product): ProductView {
       alt: image.alt ?? doc.title,
     })),
     variants: (doc.variants ?? [])
-      .filter((variant) => variant.isActive !== false)
+      // isActive и непустой volume — вариант без объёма (например, старая
+      // строка ещё не переустановлена после смены модели объёма) не должен
+      // рендериться пустой безымянной кнопкой, это ровно тот же случай, что
+      // «этого объёма у товара нет» — кнопка просто отсутствует.
+      .filter((variant) => variant.isActive !== false && Boolean(variant.volume))
       .map((variant) => ({
         sku: variant.sku,
-        volume: variant.volume,
+        volume: variant.volume as string,
         price: variant.price,
         oldPrice: variant.oldPrice ?? null,
         stock: variant.stock ?? 0,
       }))
-      .sort((a, b) => a.volume - b.volume),
+      .sort((a, b) => volumeOrder(a.volume) - volumeOrder(b.volume)),
     notes: notes.map((note) => ({ slug: note.slug, title: note.title })),
     pyramid: {
       top: pyramidNotes(doc.pyramid?.top),

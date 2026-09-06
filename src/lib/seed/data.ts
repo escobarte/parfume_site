@@ -5,6 +5,8 @@
  * docs/WIREFRAMES.md §2 (Она / Он / Унисекс / Наборы).
  */
 
+import type { ProductVolume } from '../catalog/volumes.js'
+
 export type Locales = { ro: string; ru: string; en: string }
 
 export type SeedBrand = {
@@ -42,7 +44,7 @@ export type SeedProduct = {
   notes: string[]
   pyramid: { top: string[]; heart: string[]; base: string[] }
   description: Locales
-  variants: { volume: number; sku: string; price: number; oldPrice?: number; stock: number }[]
+  variants: { volume: ProductVolume; sku: string; price: number; oldPrice?: number; stock: number }[]
   isNew?: boolean
   isHit?: boolean
 }
@@ -152,9 +154,9 @@ export const notes: SeedNote[] = [
 ]
 
 const v = (sku: string, prices: [number, number, number], stock: [number, number, number]) => [
-  { volume: 5, sku: `${sku}-05`, price: prices[0], stock: stock[0] },
-  { volume: 10, sku: `${sku}-10`, price: prices[1], stock: stock[1] },
-  { volume: 30, sku: `${sku}-30`, price: prices[2], stock: stock[2] },
+  { volume: '5ml' as const, sku: `${sku}-05`, price: prices[0], stock: stock[0] },
+  { volume: '10ml' as const, sku: `${sku}-10`, price: prices[1], stock: stock[1] },
+  { volume: 'Full Size' as const, sku: `${sku}-30`, price: prices[2], stock: stock[2] },
 ]
 
 export const products: SeedProduct[] = [
@@ -307,9 +309,9 @@ export const products: SeedProduct[] = [
       en: 'Warm amber with pepper — a seasonal edition at a reduced price.',
     },
     variants: [
-      { volume: 5, sku: 'MO-AS-05', price: 200, oldPrice: 250, stock: 9 },
-      { volume: 10, sku: 'MO-AS-10', price: 380, stock: 6 },
-      { volume: 30, sku: 'MO-AS-30', price: 800, oldPrice: 1200, stock: 4 },
+      { volume: '5ml', sku: 'MO-AS-05', price: 200, oldPrice: 250, stock: 9 },
+      { volume: '10ml', sku: 'MO-AS-10', price: 380, stock: 6 },
+      { volume: 'Full Size', sku: 'MO-AS-30', price: 800, oldPrice: 1200, stock: 4 },
     ],
   },
   {
@@ -379,9 +381,12 @@ export const products: SeedProduct[] = [
       ru: 'Три пробника по 2 мл, чтобы найти свой аромат.',
       en: 'Three 2 ml samples to find the right scent.',
     },
+    // Единственный демо-товар ровно с 2 из 5 объёмов (не полный набор) —
+    // живая проверка «нет варианта → кнопки просто нет» (см. tests/e2e/
+    // product-volume.e2e.spec.ts).
     variants: [
-      { volume: 6, sku: 'CL-SD-06', price: 180, stock: 25 },
-      { volume: 12, sku: 'CL-SD-12', price: 320, oldPrice: 360, stock: 12 },
+      { volume: '3ml', sku: 'CL-SD-06', price: 180, stock: 25 },
+      { volume: 'Travel Size', sku: 'CL-SD-12', price: 320, oldPrice: 360, stock: 12 },
     ],
     isNew: true,
   },

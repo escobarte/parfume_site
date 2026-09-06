@@ -4,20 +4,23 @@ import config from '../src/payload.config.js'
 import { brands, categories } from '../src/lib/seed/data.js'
 import { makePlaceholder } from '../src/lib/seed/placeholder.js'
 import { paragraphs } from '../src/lib/seed/richText.js'
+import { PRODUCT_VOLUMES } from '../src/lib/catalog/volumes.js'
 
 /**
  * Нагрузочный smoke (PLAN.md §8.3, Приложение A): 120 синтетических товаров
- * по 6 вариантов (720 SKU) поверх демо-данных фазы 2 — замер отклика
- * листинга/фильтров/поиска/админки на объёме, близком к реальному прайсу.
- * Товары помечены slug `load-NNN` — удаляются одним запросом (см.
- * docs/perf/full-load.md, «как откатить»). Одна общая плейсхолдер-картинка
- * на все товары: цель — нагрузить БД и рендер списков, не генератор картинок.
+ * по 5 вариантов (600 SKU, было 6/720 — объём теперь фиксированный список
+ * ровно из 5 значений, не свободное число, см. «новая модель объёма») поверх
+ * демо-данных фазы 2 — замер отклика листинга/фильтров/поиска/админки на
+ * объёме, близком к реальному прайсу. Товары помечены slug `load-NNN` —
+ * удаляются одним запросом (см. docs/perf/full-load.md, «как откатить»).
+ * Одна общая плейсхолдер-картинка на все товары: цель — нагрузить БД и
+ * рендер списков, не генератор картинок.
  */
 const LOCALES = ['ro', 'ru', 'en'] as const
 type Locale = (typeof LOCALES)[number]
 
 const COUNT = Number(process.env.LOAD_COUNT ?? 120)
-const VOLUMES = [5, 10, 15, 20, 30, 50]
+const VOLUMES = PRODUCT_VOLUMES
 const GENDERS = ['female', 'male', 'unisex'] as const
 const FAMILIES = ['floral', 'woody', 'oriental', 'fresh', 'fougere', 'chypre'] as const
 
@@ -89,10 +92,13 @@ async function main() {
     const family = FAMILIES[i % FAMILIES.length]
     const basePrice = 150 + (i % 20) * 15
 
+    // Цена растёт по индексу в каноническом порядке (заменяет старую
+    // формулу от числа мл — объём больше не число, sku тоже не может
+    // содержать значение как есть: «Travel Size»/«Full Size» — с пробелом.
     const variants = VOLUMES.map((volume, vi) => ({
       volume,
-      sku: `LOAD-${num}-${volume}`,
-      price: Math.round((basePrice * volume) / 100) * 10,
+      sku: `LOAD-${num}-${vi}`,
+      price: Math.round((basePrice * (vi + 1)) / 5) * 10,
       stock: (i + vi) % 9,
       isActive: true,
     }))

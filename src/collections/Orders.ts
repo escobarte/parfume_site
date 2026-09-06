@@ -1,6 +1,7 @@
 import type { CollectionConfig, TextField, Validate, Where } from 'payload'
 import crypto from 'node:crypto'
 import { adminOnly, isStaff, staffOnly } from '@/access/roles'
+import { PRODUCT_VOLUMES } from '@/lib/catalog/volumes'
 import { buildOrdersCsvBulk } from '@/lib/orders/csv'
 import type { Order } from '@/payload-types'
 
@@ -292,7 +293,14 @@ export const Orders: CollectionConfig = {
         {
           type: 'row',
           fields: [
-            { name: 'volume', type: 'number', admin: { width: '25%', description: 'мл' } },
+            {
+              // Снапшот на момент заявки — у подарочных позиций пусто.
+              // Тот же фиксированный список из 5 значений, что у Products.
+              name: 'volume',
+              type: 'select',
+              options: [...PRODUCT_VOLUMES],
+              admin: { width: '25%' },
+            },
             {
               name: 'price',
               type: 'number',

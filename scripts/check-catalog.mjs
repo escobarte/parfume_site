@@ -164,7 +164,7 @@ await goto(`${BASE}/ro/product/maison-orphee-signature-wood`)
 const priceNode = page.locator('span.text-display').first()
 const skuNode = page.getByText(/COD:/i).first()
 const before = { price: await priceNode.innerText(), sku: await skuNode.innerText() }
-await page.getByRole('button', { name: '30 ml' }).first().click()
+await page.getByRole('button', { name: 'Full Size' }).first().click()
 await page.waitForTimeout(150)
 const after = { price: await priceNode.innerText(), sku: await skuNode.innerText() }
 check(
@@ -176,7 +176,7 @@ check('переключение объёма меняет SKU', before.sku !== a
 
 // ── Вариант без остатка недоступен ────────────────────────────────────────
 await goto(`${BASE}/ro/product/maison-orphee-nuit-ambree`)
-const soldOut = page.getByRole('button', { name: '30 ml' }).first()
+const soldOut = page.getByRole('button', { name: 'Full Size' }).first()
 check('вариант с нулевым остатком заблокирован', await soldOut.isDisabled())
 
 // ── Похожие не содержат сам товар ─────────────────────────────────────────
