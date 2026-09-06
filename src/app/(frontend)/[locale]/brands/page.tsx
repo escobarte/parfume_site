@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { CatalogShell } from '@/components/catalog/CatalogShell'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
@@ -25,7 +26,7 @@ export default async function BrandsPage(props: { params: Promise<{ locale: Loca
   return (
     <>
       <Breadcrumbs items={[{ label: t('brands') }]} />
-      <div className="mx-auto max-w-[1440px] px-5 py-10 md:px-8 md:py-12">
+      <CatalogShell activeKey="brands">
         <h1 className="text-ink text-section tracking-display border-line border-b pb-5 font-light uppercase">
           {t('brands')}
         </h1>
@@ -48,7 +49,7 @@ export default async function BrandsPage(props: { params: Promise<{ locale: Loca
             </li>
           ))}
         </ul>
-      </div>
+      </CatalogShell>
     </>
   )
 }

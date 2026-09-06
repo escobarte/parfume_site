@@ -35,6 +35,10 @@
     "dataProtectionTitle": "Protecția datelor",
     "dataProtectionText": "Datele dvs. (nume, telefon, email) sunt folosite doar pentru procesarea comenzii și pentru a lua legătura cu dvs. — nu sunt transmise terților."
   },
+  "AboutPage": {
+    "contactsHeading": "Contacte",
+    "mapTitle": "Locația pe hartă"
+  },
   "NotFound": {
     "title": "Pagina nu a fost găsită",
     "text": "Poate linkul e vechi sau adresa conține o greșeală. Explorați catalogul — sigur găsiți ceva de văzut.",
@@ -147,7 +151,10 @@
     "notes": "Note",
     "similar": "Parfumuri similare",
     "added": "Adăugat în coș",
-    "zoomHint": "Apăsați pentru a mări"
+    "zoomHint": "Apăsați pentru a mări",
+    "galleryPrev": "Fotografia anterioară",
+    "galleryNext": "Fotografia următoare",
+    "galleryClose": "Închide"
   },
   "LocaleSwitcher": {
     "label": "Limbă",

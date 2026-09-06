@@ -22,7 +22,7 @@ export async function GiftItemsView({
   const typeLabel = tg(`type.${type}`)
 
   return (
-    <div className="mx-auto max-w-[1440px] px-5 py-10 md:px-8 md:py-12">
+    <div>
       <h1 className="text-ink text-section tracking-display border-line border-b pb-5 font-light uppercase">
         {title}
       </h1>

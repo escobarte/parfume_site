@@ -6,7 +6,7 @@ import { getFacetSource, getProductCards, type CatalogScope } from '@/lib/catalo
 import { countActiveFilters, PAGE_SIZE, type CatalogQuery } from '@/lib/catalog/searchParams'
 import { getBrands } from '@/lib/catalog/taxonomy'
 import { ActiveFilters } from './ActiveFilters'
-import { CatalogNavColumn } from './CatalogNavColumn'
+import { CatalogShell } from './CatalogShell'
 import { FiltersDrawer } from './FiltersDrawer'
 import { LoadMore } from './LoadMore'
 import { ProductCard } from './ProductCard'
@@ -21,6 +21,26 @@ import { SortSelect } from './SortSelect'
  * Фильтры с фазы 9.1 живут в дровере (FiltersDrawer) на всех разрешениях,
  * постоянного сайдбара больше нет: сетка занимает всю ширину и не меняет
  * её при открытии фильтров.
+ *
+ * `showCategoryNav` — видимость левого меню (`CatalogShell`), включена на
+ * `/catalog`, `/catalog/[category]` и `/catalog/body-care` (страница бренда
+ * рендерит тот же `CatalogView`, но меню не просит).
+ *
+ * Тулбар (заголовок, счётчик, «Фильтры», чипы, сортировка) скрывается
+ * отдельным условием — `hideToolbar` ниже (ПРОМПТ 13, задача 1) — только
+ * на «чистых» посадочных состояниях четырёх товарных пунктов левого меню
+ * (Для неё/Для него/Детям/Уход за телом), НЕ на всём `showCategoryNav`:
+ * `/catalog` без параметров (переход по «CATALOG» в шапке) и
+ * `/catalog/[category]` (произвольные категории CMS, не связаны с левым
+ * меню) обязаны сохранить полноценную фильтрацию — иначе с сайта пропадает
+ * единственный способ отфильтровать/отсортировать общую выдачу. Пункты
+ * «Для неё/него/Детям» технически используют тот же URL
+ * (`/catalog?gender=…`), что и обычный фасет «Кому» в дровере — различить
+ * «пришёл по ссылке меню» от «включил фасет сам» нечем в принципе, поэтому
+ * тулбар скрывается только пока `gender` — единственный активный фильтр
+ * (ровно то состояние, в которое ведёт пункт меню); стоит добавить любой
+ * другой фильтр (бренд, цена, страна, флаг) — тулбар возвращается, и
+ * пользователь снова может фильтровать/сбрасывать как обычно.
  */
 export async function CatalogView({
   locale,
@@ -76,8 +96,40 @@ export async function CatalogView({
 
   const activeCount = countActiveFilters(query)
 
-  return (
-    <div className="mx-auto max-w-[1440px] px-5 py-10 md:px-8 md:py-12">
+  const isSingleGenderLanding =
+    query.gender.length === 1 &&
+    (['female', 'male', 'kids'] as string[]).includes(query.gender[0]) &&
+    activeCount === query.gender.length
+  const hideToolbar =
+    showCategoryNav && (activeNavKey === 'bodyCare' || isSingleGenderLanding)
+
+  const grid = (
+    <div>
+      {items.length === 0 ? (
+        <div className="border-line flex flex-col items-center gap-2 border py-20 text-center">
+          <p className="text-ink text-body">{t('empty')}</p>
+          <p className="text-ink-muted text-body-sm">{t('emptyHint')}</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 xl:grid-cols-4">
+            {items.map((product, index) => (
+              <ProductCard key={product.id} product={product} locale={locale} priority={index < 4} />
+            ))}
+          </div>
+
+          <div className="mt-10 flex justify-center">
+            <LoadMore shown={items.length} total={total} />
+          </div>
+        </>
+      )}
+    </div>
+  )
+
+  const content = hideToolbar ? (
+    grid
+  ) : (
+    <>
       <div className="border-line flex flex-wrap items-baseline justify-between gap-3 border-b pb-5">
         <div>
           <h1 className="text-ink text-section tracking-display font-light uppercase">{title}</h1>
@@ -88,46 +140,30 @@ export async function CatalogView({
         </span>
       </div>
 
-      <div className="mt-6 lg:flex lg:items-start lg:gap-8">
-        {showCategoryNav && <CatalogNavColumn query={query} activeKey={activeNavKey} />}
-
-        <div className="min-w-0 flex-1">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3 max-lg:w-full">
-              <FiltersDrawer facets={facets} activeCount={activeCount} />
-              <ActiveFilters facets={facets} />
-            </div>
-            <SortSelect />
+      <div className="mt-6">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3 max-lg:w-full">
+            <FiltersDrawer facets={facets} activeCount={activeCount} />
+            <ActiveFilters facets={facets} />
           </div>
-
-          <div>
-            {items.length === 0 ? (
-              <div className="border-line flex flex-col items-center gap-2 border py-20 text-center">
-                <p className="text-ink text-body">{t('empty')}</p>
-                <p className="text-ink-muted text-body-sm">{t('emptyHint')}</p>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 xl:grid-cols-4">
-                  {items.map((product, index) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      locale={locale}
-                      priority={index < 4}
-                    />
-                  ))}
-                </div>
-
-                <div className="mt-10 flex justify-center">
-                  <LoadMore shown={items.length} total={total} />
-                </div>
-              </>
-            )}
-          </div>
+          <SortSelect />
         </div>
+
+        {grid}
       </div>
-    </div>
+    </>
+  )
+
+  if (showCategoryNav) {
+    return (
+      <CatalogShell activeKey={activeNavKey} gender={query.gender}>
+        {content}
+      </CatalogShell>
+    )
+  }
+
+  return (
+    <div className="mx-auto max-w-[1440px] px-5 py-10 md:px-8 md:py-12">{content}</div>
   )
 }
 

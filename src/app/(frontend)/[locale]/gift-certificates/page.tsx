@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { CatalogShell } from '@/components/catalog/CatalogShell'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { GiftItemsView } from '@/components/giftItems/GiftItemsView'
 import type { Locale } from '@/i18n/routing'
@@ -24,7 +25,9 @@ export default async function GiftCertificatesPage(props: {
   return (
     <>
       <Breadcrumbs items={[{ label: t('giftCertificates') }]} />
-      <GiftItemsView locale={locale} type="certificate" title={t('giftCertificates')} />
+      <CatalogShell activeKey="giftCertificates">
+        <GiftItemsView locale={locale} type="certificate" title={t('giftCertificates')} />
+      </CatalogShell>
     </>
   )
 }

@@ -35,6 +35,10 @@
     "dataProtectionTitle": "Data protection",
     "dataProtectionText": "Your data (name, phone, email) is used only to process your order and contact you — never shared with third parties."
   },
+  "AboutPage": {
+    "contactsHeading": "Contacts",
+    "mapTitle": "Location on the map"
+  },
   "NotFound": {
     "title": "Page not found",
     "text": "The link may be outdated or the address mistyped. Take a look at the catalog — there's always something to see.",
@@ -147,7 +151,10 @@
     "notes": "Notes",
     "similar": "Similar scents",
     "added": "Added to cart",
-    "zoomHint": "Click to zoom"
+    "zoomHint": "Click to zoom",
+    "galleryPrev": "Previous photo",
+    "galleryNext": "Next photo",
+    "galleryClose": "Close"
   },
   "LocaleSwitcher": {
     "label": "Language",

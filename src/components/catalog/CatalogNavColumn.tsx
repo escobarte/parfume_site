@@ -1,29 +1,32 @@
 import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { CATALOG_NAV_ITEMS, type CatalogNavKey } from '@/lib/catalog/navSections'
-import type { CatalogQuery } from '@/lib/catalog/searchParams'
 
 /**
- * Левая колонка навигации по разделам каталога (фаза 11.1, задача 1) — НЕ
- * фильтр и не замена `FiltersDrawer`, тот остаётся попапом по кнопке
- * «Фильтр». Видна только на страницах каталога/категорий (десктоп ≥1024,
- * `lg:` — тот же порог, что у геометрии дровера в FiltersDrawer.tsx), не на
- * главной. На мобильном пункты уходят в секцию «Каталог» гамбургер-меню
- * шапки (`HeaderShell.tsx`) — переиспользуют тот же `CATALOG_NAV_ITEMS`.
+ * Левая колонка навигации по разделам каталога (фаза 11.1, задача 1; вынесена
+ * в постоянный `CatalogShell` — ПРОМПТ 13, задача 2) — НЕ фильтр и не замена
+ * `FiltersDrawer`, тот остаётся попапом по кнопке «Фильтр». Видна на десктопе
+ * (`lg:`, тот же порог, что у геометрии дровера в FiltersDrawer.tsx) на всех
+ * восьми пунктах меню, не на главной. На мобильном пункты уходят в секцию
+ * «Каталог» гамбургер-меню шапки (`HeaderShell.tsx`) — переиспользуют тот же
+ * `CATALOG_NAV_ITEMS`.
  */
 export async function CatalogNavColumn({
-  query,
+  gender = [],
   activeKey,
 }: {
-  query: CatalogQuery
+  // Подсветка «Для неё/него/Детям» по активному фасету «Кому» — только
+  // страницы каталога передают это (у gift-items/brands/about такого фасета
+  // нет, они подсвечиваются через явный activeKey).
+  gender?: string[]
   activeKey?: CatalogNavKey
 }) {
   const t = await getTranslations('CatalogNav')
 
   const isActive = (key: CatalogNavKey) => {
-    if (key === 'forHer') return query.gender.includes('female')
-    if (key === 'forHim') return query.gender.includes('male')
-    if (key === 'kids') return query.gender.includes('kids')
+    if (key === 'forHer') return gender.includes('female')
+    if (key === 'forHim') return gender.includes('male')
+    if (key === 'kids') return gender.includes('kids')
     return key === activeKey
   }
 

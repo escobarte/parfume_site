@@ -204,20 +204,23 @@ async function seedPages(payload: Payload): Promise<Map<string, number | string>
     body: Record<Locale, string[]>
   }[] = [
     {
+      // ПРОМПТ 13, задача 3 — черновик штаба, PLACEHOLDER до вычитки
+      // (docs/translations-review.md). Контакты/карта под текстом — не здесь,
+      // читаются динамически из global `settings.contacts` (AboutPage.tsx).
       slug: 'about',
       title: { ro: 'Despre noi', ru: 'О нас', en: 'About us' },
       body: {
         ro: [
-          'MON FLACON este o galerie de parfumuri din Chișinău. Nu credem în reguli stricte despre cum trebuie să miroasă cineva — aroma este o alegere personală, la fel ca o haină sau o culoare preferată.',
-          'Selecția noastră reunește nișă și mărci cunoscute, pentru orice buget și orice poveste. Vă ajutăm să explorați, să încercați și să găsiți aroma care vă reprezintă.',
+          'MON FLACON este un catalog de parfumuri pentru Moldova. Adunăm arome pe care vrei să le porți în fiecare zi — de la note florale ușoare până la arome orientale intense — și te ajutăm să o găsești pe a ta, fără să cutreieri zece magazine.',
+          'Comanda se face fără înregistrare: alegi volumul, lași o cerere — te contactăm pentru a confirma disponibilitatea și a stabili livrarea sau ridicarea personală.',
         ],
         ru: [
-          'MON FLACON — парфюмерная галерея в Кишинёве. Мы не верим в строгие правила о том, как «должен» пахнуть человек — аромат такой же личный выбор, как любимый цвет или силуэт одежды.',
-          'В подборке — нишевые и известные бренды, на любой бюджет и вкус. Мы помогаем исследовать, пробовать и находить тот аромат, который говорит именно о вас.',
+          'MON FLACON — небольшой парфюмерный каталог для Молдовы. Мы собираем ароматы, которые хочется носить каждый день: от лёгких цветочных до плотных восточных, — и помогаем подобрать свой без похода по десяти магазинам.',
+          'Заказ оформляется без регистрации: выбрали объём, оставили заявку — мы свяжемся, чтобы подтвердить наличие и договориться о доставке или самовывозе.',
         ],
         en: [
-          'MON FLACON is a perfume gallery in Chisinau. We don’t believe in strict rules about how someone should smell — scent is a personal choice, just like a favourite colour or silhouette.',
-          'Our selection brings together niche and well-known houses, for every budget and every story. We help you explore, try, and find the scent that feels like you.',
+          'MON FLACON is a perfume catalog for Moldova. We curate scents you’ll want to wear every day — from light floral notes to rich oriental blends — and help you find yours without visiting ten stores.',
+          'Ordering doesn’t require an account: pick a size, leave a request, and we’ll get in touch to confirm availability and arrange delivery or pickup.',
         ],
       },
     },

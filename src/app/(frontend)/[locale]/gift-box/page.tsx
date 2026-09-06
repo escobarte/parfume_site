@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { CatalogShell } from '@/components/catalog/CatalogShell'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { GiftItemsView } from '@/components/giftItems/GiftItemsView'
 import type { Locale } from '@/i18n/routing'
@@ -22,7 +23,9 @@ export default async function GiftBoxPage(props: { params: Promise<{ locale: Loc
   return (
     <>
       <Breadcrumbs items={[{ label: t('giftBox') }]} />
-      <GiftItemsView locale={locale} type="giftBox" title={t('giftBox')} />
+      <CatalogShell activeKey="giftBox">
+        <GiftItemsView locale={locale} type="giftBox" title={t('giftBox')} />
+      </CatalogShell>
     </>
   )
 }
