@@ -54,8 +54,10 @@ export const orderItemSchema = z.object({
   title: z.string().min(1),
   brandTitle: z.string().default(''),
   sku: z.string().min(1),
-  // Объём в мл — только у товаров-духов, у подарочных товаров нет.
-  volume: z.number().positive().optional(),
+  // Готовая подпись объёма («5 ml»/«Full Size») — только у товаров-духов, у
+  // подарочных товаров нет. Клиентское значение здесь декоративно: сервер
+  // переопределяет его в buildItems() авторитетным объёмом из БД (route.ts).
+  volume: z.string().optional(),
   price: z.number().nonnegative(),
   qty: z.number().int().positive().max(99),
 })

@@ -16,7 +16,18 @@ export type ImportPlan = {
   update: string[]
   /** Справочники, которые будут заведены автоматически. */
   autoCreate: { brands: string[]; categories: string[]; notes: string[] }
-  variants: { created: number; updated: number }
+  variants: {
+    created: number
+    updated: number
+    /**
+     * Форматы A/B: строки с нераспознанным значением `volume` (не из
+     * фиксированного списка 3ml/5ml/10ml/travel/full, ПРОМПТ 12-дополнение) —
+     * предупреждение, не ошибка формата. Такая строка (вариант) пропускается,
+     * остальной файл применяется как обычно, товар не создаётся, только если
+     * ВСЕ его строки оказались с плохим объёмом (см. applyProducts.ts).
+     */
+    invalidVolume: RowError[]
+  }
   /** Для лёгкого прайса и переводов. */
   touched: number
   /** Строки, для которых не нашлось товара (не ошибка формата, но и не изменение). */
@@ -50,7 +61,7 @@ export const emptyPlan = (kind: ImportKind, locale: string): ImportPlan => ({
   create: [],
   update: [],
   autoCreate: { brands: [], categories: [], notes: [] },
-  variants: { created: 0, updated: 0 },
+  variants: { created: 0, updated: 0, invalidVolume: [] },
   touched: 0,
   skipped: [],
   descriptionLocales: [],

@@ -32,7 +32,9 @@ export function buildTelegramMessage(order: Order): string {
 
   for (const item of order.items ?? []) {
     const brand = item.brandTitle ? `${escapeHtml(item.brandTitle)} · ` : ''
-    const volume = item.volume ? `${item.volume} ml` : ''
+    // item.volume — уже готовая подпись («5 ml»/«Full Size»), не число мл
+    // (ПРОМПТ 12-дополнение) — суффикс не добавляем, он уже внутри строки.
+    const volume = item.volume ? escapeHtml(item.volume) : ''
     lines.push(`• ${brand}<b>${escapeHtml(item.title)}</b>`)
     lines.push(
       `  ${volume}${volume ? ' · ' : ''}${escapeHtml(item.sku)} · ${item.qty} × ${item.price} = <b>${item.lineTotal} MDL</b>`,

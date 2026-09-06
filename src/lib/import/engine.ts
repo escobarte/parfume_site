@@ -84,8 +84,8 @@ export async function runImport(
     if (kind === 'products-a' || kind === 'products-b') {
       const inputs: ProductInput[] =
         kind === 'products-a'
-          ? groupFormatA(rows as { line: number; value: FormatARow }[])
-          : groupFormatB(rows as { line: number; value: FormatBRow }[])
+          ? groupFormatA(rows as { line: number; value: FormatARow }[], plan)
+          : groupFormatB(rows as { line: number; value: FormatBRow }[], plan)
       await applyProducts(payload, inputs, { locale, dryRun, req }, plan)
       plan.touched = inputs.length
     } else if (kind === 'prices') {

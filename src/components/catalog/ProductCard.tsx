@@ -4,7 +4,7 @@ import { BottleGlyph } from '@/components/brand/BrandMark'
 import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import type { ProductCardData } from '@/lib/catalog/types'
-import { formatPrice, formatVolume } from '@/lib/format'
+import { formatPrice, formatPriceRange, formatVolume } from '@/lib/format'
 import { DiscountBadge } from './DiscountBadge'
 
 /**
@@ -79,11 +79,20 @@ export async function ProductCard({
               (BRAND.md §5), «нет в наличии» уходит в приглушённый тон. */}
           <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-ink text-body font-medium">
-              {t('from')} {formatPrice(product.displayPrice, locale)}
-              {product.oldPrice !== null && (
-                <span className="text-ink-muted text-label ml-1.5 font-normal line-through">
-                  {formatPrice(product.oldPrice, locale)}
-                </span>
+              {/* Уценённый вариант (вариант B, фаза 4.5) — по-прежнему цена
+                  ОДНОГО конкретного варианта с максимальной скидкой, с «от»
+                  и зачёркнутой ценой (инвариант бейджа не тронут). Без
+                  скидки — диапазон {min}–{max} по всем вариантам товара
+                  (ПРОМПТ 12-дополнение), одно число совпадающих min/max. */}
+              {product.oldPrice !== null ? (
+                <>
+                  {t('from')} {formatPrice(product.displayPrice, locale)}
+                  <span className="text-ink-muted text-label ml-1.5 font-normal line-through">
+                    {formatPrice(product.oldPrice, locale)}
+                  </span>
+                </>
+              ) : (
+                formatPriceRange(product.minPrice, product.maxPrice, locale)
               )}
             </span>
             <span

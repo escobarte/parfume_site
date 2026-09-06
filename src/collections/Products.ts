@@ -2,8 +2,27 @@ import type { CollectionConfig } from 'payload'
 import { adminOnly, isStaff, staffOnly } from '@/access/roles'
 import { seoField } from '@/fields/seo'
 import { slugField } from '@/fields/slug'
+import { VOLUME_VALUES } from '@/lib/catalog/volume'
 import { denormalizeVariants, type VariantLike } from '@/lib/products/denormalize'
 import { revalidateCatalog } from '@/lib/revalidate'
+
+// Объём — фиксированный список (ПРОМПТ 12-дополнение), не свободное число в
+// мл: 3/5/10 мл — реальные декант-объёмы, Travel Size/Full Size — категории
+// без привязки к конкретному мл (коммерческий travel-спрей/полноразмерный
+// флакон разного объёма у разных брендов). Значения — из общего модуля
+// `@/lib/catalog/volume` (не дублируются: тот же список используют формат
+// CSV-импорта и витрина), подписи здесь — только для админки, на русском.
+const VOLUME_ADMIN_LABELS: Record<(typeof VOLUME_VALUES)[number], string> = {
+  '3ml': '3 мл',
+  '5ml': '5 мл',
+  '10ml': '10 мл',
+  travel: 'Travel Size',
+  full: 'Full Size',
+}
+export const VOLUMES = VOLUME_VALUES.map((value) => ({
+  label: VOLUME_ADMIN_LABELS[value],
+  value,
+}))
 
 export const GENDERS = [
   { label: 'Она', value: 'female' },
@@ -162,10 +181,10 @@ export const Products: CollectionConfig = {
                   fields: [
                     {
                       name: 'volume',
-                      type: 'number',
+                      type: 'select',
                       required: true,
-                      min: 1,
-                      admin: { width: '25%', description: 'мл' },
+                      options: [...VOLUMES],
+                      admin: { width: '25%' },
                     },
                     {
                       name: 'sku',

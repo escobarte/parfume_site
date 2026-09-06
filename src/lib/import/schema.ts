@@ -86,7 +86,12 @@ const productBase = {
 /** Формат A: одна строка = один вариант, группировка по handle. */
 export const formatARow = z.object({
   ...productBase,
-  volume: numberFrom('volume'),
+  // Объём — фиксированный список из 5 значений (ПРОМПТ 12-дополнение), но
+  // здесь только «непусто»: строгая проверка по словарю — НЕ на этом уровне
+  // (schema.ts валидирует всё-или-ничего, одна плохая строка обрушила бы
+  // весь файл), а в applyProducts.ts::resolveVolumeOrWarn — плохое значение
+  // там даёт предупреждение в отчёте и пропуск строки, не обрыв импорта.
+  volume: trimmed.min(1, 'volume: обязателен'),
   sku: trimmed.min(1, 'sku: обязателен'),
   price: numberFrom('price'),
   old_price: optionalNumber('old_price'),
@@ -97,7 +102,10 @@ export const formatARow = z.object({
 export type FormatARow = z.infer<typeof formatARow>
 
 export const variantJson = z.object({
-  volume: z.number().positive('variants[].volume: ожидается число > 0'),
+  // Число ИЛИ строка (старые интеграции клиента могут выгружать мл числом) —
+  // приводится к строке, строгая проверка по словарю объёма — тем же
+  // способом и в том же месте, что и у формата A (см. комментарий выше).
+  volume: z.union([z.string(), z.number()]).transform((value) => String(value).trim()),
   sku: z.string().min(1, 'variants[].sku: обязателен'),
   price: z.number().nonnegative('variants[].price: ожидается число ≥ 0'),
   oldPrice: z.number().nonnegative().optional(),

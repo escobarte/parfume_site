@@ -5,6 +5,8 @@ import { logNotifyReport, notifyOrder } from '@/lib/orders/notify'
 import { claimPromoCode, resolvePromoCode } from '@/lib/orders/promo'
 import { checkRateLimit, clientIp } from '@/lib/orders/rateLimit'
 import { orderRequestSchema, type OrderRequest } from '@/lib/orders/schema'
+import type { VolumeValue } from '@/lib/catalog/volume'
+import { formatVolume } from '@/lib/format'
 import { getPayloadClient } from '@/lib/payload'
 import { promoDiscountAmount } from '@/lib/pricing'
 
@@ -188,7 +190,10 @@ async function buildItems(payload: PayloadClient, data: OrderRequest) {
       title: product.title,
       brandTitle: brand,
       sku: variant.sku,
-      volume: variant.volume,
+      // Снапшот готовой подписи («5 ml»/«Full Size»), не кода — заказ не
+      // должен зависеть от живого словаря объёмов (ПРОМПТ 12-дополнение,
+      // тот же принцип, что у title/sku/brandTitle рядом).
+      volume: formatVolume(variant.volume as VolumeValue),
       price: variant.price,
       qty,
       lineTotal: variant.price * qty,

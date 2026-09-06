@@ -56,7 +56,7 @@ export default async function OrderStatusPage(props: {
             <span>
               {item.brandTitle ? `${item.brandTitle} · ` : ''}
               {item.title}
-              {item.volume ? ` — ${item.volume} ml` : ''} × {item.qty}
+              {item.volume ? ` — ${item.volume}` : ''} × {item.qty}
             </span>
             <span className="whitespace-nowrap">{item.lineTotal} MDL</span>
           </li>

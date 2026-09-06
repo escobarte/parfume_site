@@ -4,6 +4,7 @@ import { CACHE_TTL } from '@/lib/cache'
 import type { Locale } from '@/i18n/routing'
 import type { Media, Note, Product } from '@/payload-types'
 import { getPayloadClient } from '@/lib/payload'
+import { sortByVolume, type VolumeValue } from '@/lib/catalog/volume'
 import { CATALOG_TAG } from '@/lib/revalidate'
 import { toCardList } from './cards'
 import type { ProductCardData } from './types'
@@ -12,7 +13,7 @@ export type PyramidNote = { slug: string; title: string; image: string | null }
 
 export type VariantView = {
   sku: string
-  volume: number
+  volume: VolumeValue
   price: number
   oldPrice: number | null
   stock: number
@@ -75,16 +76,18 @@ function toView(doc: Product): ProductView {
       full: image.sizes?.full?.url ?? image.url ?? '',
       alt: image.alt ?? doc.title,
     })),
-    variants: (doc.variants ?? [])
-      .filter((variant) => variant.isActive !== false)
-      .map((variant) => ({
-        sku: variant.sku,
-        volume: variant.volume,
-        price: variant.price,
-        oldPrice: variant.oldPrice ?? null,
-        stock: variant.stock ?? 0,
-      }))
-      .sort((a, b) => a.volume - b.volume),
+    variants: sortByVolume(
+      (doc.variants ?? [])
+        .filter((variant) => variant.isActive !== false)
+        .map((variant) => ({
+          sku: variant.sku,
+          volume: variant.volume as VolumeValue,
+          price: variant.price,
+          oldPrice: variant.oldPrice ?? null,
+          stock: variant.stock ?? 0,
+        })),
+      (variant) => variant.volume,
+    ),
     notes: notes.map((note) => ({ slug: note.slug, title: note.title })),
     pyramid: {
       top: pyramidNotes(doc.pyramid?.top),

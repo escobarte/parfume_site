@@ -1,6 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
+import type { VolumeValue } from '@/lib/catalog/volume'
 
 /**
  * Одиночный тост витрины (фаза 9.1). Стор, а не локальное состояние кнопки:
@@ -16,7 +17,7 @@ export type CartToast = {
   id: number
   title: string
   brandTitle?: string
-  volume?: number
+  volume?: VolumeValue
   image?: string | null
 }
 

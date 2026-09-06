@@ -7,7 +7,7 @@ import type { Locale } from '@/i18n/routing'
 import { cartItemsToGaItems, trackEvent } from '@/lib/analytics/gtag'
 import { useCart } from '@/lib/cart/store'
 import type { ProductView } from '@/lib/catalog/product'
-import { formatPrice, formatVolume } from '@/lib/format'
+import { formatPrice, formatPriceRange, formatVolume } from '@/lib/format'
 import { discountPercent } from '@/lib/pricing'
 import { useToast } from '@/lib/ui/toast'
 import { DiscountBadge } from '@/components/catalog/DiscountBadge'
@@ -78,10 +78,21 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
     router.push('/cart')
   }
 
+  // Диапазон цены всего товара (ПРОМПТ 12-дополнение) — статичный, не
+  // зависит от выбранного объёма; цена ниже (variant.price) по-прежнему
+  // меняется при переключении. Одно число, если min===max (один вариант
+  // или все варианты по одной цене) — formatPriceRange уже это учитывает.
+  const priceRange = formatPriceRange(product.minPrice, product.maxPrice, locale)
+
   return (
     <div>
-      <div className="text-ink-muted text-eyebrow tracking-display mb-2 uppercase">
-        {t('volume')}
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="text-ink-muted text-eyebrow tracking-display mb-2 uppercase">
+          {t('volume')}
+        </div>
+        {product.variants.length > 1 && (
+          <span className="text-ink-muted text-body-sm">{priceRange}</span>
+        )}
       </div>
       <div className="flex flex-wrap gap-2">
         {product.variants.map((item, itemIndex) => {

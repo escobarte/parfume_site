@@ -11,7 +11,7 @@ test.describe('Карточка товара: переключение объё�
 
     // Клик до окончания гидрации в dev теряется (см. GOTCHAS.md) — жмём,
     // пока цена не изменится.
-    const volumeButton = page.getByRole('button', { name: '30 ml' }).first()
+    const volumeButton = page.getByRole('button', { name: 'Full Size' }).first()
     await expect(async () => {
       await volumeButton.click()
       await expect(priceNode).not.toHaveText(before.price, { timeout: 1000 })
@@ -24,7 +24,7 @@ test.describe('Карточка товара: переключение объё�
 
   test('вариант с нулевым остатком заблокирован для выбора', async ({ page }) => {
     await gotoAndWaitForFooter(page, '/ro/product/maison-orphee-nuit-ambree')
-    const soldOut = page.getByRole('button', { name: '30 ml' }).first()
+    const soldOut = page.getByRole('button', { name: 'Full Size' }).first()
     await expect(soldOut).toBeDisabled()
   })
 })

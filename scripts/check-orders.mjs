@@ -36,7 +36,7 @@ const validOrder = (overrides = {}) => ({
       title: 'Signature Wood',
       brandTitle: 'Maison Orphée',
       sku: 'MO-SW-05',
-      volume: 5,
+      volume: '5ml',
       price: 240,
       qty: 2,
     },

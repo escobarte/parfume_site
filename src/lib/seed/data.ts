@@ -5,6 +5,8 @@
  * docs/WIREFRAMES.md §2 (Она / Он / Унисекс / Наборы).
  */
 
+import type { VolumeValue } from '@/lib/catalog/volume'
+
 export type Locales = { ro: string; ru: string; en: string }
 
 export type SeedBrand = {
@@ -42,7 +44,7 @@ export type SeedProduct = {
   notes: string[]
   pyramid: { top: string[]; heart: string[]; base: string[] }
   description: Locales
-  variants: { volume: number; sku: string; price: number; oldPrice?: number; stock: number }[]
+  variants: { volume: VolumeValue; sku: string; price: number; oldPrice?: number; stock: number }[]
   isNew?: boolean
   isHit?: boolean
 }
@@ -151,10 +153,13 @@ export const notes: SeedNote[] = [
   { slug: 'mosc', title: { ro: 'Mosc', ru: 'Мускус', en: 'Musk' }, group: 'animalic' },
 ]
 
+// SKU-суффиксы (-05/-10/-30) сохранены как есть — это исторический код
+// объёма в мл, не сам объём (тот теперь VolumeValue ниже); менять его в
+// демо-данных задним числом не требуется, только тип поля volume.
 const v = (sku: string, prices: [number, number, number], stock: [number, number, number]) => [
-  { volume: 5, sku: `${sku}-05`, price: prices[0], stock: stock[0] },
-  { volume: 10, sku: `${sku}-10`, price: prices[1], stock: stock[1] },
-  { volume: 30, sku: `${sku}-30`, price: prices[2], stock: stock[2] },
+  { volume: '5ml' as VolumeValue, sku: `${sku}-05`, price: prices[0], stock: stock[0] },
+  { volume: '10ml' as VolumeValue, sku: `${sku}-10`, price: prices[1], stock: stock[1] },
+  { volume: 'full' as VolumeValue, sku: `${sku}-30`, price: prices[2], stock: stock[2] },
 ]
 
 export const products: SeedProduct[] = [
@@ -307,9 +312,9 @@ export const products: SeedProduct[] = [
       en: 'Warm amber with pepper — a seasonal edition at a reduced price.',
     },
     variants: [
-      { volume: 5, sku: 'MO-AS-05', price: 200, oldPrice: 250, stock: 9 },
-      { volume: 10, sku: 'MO-AS-10', price: 380, stock: 6 },
-      { volume: 30, sku: 'MO-AS-30', price: 800, oldPrice: 1200, stock: 4 },
+      { volume: '5ml', sku: 'MO-AS-05', price: 200, oldPrice: 250, stock: 9 },
+      { volume: '10ml', sku: 'MO-AS-10', price: 380, stock: 6 },
+      { volume: 'full', sku: 'MO-AS-30', price: 800, oldPrice: 1200, stock: 4 },
     ],
   },
   {
@@ -380,8 +385,10 @@ export const products: SeedProduct[] = [
       en: 'Three 2 ml samples to find the right scent.',
     },
     variants: [
-      { volume: 6, sku: 'CL-SD-06', price: 180, stock: 25 },
-      { volume: 12, sku: 'CL-SD-12', price: 320, oldPrice: 360, stock: 12 },
+      // Раньше 6/12 мл — ближайшее по правилу миграции (volume.ts,
+      // migrateLegacyVolume): 6 → 5ml (≤7), 12 → full (>10).
+      { volume: '5ml', sku: 'CL-SD-06', price: 180, stock: 25 },
+      { volume: 'full', sku: 'CL-SD-12', price: 320, oldPrice: 360, stock: 12 },
     ],
     isNew: true,
   },

@@ -292,7 +292,15 @@ export const Orders: CollectionConfig = {
         {
           type: 'row',
           fields: [
-            { name: 'volume', type: 'number', admin: { width: '25%', description: 'мл' } },
+            {
+              // Снапшот готовой подписи объёма («5 ml»/«Full Size»), не код
+              // и не число мл (ПРОМПТ 12-дополнение) — заказ не должен
+              // зависеть от живого словаря Products.variants.volume,
+              // тот же принцип, что у title/sku/brandTitle рядом.
+              name: 'volume',
+              type: 'text',
+              admin: { width: '25%' },
+            },
             {
               name: 'price',
               type: 'number',

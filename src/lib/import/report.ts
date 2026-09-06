@@ -37,6 +37,16 @@ export function formatReport(result: ImportResult): string {
   )
   lines.push(`Вариантов: создано ${plan.variants.created} · обновлено ${plan.variants.updated}`)
 
+  if (plan.variants.invalidVolume.length) {
+    lines.push(`⚠ Объём не распознан (пропущено вариантов): ${plan.variants.invalidVolume.length}`)
+    for (const warn of plan.variants.invalidVolume.slice(0, 20)) {
+      lines.push(`  строка ${warn.line}: ${warn.message}`)
+    }
+    if (plan.variants.invalidVolume.length > 20) {
+      lines.push(`  … и ещё ${plan.variants.invalidVolume.length - 20}`)
+    }
+  }
+
   if (plan.images.attached || plan.images.missing.length) {
     lines.push(
       `Фото: привязано ${plan.images.attached}` +

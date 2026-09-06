@@ -3,6 +3,7 @@ import { normalizeHeader, parseCsv, toTable } from '@/lib/import/csv'
 import { detectKind } from '@/lib/import/detect'
 import { groupFormatA } from '@/lib/import/applyProducts'
 import { formatARow } from '@/lib/import/schema'
+import { emptyPlan } from '@/lib/import/types'
 import { findDuplicates, validateRows } from '@/lib/import/validate'
 import { denormalizeVariants } from '@/lib/products/denormalize'
 import { discountPercent } from '@/lib/pricing'
@@ -84,17 +85,47 @@ describe('формат A', () => {
     const table = toTable(
       [
         'handle,title,brand,volume,sku,price,stock',
-        'A,Название,b,5,A-5,100,3',
-        'A,Название,b,30,A-30,300,1',
-        'B,Другое,b,5,B-5,150,0',
+        'A,Название,b,5ml,A-5,100,3',
+        'A,Название,b,full,A-30,300,1',
+        'B,Другое,b,5ml,B-5,150,0',
       ].join('\n'),
     )
     const { rows, errors } = validateRows<never>('products-a', table.records)
     expect(errors).toHaveLength(0)
 
-    const grouped = groupFormatA(rows)
+    const plan = emptyPlan('products-a', 'ro')
+    const grouped = groupFormatA(rows, plan)
     expect(grouped).toHaveLength(2)
     expect(grouped[0].variants.map((variant) => variant.sku)).toEqual(['A-5', 'A-30'])
+    expect(plan.variants.invalidVolume).toHaveLength(0)
+  })
+
+  it('плохое значение volume — предупреждение и пропуск варианта, не обрыв импорта', () => {
+    const table = toTable(
+      [
+        'handle,title,brand,volume,sku,price,stock',
+        'A,Название,b,5ml,A-5,100,3',
+        'A,Название,b,90,A-90,300,1',
+        'B,Другое,b,77,B-77,150,0',
+      ].join('\n'),
+    )
+    const { rows, errors } = validateRows<never>('products-a', table.records)
+    expect(errors).toHaveLength(0)
+
+    const plan = emptyPlan('products-a', 'ro')
+    const grouped = groupFormatA(rows, plan)
+
+    // Товар A: одна строка плохая (90), одна валидная (5ml) — товар остаётся
+    // с одним вариантом, не пропадает целиком.
+    expect(grouped).toHaveLength(1)
+    expect(grouped[0].base.handle).toBe('A')
+    expect(grouped[0].variants.map((variant) => variant.sku)).toEqual(['A-5'])
+
+    // Товар B: единственная строка — с плохим volume — пропущен целиком.
+    expect(plan.skipped.some((s) => s.message.includes('B'))).toBe(true)
+    expect(plan.variants.invalidVolume).toHaveLength(2)
+    expect(plan.variants.invalidVolume[0].message).toContain('90')
+    expect(plan.variants.invalidVolume[1].message).toContain('77')
   })
 })
 

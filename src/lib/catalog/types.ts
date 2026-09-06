@@ -1,3 +1,4 @@
+import type { VolumeValue } from './volume'
 import type { FlagOption } from './searchParams'
 
 /** Данные карточки товара — ровно то, что рисует эталон из WIREFRAMES.md §3. */
@@ -8,13 +9,21 @@ export type ProductCardData = {
   brandTitle: string
   family: string | null
   noteTitles: string[]
-  volumes: number[]
+  volumes: VolumeValue[]
   /**
    * Вариант B (фаза 4.5): если есть уценённые варианты — цена САМОГО
    * уценённого из них (может быть не минимальным объёмом товара). Если
    * уценённых нет — обычная минимальная цена по вариантам.
    */
   displayPrice: number | null
+  /**
+   * Диапазон цены товара (ПРОМПТ 12-дополнение) — только для отображения
+   * «{min}–{max} MDL» вместо «от X» в НЕ уценённом случае (discountPercent
+   * null). Уценённый случай продолжает показывать displayPrice/oldPrice
+   * одного конкретного варианта — инвариант бейджа не тронут.
+   */
+  minPrice: number | null
+  maxPrice: number | null
   /** Старая цена того же варианта, что и displayPrice — только если он со скидкой. */
   oldPrice: number | null
   /** Бейдж скидки: процент того же варианта, что и displayPrice/oldPrice. */

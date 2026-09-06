@@ -1,5 +1,6 @@
 import type { Media, Note, Product } from '@/payload-types'
 import { discountPercent } from '@/lib/pricing'
+import { sortByVolume, type VolumeValue } from './volume'
 import type { FlagOption } from './searchParams'
 import type { ProductCardData } from './types'
 
@@ -44,8 +45,13 @@ export function toCard(doc: Product): ProductCardData {
     brandTitle: brand?.title ?? '',
     family: doc.family ?? null,
     noteTitles: notes.map((note) => note.title),
-    volumes: [...new Set(variants.map((variant) => variant.volume))].sort((a, b) => a - b),
+    volumes: sortByVolume(
+      [...new Set(variants.map((variant) => variant.volume as VolumeValue))],
+      (volume) => volume,
+    ),
     displayPrice: bestDiscount ? bestDiscount.variant.price : (doc.minPrice ?? null),
+    minPrice: doc.minPrice ?? null,
+    maxPrice: doc.maxPrice ?? null,
     oldPrice: bestDiscount ? (bestDiscount.variant.oldPrice ?? null) : null,
     discountPercent: bestDiscount ? bestDiscount.percent : null,
     image: cover?.sizes?.card?.url

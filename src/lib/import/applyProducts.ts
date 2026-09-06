@@ -1,5 +1,6 @@
 import type { Payload, PayloadRequest } from 'payload'
 import type { Product } from '@/payload-types'
+import { resolveVolumeToken, type VolumeValue } from '@/lib/catalog/volume'
 import { paragraphs } from '@/lib/seed/richText'
 import { slugify } from '@/lib/slugify'
 import { DESCRIPTION_LOCALES, type DescriptionLocale } from './detect'
@@ -10,7 +11,7 @@ import type { ImportPlan } from './types'
 import type { ValidatedRow } from './validate'
 
 type VariantInput = {
-  volume: number
+  volume: VolumeValue
   sku: string
   price: number
   oldPrice: number | null
@@ -24,12 +25,45 @@ export type ProductInput = {
   variants: VariantInput[]
 }
 
+/**
+ * Плохое значение `volume` (не из фиксированного списка, ПРОМПТ
+ * 12-дополнение) — предупреждение в `plan.variants.invalidVolume`, строка
+ * (вариант) пропускается, файл целиком НЕ обрывается (в отличие от обычных
+ * ошибок формата zod, которые проверяются раньше и обрывают всё-или-ничего).
+ */
+function resolveVolumeOrWarn(
+  raw: string,
+  line: number,
+  plan: ImportPlan,
+): VolumeValue | null {
+  const resolved = resolveVolumeToken(raw)
+  if (resolved === null) {
+    plan.variants.invalidVolume.push({
+      line,
+      field: 'volume',
+      message: `значение «${raw}» не из списка (3ml/5ml/10ml/travel/full) — вариант пропущен`,
+    })
+  }
+  return resolved
+}
+
 /** Формат A: строки одного handle склеиваются в один товар. */
-export function groupFormatA(rows: ValidatedRow<FormatARow>[]): ProductInput[] {
+export function groupFormatA(rows: ValidatedRow<FormatARow>[], plan: ImportPlan): ProductInput[] {
   const grouped = new Map<string, ProductInput>()
+  // Первая строка каждого handle — даже с плохим объёмом. Нужен для случая
+  // «у товара ВСЕ строки оказались с плохим volume»: тогда handle никогда не
+  // попадёт в `grouped` (там создание записи идёт только при первом валидном
+  // варианте), и без этой карты товар исчез бы из отчёта молча, а не как
+  // явное «пропущен целиком» — ниже.
+  const firstLineByHandle = new Map<string, number>()
 
   for (const { line, value } of rows) {
-    const { volume, sku, price, old_price, stock, is_active, ...base } = value
+    const { volume: rawVolume, sku, price, old_price, stock, is_active, ...base } = value
+    if (!firstLineByHandle.has(base.handle)) firstLineByHandle.set(base.handle, line)
+
+    const volume = resolveVolumeOrWarn(rawVolume, line, plan)
+    if (volume === null) continue
+
     const existing = grouped.get(base.handle)
     const variant: VariantInput = {
       volume,
@@ -47,25 +81,54 @@ export function groupFormatA(rows: ValidatedRow<FormatARow>[]): ProductInput[] {
     }
   }
 
+  for (const [handle, line] of firstLineByHandle) {
+    if (!grouped.has(handle)) {
+      plan.skipped.push({
+        line,
+        message: `товар «${handle}» пропущен целиком — ни одного варианта с валидным объёмом`,
+      })
+    }
+  }
+
   return [...grouped.values()]
 }
 
 /** Формат B: варианты уже пришли JSON-массивом. */
-export function groupFormatB(rows: ValidatedRow<FormatBRow>[]): ProductInput[] {
-  return rows.map(({ line, value }) => {
+export function groupFormatB(rows: ValidatedRow<FormatBRow>[], plan: ImportPlan): ProductInput[] {
+  const inputs = rows.map(({ line, value }) => {
     const { variants, ...base } = value
-    return {
-      line,
-      base,
-      variants: variants.map((variant) => ({
-        volume: variant.volume,
+    const resolvedVariants = variants
+      .map((variant) => ({
+        volume: resolveVolumeOrWarn(variant.volume, line, plan),
         sku: variant.sku,
         price: variant.price,
         oldPrice: variant.oldPrice ?? null,
         stock: variant.stock ?? 0,
         isActive: variant.isActive ?? true,
-      })),
-    }
+      }))
+      .filter(
+        (variant): variant is VariantInput & { volume: VolumeValue } => variant.volume !== null,
+      )
+    return { line, base, variants: resolvedVariants }
+  })
+
+  return dropEmptyProducts(inputs, plan)
+}
+
+/**
+ * Товар, у которого ВСЕ строки/варианты оказались с плохим объёмом, целиком
+ * пропускается (не создаётся/не обновляется) — иначе payload.create упал бы
+ * на `variants: minRows 1`, и это неконтролируемо обрушило бы транзакцию
+ * целиком (не тот путь: warning уже дан выше на каждую пропущенную строку).
+ */
+function dropEmptyProducts(inputs: ProductInput[], plan: ImportPlan): ProductInput[] {
+  return inputs.filter((input) => {
+    if (input.variants.length > 0) return true
+    plan.skipped.push({
+      line: input.line,
+      message: `товар «${input.base.handle}» пропущен целиком — ни одного варианта с валидным объёмом`,
+    })
+    return false
   })
 }
 

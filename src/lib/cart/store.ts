@@ -2,6 +2,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { VolumeValue } from '@/lib/catalog/volume'
 
 /**
  * Минимальная корзина фазы 3: нужна счётчику в шапке и кнопке «В корзину»
@@ -23,9 +24,10 @@ export type CartItem = {
   title: string
   brandTitle: string
   sku: string
-  // Объём в мл — только у товаров-духов. У подарочных товаров нет ml-объёма,
-  // номинал в MDL и так виден в `price`, поле остаётся пустым.
-  volume?: number
+  // Код объёма (ПРОМПТ 12-дополнение: '3ml'/'5ml'/'10ml'/'travel'/'full') —
+  // только у товаров-духов, formatVolume() превращает в подпись для показа.
+  // У подарочных товаров нет объёма, номинал в MDL и так виден в `price`.
+  volume?: VolumeValue
   price: number
   image?: string | null
   qty: number
