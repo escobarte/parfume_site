@@ -115,6 +115,40 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
       </>
     ) : null
 
+  // Зум-режим: карточка со светлым фоном лежит на тёмном оверлее — стрелки
+  // здесь снаружи карточки, на тёмном фоне, поэтому светлая тема кнопок
+  // (arrowButtonClass выше) не подходит по контрасту, нужна тёмная версия.
+  const zoomArrowButtonClass =
+    'bg-navy/60 border-line-on-dark text-cream hover:bg-navy/80 fixed top-1/2 z-10 -translate-y-1/2 cursor-pointer rounded-full border p-2 transition-colors'
+
+  const zoomArrows =
+    count > 1 ? (
+      <>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            goPrev()
+          }}
+          aria-label={t('galleryPrev')}
+          className={`${zoomArrowButtonClass} left-3 md:left-6`}
+        >
+          <ChevronLeft className="size-5" strokeWidth={1.6} />
+        </button>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            goNext()
+          }}
+          aria-label={t('galleryNext')}
+          className={`${zoomArrowButtonClass} right-3 md:right-6`}
+        >
+          <ChevronRight className="size-5" strokeWidth={1.6} />
+        </button>
+      </>
+    ) : null
+
   return (
     <div>
       <div className="relative">
@@ -164,29 +198,35 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
       )}
 
       {zoom && (
-        <div className="bg-surface-warm fixed inset-0 z-70 flex items-center justify-center p-6">
+        <div className="bg-navy/95 fixed inset-0 z-70 flex items-center justify-center p-6">
           <button
             type="button"
             onClick={() => setZoom(false)}
             aria-label={t('galleryClose')}
-            className="bg-surface border-line text-ink absolute top-5 right-5 z-10 cursor-pointer rounded-full border p-2"
+            className="bg-navy/60 border-line-on-dark text-cream hover:bg-navy/80 fixed top-5 right-5 z-10 cursor-pointer rounded-full border p-2 transition-colors"
           >
             <X className="size-6" strokeWidth={1.6} />
           </button>
+
+          {/* Карточка фото — ограниченный по размеру блок со своим светлым
+              фоном (bg-surface-warm, тот же токен, что и в инлайн-просмотре),
+              не растянута на весь экран — вокруг неё виден тёмный оверлей. */}
           <div
-            className="relative h-full w-full max-w-4xl"
+            className="bg-surface-warm border-line relative aspect-square w-[min(90vw,80vh,42rem)] rounded-2xl border"
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
           >
-            <Image
-              src={current.full}
-              alt={current.alt}
-              fill
-              sizes="100vw"
-              className="object-contain"
-            />
+            <div className="absolute inset-4 md:inset-6">
+              <Image
+                src={current.full}
+                alt={current.alt}
+                fill
+                sizes="90vw"
+                className="object-contain"
+              />
+            </div>
           </div>
-          {arrows}
+          {zoomArrows}
         </div>
       )}
     </div>
