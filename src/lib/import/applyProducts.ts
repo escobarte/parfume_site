@@ -107,6 +107,23 @@ function localizedDescriptions(
 }
 
 /**
+ * Мультиязычные колонки family_ro/ru/en — только заполненные (пустая ячейка
+ * не трогает уже сохранённое значение другой локали). В отличие от
+ * description здесь нет одноколоночного варианта с дублированием — семейство
+ * либо задано на конкретных локалях, либо не задано вовсе (ПРОМПТ 12 v2).
+ */
+function localizedFamily(
+  base: Record<string, unknown>,
+): Partial<Record<DescriptionLocale, string>> {
+  const result: Partial<Record<DescriptionLocale, string>> = {}
+  for (const locale of DESCRIPTION_LOCALES) {
+    const value = base[`family_${locale}`]
+    if (typeof value === 'string' && value) result[locale] = value
+  }
+  return result
+}
+
+/**
  * Есть ли в lexical-дереве хоть один непробельный текстовый узел.
  * Спускаться нужно и в `root` (верхний узел документа), и в `children` —
  * иначе непустое описание читается как пустое и получает дубль поверх.
@@ -212,7 +229,11 @@ export async function applyProducts(
       data.pyramid = { top: topIds, heart: heartIds, base: baseIds }
     }
     if (base.gender) data.gender = base.gender
-    if (base.family) data.family = base.family
+    // family — три независимые локали (family_ro/ru/en), пишутся отдельными
+    // update'ами ниже, тем же принципом, что и мультиязычная description —
+    // в основной data.family не кладётся, чтобы не завязываться на
+    // options.locale.
+    const families = localizedFamily(base)
 
     // Пустая ячейка (колонка images отсутствует или ничего не перечислено в
     // этой строке) — существующие фото не трогаем. Непустая ячейка — CSV
@@ -304,6 +325,18 @@ export async function applyProducts(
           id: productId,
           locale: descLocale,
           data: { description: paragraphs(singleDescription) } as never,
+          req: req as PayloadRequest,
+        })
+      }
+    }
+
+    if (Object.keys(families).length && !dryRun && productId !== undefined) {
+      for (const [famLocale, text] of Object.entries(families)) {
+        await payload.update({
+          collection: 'products',
+          id: productId,
+          locale: famLocale as DescriptionLocale,
+          data: { family: text } as never,
           req: req as PayloadRequest,
         })
       }

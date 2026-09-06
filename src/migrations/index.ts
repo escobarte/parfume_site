@@ -15,6 +15,7 @@ import * as migration_20260905_094509_phase11_1_country_of_origin from './202609
 import * as migration_20260905_125324_phase11_2_delivery_method from './20260905_125324_phase11_2_delivery_method';
 import * as migration_20260905_130249_phase11_2_payment_method from './20260905_130249_phase11_2_payment_method';
 import * as migration_20260905_131227_phase11_2_promo_codes from './20260905_131227_phase11_2_promo_codes';
+import * as migration_20260905_173146_phase12_notes_review_image_group_text from './20260905_173146_phase12_notes_review_image_group_text';
 
 export const migrations = [
   {
@@ -100,6 +101,11 @@ export const migrations = [
   {
     up: migration_20260905_131227_phase11_2_promo_codes.up,
     down: migration_20260905_131227_phase11_2_promo_codes.down,
-    name: '20260905_131227_phase11_2_promo_codes'
+    name: '20260905_131227_phase11_2_promo_codes',
+  },
+  {
+    up: migration_20260905_173146_phase12_notes_review_image_group_text.up,
+    down: migration_20260905_173146_phase12_notes_review_image_group_text.down,
+    name: '20260905_173146_phase12_notes_review_image_group_text'
   },
 ];

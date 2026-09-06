@@ -25,7 +25,8 @@ export type SeedCategory = {
 export type SeedNote = {
   slug: string
   title: Locales
-  group: 'citrus' | 'floral' | 'woody' | 'spicy' | 'sweet' | 'fresh' | 'animalic'
+  // Раньше фиксированный enum — снят (ПРОМПТ 12 v2), свободный текст.
+  group: string
 }
 
 export type SeedProduct = {
@@ -35,7 +36,9 @@ export type SeedProduct = {
   brand: string
   categories: string[]
   gender: 'female' | 'male' | 'unisex'
-  family: 'floral' | 'woody' | 'oriental' | 'fresh' | 'fougere' | 'chypre'
+  // Раньше фиксированный enum, теперь свободный локализованный текст
+  // (ПРОМПТ 12 v2) — демо-данные оставлены как есть, просто без типа-enum.
+  family: string
   notes: string[]
   pyramid: { top: string[]; heart: string[]; base: string[] }
   description: Locales

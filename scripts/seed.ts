@@ -111,6 +111,9 @@ async function main() {
       slug: note.slug,
       title: note.title[locale],
       group: note.group,
+      // Демо-ноты полностью заполнены на всех трёх локалях — не заготовки,
+      // needsReview снят сразу (ПРОМПТ 12 v2).
+      needsReview: false,
     }))
     noteIds.set(note.slug, id)
   }

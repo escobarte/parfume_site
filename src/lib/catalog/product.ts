@@ -8,6 +8,8 @@ import { CATALOG_TAG } from '@/lib/revalidate'
 import { toCardList } from './cards'
 import type { ProductCardData } from './types'
 
+export type PyramidNote = { slug: string; title: string; image: string | null }
+
 export type VariantView = {
   sku: string
   volume: number
@@ -27,7 +29,7 @@ export type ProductView = {
   images: { url: string; alt: string; full: string }[]
   variants: VariantView[]
   notes: { slug: string; title: string }[]
-  pyramid: { top: string[]; heart: string[]; base: string[] }
+  pyramid: { top: PyramidNote[]; heart: PyramidNote[]; base: PyramidNote[] }
   categoryIds: (number | string)[]
   noteIds: (number | string)[]
   minPrice: number | null
@@ -39,7 +41,15 @@ export type ProductView = {
 const objects = <T>(value: unknown): T[] =>
   Array.isArray(value) ? (value.filter((item) => typeof item === 'object' && item) as T[]) : []
 
-const noteTitles = (value: unknown) => objects<Note>(value).map((note) => note.title)
+const pyramidNotes = (value: unknown): PyramidNote[] =>
+  objects<Note>(value).map((note) => {
+    const image = typeof note.image === 'object' && note.image ? (note.image as Media) : null
+    return {
+      slug: note.slug,
+      title: note.title,
+      image: image?.sizes?.thumb?.url ?? image?.url ?? null,
+    }
+  })
 
 function toView(doc: Product): ProductView {
   const brand = typeof doc.brand === 'object' && doc.brand ? doc.brand : null
@@ -77,9 +87,9 @@ function toView(doc: Product): ProductView {
       .sort((a, b) => a.volume - b.volume),
     notes: notes.map((note) => ({ slug: note.slug, title: note.title })),
     pyramid: {
-      top: noteTitles(doc.pyramid?.top),
-      heart: noteTitles(doc.pyramid?.heart),
-      base: noteTitles(doc.pyramid?.base),
+      top: pyramidNotes(doc.pyramid?.top),
+      heart: pyramidNotes(doc.pyramid?.heart),
+      base: pyramidNotes(doc.pyramid?.base),
     },
     categoryIds: objects<{ id: number | string }>(doc.categories).map((category) => category.id),
     noteIds: notes.map((note) => note.id),
@@ -106,7 +116,10 @@ export const getProductBySlug = (slug: string, locale: Locale) =>
       const { docs } = await payload.find({
         collection: 'products',
         locale,
-        depth: 1,
+        // depth 2 (не 1) — пирамида нот под фото (ПРОМПТ 12 v2) показывает
+        // иконку note.image, а это уже второй уровень вложенности от товара
+        // (product → pyramid.top/heart/base → Note.image → Media).
+        depth: 2,
         limit: 1,
         where: { and: [{ slug: { equals: slug } }, { _status: { equals: 'published' } }] },
       })

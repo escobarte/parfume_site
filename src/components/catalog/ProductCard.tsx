@@ -20,16 +20,11 @@ export async function ProductCard({
   locale: Locale
   priority?: boolean
 }) {
-  const [t, tf, tp] = await Promise.all([
-    getTranslations('Catalog'),
-    getTranslations('Catalog.family'),
-    getTranslations('Product'),
-  ])
+  const [t, tp] = await Promise.all([getTranslations('Catalog'), getTranslations('Product')])
 
-  const subtitle = [
-    product.family ? tf(product.family) : null,
-    product.noteTitles.slice(0, 3).join(', ').toLowerCase() || null,
-  ]
+  // Семейство теперь свободный локализованный текст, не enum-ключ
+  // (ПРОМПТ 12 v2) — показывается как есть, без перевода через messages.
+  const subtitle = [product.family, product.noteTitles.slice(0, 3).join(', ').toLowerCase() || null]
     .filter(Boolean)
     .join(' · ')
 

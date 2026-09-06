@@ -42,7 +42,6 @@ const pipeList = z.preprocess(
 )
 
 export const GENDER_VALUES = ['female', 'male', 'unisex'] as const
-export const FAMILY_VALUES = ['floral', 'woody', 'oriental', 'fresh', 'fougere', 'chypre'] as const
 
 const optionalEnum = <T extends readonly [string, ...string[]]>(values: T, label: string) =>
   z.preprocess(
@@ -62,7 +61,12 @@ const productBase = {
   notes_heart: pipeList,
   notes_base: pipeList,
   gender: optionalEnum(GENDER_VALUES, 'gender'),
-  family: optionalEnum(FAMILY_VALUES, 'family'),
+  // Семейство/группа — свободный локализованный текст (ПРОМПТ 12 v2), три
+  // колонки за один прогон, тем же принципом, что description_ro/ru/en:
+  // каждая непустая ячейка пишется в свою локаль независимо от --locale.
+  family_ro: trimmed.optional(),
+  family_ru: trimmed.optional(),
+  family_en: trimmed.optional(),
   // Имена файлов из медиатеки (загружаются отдельно, ZIP-архивом через
   // /admin/catalog-import) через `|`, порядок = порядок в галерее товара,
   // первое имя — обложка. Пустая ячейка не трогает уже привязанные фото —

@@ -29,8 +29,10 @@ import { BrandIcon as BrandIcon_d9087a380941d12f95aff168665b00b4 } from '@/compo
 import { BrandLogo as BrandLogo_fd0a9bbb35693e340bbbfa9596236d37 } from '@/components/admin/BrandLogo'
 import { LogoutAction as LogoutAction_f3d0d6002ca5029cd07c8dec72912195 } from '@/components/admin/LogoutAction'
 import { ImportNavLink as ImportNavLink_3979dbf3bab985c6339c5134e9736579 } from '@/components/admin/ImportNavLink'
+import { NotesImportNavLink as NotesImportNavLink_308511ec3efca42a7470cf419cfba3f5 } from '@/components/admin/NotesImportNavLink'
 import { NewOrdersCard as NewOrdersCard_9015307af7c92577d844533bbe324c8c } from '@/components/admin/NewOrdersCard'
 import { ImportView as ImportView_ea36ac6ced6079a7c2e93b046ca7c6c8 } from '@/components/admin/ImportView'
+import { NotesImportView as NotesImportView_c70317d68630e6c73f774479501d7cbd } from '@/components/admin/NotesImportView'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
 /** @type import('payload').ImportMap */
@@ -66,7 +68,9 @@ export const importMap = {
   "@/components/admin/BrandLogo#BrandLogo": BrandLogo_fd0a9bbb35693e340bbbfa9596236d37,
   "@/components/admin/LogoutAction#LogoutAction": LogoutAction_f3d0d6002ca5029cd07c8dec72912195,
   "@/components/admin/ImportNavLink#ImportNavLink": ImportNavLink_3979dbf3bab985c6339c5134e9736579,
+  "@/components/admin/NotesImportNavLink#NotesImportNavLink": NotesImportNavLink_308511ec3efca42a7470cf419cfba3f5,
   "@/components/admin/NewOrdersCard#NewOrdersCard": NewOrdersCard_9015307af7c92577d844533bbe324c8c,
   "@/components/admin/ImportView#ImportView": ImportView_ea36ac6ced6079a7c2e93b046ca7c6c8,
+  "@/components/admin/NotesImportView#NotesImportView": NotesImportView_c70317d68630e6c73f774479501d7cbd,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

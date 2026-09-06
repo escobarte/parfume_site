@@ -152,9 +152,9 @@ export interface Product {
   categories?: (number | Category)[] | null;
   gender?: ('female' | 'male' | 'unisex' | 'kids') | null;
   /**
-   * Ольфакторное семейство.
+   * Ольфакторное семейство/группа — свободный текст.
    */
-  family?: ('floral' | 'woody' | 'oriental' | 'fresh' | 'fougere' | 'chypre') | null;
+  family?: string | null;
   /**
    * Раздел каталога (не «Кому») — влияет на левую навигацию.
    */
@@ -398,9 +398,17 @@ export interface Note {
   slug: string;
   description?: string | null;
   /**
-   * Группа ноты — для навигации по нотам.
+   * Иконка ноты.
    */
-  group?: ('citrus' | 'floral' | 'woody' | 'spicy' | 'sweet' | 'fresh' | 'animalic') | null;
+  image?: (number | null) | Media;
+  /**
+   * Заготовка без проверки — название/иконка ещё не готовы или не вычитаны. Снимается вручную.
+   */
+  needsReview?: boolean | null;
+  /**
+   * Группа ноты — свободный текст, не список.
+   */
+  group?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -867,6 +875,8 @@ export interface NotesSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
   description?: T;
+  image?: T;
+  needsReview?: T;
   group?: T;
   updatedAt?: T;
   createdAt?: T;

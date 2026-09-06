@@ -23,6 +23,7 @@ import { Navigation } from './globals/Navigation'
 import { Settings } from './globals/Settings'
 import { adminCatalogEndpoints } from './endpoints/adminCatalog'
 import { adminMediaEndpoints } from './endpoints/adminMedia'
+import { adminNotesEndpoints } from './endpoints/adminNotes'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -54,9 +55,12 @@ export default buildConfig({
       // штатная кнопка живёт в свёрнутой по умолчанию Nav-шторке и не видна
       // без клика по гамбургеру, см. LogoutAction.tsx.
       actions: ['@/components/admin/LogoutAction#LogoutAction'],
-      // Точка входа на экран импорта CSV (задача 2 фазы 8.1) — только admin,
-      // роль проверяется внутри самого компонента (ImportNavLink.tsx).
-      afterNavLinks: ['@/components/admin/ImportNavLink#ImportNavLink'],
+      // Точки входа на экраны импорта CSV (задача 2 фазы 8.1 + ПРОМПТ 12 v2,
+      // задача 2) — только admin, роль проверяется внутри самих компонентов.
+      afterNavLinks: [
+        '@/components/admin/ImportNavLink#ImportNavLink',
+        '@/components/admin/NotesImportNavLink#NotesImportNavLink',
+      ],
       views: {
         // /admin/catalog-import — экран загрузки CSV, см. ImportView.tsx.
         // Payload сам оборачивает зарегистрированный здесь Component в
@@ -64,6 +68,13 @@ export default buildConfig({
         catalogImport: {
           Component: '@/components/admin/ImportView#ImportView',
           path: '/catalog-import',
+          exact: true,
+        },
+        // /admin/notes-import — отдельный экран словаря нот, не смешивается
+        // с товарами (ПРОМПТ 12 v2), см. NotesImportView.tsx.
+        notesImport: {
+          Component: '@/components/admin/NotesImportView#NotesImportView',
+          path: '/notes-import',
           exact: true,
         },
       },
@@ -82,7 +93,7 @@ export default buildConfig({
   globals: [Homepage, Settings, Navigation],
   // Импорт каталога, загрузка фото архивом и сброс кэша витрины из /admin —
   // вне пространства коллекций (не /api/<slug>, см. docs/GOTCHAS.md «Роуты и API»).
-  endpoints: [...adminCatalogEndpoints, ...adminMediaEndpoints],
+  endpoints: [...adminCatalogEndpoints, ...adminMediaEndpoints, ...adminNotesEndpoints],
   editor: lexicalEditor(),
   localization: {
     locales: ['ro', 'ru', 'en'],

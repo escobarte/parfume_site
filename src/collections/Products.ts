@@ -5,15 +5,6 @@ import { slugField } from '@/fields/slug'
 import { denormalizeVariants, type VariantLike } from '@/lib/products/denormalize'
 import { revalidateCatalog } from '@/lib/revalidate'
 
-export const FRAGRANCE_FAMILIES = [
-  { label: 'Цветочный', value: 'floral' },
-  { label: 'Древесный', value: 'woody' },
-  { label: 'Восточный', value: 'oriental' },
-  { label: 'Свежий', value: 'fresh' },
-  { label: 'Фужерный', value: 'fougere' },
-  { label: 'Шипровый', value: 'chypre' },
-] as const
-
 export const GENDERS = [
   { label: 'Она', value: 'female' },
   { label: 'Он', value: 'male' },
@@ -100,11 +91,19 @@ export const Products: CollectionConfig = {
                   admin: { width: '50%' },
                 },
                 {
+                  // Раньше select с фиксированным списком (floral/woody/…) —
+                  // снят по решению владельца (ПРОМПТ 12 v2): свободный
+                  // локализованный текст, как короткое описание, а не enum.
+                  // Переводные ключи `Catalog.family.*` в messages/*.json
+                  // убраны — значение хранится и показывается как есть, на
+                  // текущей локали. Старые enum-значения перенесены миграцией
+                  // в `family` локали `ro` как временный текст (см.
+                  // src/migrations/…phase12_family_localized_text…).
                   name: 'family',
-                  type: 'select',
+                  type: 'text',
+                  localized: true,
                   index: true,
-                  options: [...FRAGRANCE_FAMILIES],
-                  admin: { width: '50%', description: 'Ольфакторное семейство.' },
+                  admin: { width: '50%', description: 'Ольфакторное семейство/группа — свободный текст.' },
                 },
               ],
             },
