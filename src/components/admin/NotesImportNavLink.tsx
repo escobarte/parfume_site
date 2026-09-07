@@ -15,15 +15,13 @@ export function NotesImportNavLink({ user }: Props) {
   return (
     <Link
       href="/admin/notes-import"
+      className="admin-nav-accent"
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: '.6em',
-        padding: 'calc(var(--base) / 4) 0',
         margin: 'calc(var(--base) / 2) 0',
-        color: 'var(--theme-elevation-800)',
         textDecoration: 'none',
-        fontSize: '.95rem',
       }}
     >
       Словарь нот

@@ -17,15 +17,16 @@ export async function NewOrdersCard() {
     <div style={{ margin: 'calc(var(--base) * 2) 0' }}>
       <Link
         href="/admin/collections/orders?where[status][equals]=new"
+        className="new-orders-card__link"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: '.6em',
-          border: '1px solid var(--theme-elevation-150)',
           borderRadius: 'var(--style-radius-m)',
           padding: 'calc(var(--base) / 2) var(--base)',
           textDecoration: 'none',
-          color: 'var(--theme-elevation-800)',
+          fontWeight: 600,
+          fontSize: '0.95rem',
         }}
       >
         <span

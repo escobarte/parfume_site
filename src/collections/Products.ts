@@ -317,7 +317,10 @@ export const Products: CollectionConfig = {
           type: 'checkbox',
           defaultValue: false,
           index: true,
-          admin: { readOnly: true },
+          admin: {
+            readOnly: true,
+            components: { Cell: '@/components/admin/InStockCell#InStockCell' },
+          },
         },
         {
           name: 'hasDiscount',

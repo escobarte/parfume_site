@@ -137,7 +137,10 @@ export const GiftItems: CollectionConfig = {
           type: 'checkbox',
           defaultValue: false,
           index: true,
-          admin: { readOnly: true },
+          admin: {
+            readOnly: true,
+            components: { Cell: '@/components/admin/InStockCell#InStockCell' },
+          },
         },
       ],
     },

@@ -21,6 +21,7 @@ import { StrikethroughFeatureClient as StrikethroughFeatureClient_e70f5e05f09f93
 import { UnderlineFeatureClient as UnderlineFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { InStockCell as InStockCell_29df0bd8828d6bdf8838d6e7dd8e6387 } from '@/components/admin/InStockCell'
 import { OrderStatusCell as OrderStatusCell_a62e47b57797e0bb7a9458ad5341f335 } from '@/components/admin/OrderStatusCell'
 import { OrderCsvCell as OrderCsvCell_e28494c9b9c6e689db6427e4e3307e66 } from '@/components/admin/OrderCsvCell'
 import { OrderCsvField as OrderCsvField_5c20d67acbc090c31251851b7badb16d } from '@/components/admin/OrderCsvField'
@@ -31,6 +32,7 @@ import { LogoutAction as LogoutAction_f3d0d6002ca5029cd07c8dec72912195 } from '@
 import { ImportNavLink as ImportNavLink_3979dbf3bab985c6339c5134e9736579 } from '@/components/admin/ImportNavLink'
 import { NotesImportNavLink as NotesImportNavLink_308511ec3efca42a7470cf419cfba3f5 } from '@/components/admin/NotesImportNavLink'
 import { NewOrdersCard as NewOrdersCard_9015307af7c92577d844533bbe324c8c } from '@/components/admin/NewOrdersCard'
+import { FontProvider as FontProvider_f9708d2ae68be4e162eb02ebdcc09122 } from '@/components/admin/FontProvider'
 import { ImportView as ImportView_ea36ac6ced6079a7c2e93b046ca7c6c8 } from '@/components/admin/ImportView'
 import { NotesImportView as NotesImportView_c70317d68630e6c73f774479501d7cbd } from '@/components/admin/NotesImportView'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
@@ -60,6 +62,7 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#UnderlineFeatureClient": UnderlineFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#BoldFeatureClient": BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "@/components/admin/InStockCell#InStockCell": InStockCell_29df0bd8828d6bdf8838d6e7dd8e6387,
   "@/components/admin/OrderStatusCell#OrderStatusCell": OrderStatusCell_a62e47b57797e0bb7a9458ad5341f335,
   "@/components/admin/OrderCsvCell#OrderCsvCell": OrderCsvCell_e28494c9b9c6e689db6427e4e3307e66,
   "@/components/admin/OrderCsvField#OrderCsvField": OrderCsvField_5c20d67acbc090c31251851b7badb16d,
@@ -70,6 +73,7 @@ export const importMap = {
   "@/components/admin/ImportNavLink#ImportNavLink": ImportNavLink_3979dbf3bab985c6339c5134e9736579,
   "@/components/admin/NotesImportNavLink#NotesImportNavLink": NotesImportNavLink_308511ec3efca42a7470cf419cfba3f5,
   "@/components/admin/NewOrdersCard#NewOrdersCard": NewOrdersCard_9015307af7c92577d844533bbe324c8c,
+  "@/components/admin/FontProvider#FontProvider": FontProvider_f9708d2ae68be4e162eb02ebdcc09122,
   "@/components/admin/ImportView#ImportView": ImportView_ea36ac6ced6079a7c2e93b046ca7c6c8,
   "@/components/admin/NotesImportView#NotesImportView": NotesImportView_c70317d68630e6c73f774479501d7cbd,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1

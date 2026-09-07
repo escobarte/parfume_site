@@ -20,20 +20,36 @@
 }
 
 /*
- * Цвет знака/лого MON FLACON (BrandIcon/BrandLogo) — тема-зависимый, иначе
- * navy-текст/обводка почти не читаются на тёмной теме логина (баг из
- * приёмки фазы 4.7). Payload сам ставит data-theme на <html> (Theme
- * provider), переключатель темы уже есть в /admin/account — здесь только
- * выбор между двумя значениями tokens.css по этому атрибуту.
+ * Цвет лого /admin/account (BrandLogo, всё ещё рисуется SVG-плейсхолдером
+ * через currentColor) — тема-зависимый, иначе navy-текст/обводка почти не
+ * читаются на тёмной теме логина (баг из приёмки фазы 4.7). Payload сам
+ * ставит data-theme на <html> (Theme provider), переключатель темы уже
+ * есть в /admin/account — здесь только выбор между двумя значениями
+ * tokens.css по этому атрибуту.
  */
-.brand-icon,
 .brand-logo {
   color: var(--color-navy);
 }
 
-:root[data-theme='dark'] .brand-icon,
 :root[data-theme='dark'] .brand-logo {
   color: var(--color-cream);
+}
+
+/*
+ * Знак MON FLACON в шапке /admin (BrandIcon.tsx) — с 2026-09-07 это готовые
+ * PNG от дизайнера (docs/logo/), не SVG на currentColor, поэтому светлый/
+ * тёмный вариант переключается видимостью двух картинок, а не цветом.
+ */
+.brand-icon__dark {
+  display: none;
+}
+
+:root[data-theme='dark'] .brand-icon__light {
+  display: none;
+}
+
+:root[data-theme='dark'] .brand-icon__dark {
+  display: block;
 }
 
 /*
@@ -149,4 +165,224 @@
   &:focus-visible {
     background-color: var(--color-line-on-dark-soft);
   }
+}
+
+/*
+ * ── Заголовки групп в сайдбаре (Каталог/Контент/Заказы/Система) + отдельные
+ *    пункты «Импорт каталога»/«Словарь нот» ─────────────────────────────
+ * Правка правок дизайнера (скриншот 2026-09-07, ремарка 2026-09-07 вечер):
+ * заголовки групп терялись — тот же серый, тот же вес, что у пунктов
+ * внутри. Делаем их брендовым акцентом — заливка navy + cream-текст, крупнее
+ * и жирнее — чтобы группа читалась как заголовок раздела. Тем же приёмом
+ * (класс `.admin-nav-accent`) размечены два одиночных пункта нижней части
+ * сайдбара, не входящих ни в одну группу (ImportNavLink.tsx,
+ * NotesImportNavLink.tsx) — владелец попросил уравнять их по цвету/шрифту.
+ * Шрифт после первой правки выглядел слишком крупным — уменьшен обратно
+ * с 1.05rem до 0.95rem (было 13px/.8rem по умолчанию у Payload).
+ *
+ * .nav-group__toggle/__label/__indicator — публичные классы Payload
+ * (@payloadcms/ui/dist/elements/NavGroup). Правила вне @layer, поэтому
+ * перебивают payload-default без !important (см. комментарий выше).
+ */
+.nav-group__toggle,
+.admin-nav-accent {
+  background: var(--color-navy);
+  color: var(--color-cream);
+  padding: calc(var(--base) * 0.3) calc(var(--base) * 0.5);
+  border-radius: var(--style-radius-s, 3px);
+  margin-bottom: calc(var(--base) * 0.4);
+  transition: opacity 100ms ease;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--color-cream);
+    opacity: 0.85;
+  }
+
+  .nav-group__indicator svg .stroke {
+    stroke: var(--color-cream);
+  }
+}
+
+.nav-group__label,
+.admin-nav-accent {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Тёмная тема: navy-заливка на тёмном фоне сливается с фоном сайдбара —
+   инвертируем, как лого/кнопки выше по файлу. */
+:root[data-theme='dark'] .nav-group__toggle,
+:root[data-theme='dark'] .admin-nav-accent {
+  background: var(--color-cream);
+  color: var(--color-navy);
+
+  &:hover,
+  &:focus-visible {
+    color: var(--color-navy);
+  }
+
+  .nav-group__indicator svg .stroke {
+    stroke: var(--color-navy);
+  }
+}
+
+/*
+ * ── Карточки коллекций на дашборде (Товары/Бренды/Категории/…) ─────────
+ * Правка дизайнера: подписи карточек мелкие, увеличить минимум в 2 раза.
+ * .card__title — публичный класс Payload (elements/Card), используется
+ * только виджетом CollectionCards на дашборде — глобальный таргет безопасен.
+ * Было base(0.65) = 13px → сперва base(1.3) = 26px, по ремарке владельца
+ * («чуть уменьшить») — base(1.15) = 23px, всё ещё почти вдвое исходного.
+ */
+.card__title {
+  font-size: calc(var(--base) * 1.15);
+  line-height: calc(var(--base) * 1.35);
+}
+
+/*
+ * ── Кнопка «Новых заявок» на дашборде ───────────────────────────────────
+ * Правка дизайнера: пилюля-ссылка (NewOrdersCard.tsx) была блёклой (только
+ * рамка elevation-150) и терялась над «Каталог». Заливка navy + cream-текст —
+ * тот же брендовый акцентный приём, что у заголовков групп сайдбара выше.
+ * Бейдж-счётчик (--color-status-new) не трогаем — он остаётся отдельным
+ * сигналом «требует внимания», как и в статусах заказов.
+ */
+.new-orders-card__link {
+  background: var(--color-navy);
+  color: var(--color-cream);
+  transition:
+    opacity 100ms ease,
+    box-shadow 100ms ease;
+  box-shadow: 0 2px 8px -2px rgb(0 2 4 / 0.2);
+
+  &:hover,
+  &:focus-visible {
+    color: var(--color-cream);
+    opacity: 0.85;
+  }
+}
+
+:root[data-theme='dark'] .new-orders-card__link {
+  background: var(--color-cream);
+  color: var(--color-navy);
+
+  &:hover,
+  &:focus-visible {
+    color: var(--color-navy);
+  }
+}
+
+/*
+ * ── Активный пункт сайдбара внутри группы ───────────────────────────────
+ * Правка дизайнера: активная строка («Товары» и т.п.) уже была жирной
+ * (Payload сам ставит font-weight 600 через рендер `<div>` вместо `<a>`
+ * для текущего пункта — см. DefaultNavClient), но цветом не отличалась от
+ * остальных пунктов группы. Добавлен акцентный цвет — тем же приёмом, что
+ * и заголовки групп/кнопки выше. `.nav-group__content div.nav__link` —
+ * Payload рендерит активный пункт именно как `<div class="nav__link">`
+ * (неактивные — `<a class="nav__link">`), это и есть надёжный маркер
+ * состояния, добавлять свой JS/класс не пришлось.
+ */
+.nav-group__content div.nav__link {
+  color: var(--color-navy);
+  font-weight: 700;
+
+  .nav__link-indicator {
+    background: var(--color-navy);
+  }
+}
+
+:root[data-theme='dark'] .nav-group__content div.nav__link {
+  color: var(--color-cream);
+
+  .nav__link-indicator {
+    background: var(--color-cream);
+  }
+}
+
+/*
+ * ── Все основные кнопки /admin (правка дизайнера: «на все кнопки добавить
+ *    цвет, чтоб было видно») ─────────────────────────────────────────────
+ * Раньше красили отдельные места точечно (кнопка «Создать» списком,
+ * см. историю в CHANGELOG) — теперь красим на уровне модификатора Payload:
+ * внешний вид ЛЮБОЙ кнопки задаётся переменными --bg-color/--color на
+ * классе `.btn--style-*` (elements/Button/index.scss), так что правка на
+ * этом уровне разом покрывает Сохранить/Опубликовать/Создать/подтверждение
+ * в модалках и т.д. в любой коллекции/global — новых мест руками не нужно.
+ * Прежнее точечное правило кнопки «Создать» удалено как дублирующее (та же
+ * кнопка и так использует `.btn--style-pill`).
+ *
+ * Затронуты только «весомые» варианты — primary (Сохранить/Опубликовать/
+ * подтверждение в модалках, дефолт Payload-кнопки) и pill (Создать и т.п.,
+ * обычно был бледно-серым `--theme-elevation-150`). Secondary/dashed/subtle
+ * (Отмена, «добавить блок» и т.п.) сознательно не трогали — это подчёркнуто
+ * второстепенные действия, покрасить и их в тот же акцент значило бы стереть
+ * иерархию «что здесь главное действие» вместо того, чтобы её проявить.
+ * disabled-состояние не трогаем — Payload сам приглушает его через вложенный
+ * `&.btn--disabled` внутри каждого `--style-*` (мы не переопределяем эти
+ * блоки), это осталось верным сигналом «действие сейчас недоступно».
+ */
+.btn--style-primary:not(.btn--disabled) {
+  --bg-color: var(--color-navy);
+  --color: var(--color-cream);
+  --hover-bg: var(--color-navy);
+  --hover-color: var(--color-cream);
+}
+
+.btn--style-pill:not(.btn--disabled) {
+  --bg-color: var(--color-navy);
+  --color: var(--color-cream);
+  --hover-bg: var(--color-navy);
+  --hover-color: var(--color-cream);
+}
+
+:root[data-theme='dark'] .btn--style-primary:not(.btn--disabled),
+:root[data-theme='dark'] .btn--style-pill:not(.btn--disabled) {
+  --bg-color: var(--color-cream);
+  --color: var(--color-navy);
+  --hover-bg: var(--color-cream);
+  --hover-color: var(--color-navy);
+}
+
+/* Активная вкладка документа («Редактировать» и т.п., .btn--style-tab) —
+   тем же акцентом, только цветом текста (не заливкой — это вкладка, а не
+   кнопка-действие, заливать её так же, как Сохранить, было бы неверным
+   сигналом). */
+.doc-tab--active {
+  --color: var(--color-navy);
+}
+
+:root[data-theme='dark'] .doc-tab--active {
+  --color: var(--color-cream);
+}
+
+/*
+ * ── Хлебные крошки шапки (иконка-лого + «/» + «Панель») ─────────────────
+ * Правка дизайнера: шрифт и лого в этой строке увеличить примерно вдвое.
+ * .step-nav — публичный класс Payload (elements/StepNav), 13px по умолчанию
+ * (общий $baseline-body-size темы) → 26px. Помимо обычного текста строка
+ * содержит react-select (переключатель «Панель»/список коллекций на других
+ * страницах) — его классы `.rs__control`/`.rs__single-value` не наследуют
+ * размер шрифта автоматически (щит react-select), таргетим их отдельно.
+ * `.step-nav__home` (слот знака) — было 18px (16px на узких экранах через
+ * Payload-media-query), стало 36px без медиа-условия: правило вне @layer
+ * побеждает независимо от viewport, повторять брейкпоинт не нужно.
+ * Ремарка владельца (тот же день): лого — ещё вдвое крупнее, 36px → 72px,
+ * и заменено на полный леттеринг (иконка + «MON FLACON» + тэглайн, см.
+ * BrandIcon.tsx) — при таком размере слота текст лого уже читаем.
+ */
+.step-nav {
+  font-size: 26px;
+
+  .rs__control,
+  .rs__single-value {
+    font-size: 26px;
+  }
+}
+
+.step-nav__home {
+  width: 72px;
+  height: 72px;
 }

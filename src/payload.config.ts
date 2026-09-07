@@ -44,6 +44,9 @@ export default buildConfig({
       duration: 6000,
     },
     components: {
+      // Шрифт Inter по всей админке (правка дизайнера 2026-09-07) — см.
+      // FontProvider.tsx, почему именно через providers, а не layout.tsx.
+      providers: ['@/components/admin/FontProvider#FontProvider'],
       // Логотип/акценты MON FLACON поверх стандартного layout (фаза 4.7.6) —
       // структура экранов Payload admin не трогается, см. src/app/(payload)/custom.scss.
       graphics: {
