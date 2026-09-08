@@ -8,7 +8,7 @@ import { BottleGlyph } from '@/components/brand/BrandMark'
 import { ProductCard } from '@/components/catalog/ProductCard'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { BuyBlock } from '@/components/product/BuyBlock'
-import { Gallery } from '@/components/product/Gallery'
+import { ProductGallery } from '@/components/product/ProductGallery'
 import { Link } from '@/i18n/navigation'
 import { routing, type Locale } from '@/i18n/routing'
 import { getProductBySlug, getSimilarProducts, type PyramidNote } from '@/lib/catalog/product'
@@ -160,7 +160,10 @@ export default async function ProductPage(props: {
       <div className="mx-auto max-w-[1440px] px-5 py-10 md:px-8 md:py-12">
         <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
           <div>
-            <Gallery images={product.images} title={product.title} />
+            {/* Галерея и BuyBlock лежат в разных колонках сетки и общаются
+                через URL-состояние объёма (nuqs), а не через общий провайдер —
+                поэтому страница целиком остаётся серверной. */}
+            <ProductGallery product={product} />
 
             {/* Пирамида нот — под фото, не в правой колонке (ПРОМПТ 12 v2,
                 переезд из старого места ниже описания). */}
@@ -192,7 +195,7 @@ export default async function ProductPage(props: {
             {product.family && <p className="text-ink-muted text-body-sm mt-2">{product.family}</p>}
 
             <div className="mt-8">
-              <BuyBlock product={product} image={product.images[0]?.url ?? null} />
+              <BuyBlock product={product} />
             </div>
 
             {product.description ? (

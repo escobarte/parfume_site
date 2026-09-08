@@ -1,3 +1,4 @@
+import { PRODUCT_COUNTRY_VALUES } from './countries'
 import { FLAG_OPTIONS, type CatalogQuery, type FlagOption } from './searchParams'
 import type { FacetCount, FacetRow, Facets } from './types'
 import type { TaxonomyItem } from './taxonomy'
@@ -5,7 +6,9 @@ import type { TaxonomyItem } from './taxonomy'
 // Порядок фасета «Кому» зафиксирован ПРОМПТ 11A задача 3: Для неё / Для
 // него / Детям / Унисекс — не порядок значений в Products.GENDERS.
 const GENDERS = ['female', 'male', 'kids', 'unisex'] as const
-const COUNTRIES = ['uae', 'europe', 'usa'] as const
+// Порядок фасета «Страна» = порядок в общем списке (lib/catalog/countries.ts),
+// он же источник значений для select в Products и для CSV-импорта.
+const COUNTRIES = PRODUCT_COUNTRY_VALUES
 
 /**
  * Счётчик фасета честный: он показывает, сколько товаров останется, если

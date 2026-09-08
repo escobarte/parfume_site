@@ -11,6 +11,8 @@ type ImportResponse = {
     create?: string[]
     update?: string[]
     images?: { missing?: unknown[] }
+    variantImages?: { missing?: unknown[] }
+    country?: { unknown?: unknown[]; conflicts?: unknown[] }
     skipped?: unknown[]
   }
 }
@@ -42,8 +44,14 @@ function importReportView(response: ImportResponse): {
   const created = plan?.create?.length ?? 0
   const updated = plan?.update?.length ?? 0
   const missingImages = plan?.images?.missing?.length ?? 0
+  // Фото вариантов и страна считаются в тот же счётчик замечаний: молча
+  // проглоченная опечатка в имени файла или в стране — главный риск обеих
+  // колонок, шапка отчёта обязана показать, что разбирать есть что.
+  const missingVariantImages = plan?.variantImages?.missing?.length ?? 0
+  const countryRemarks =
+    (plan?.country?.unknown?.length ?? 0) + (plan?.country?.conflicts?.length ?? 0)
   const skippedRows = plan?.skipped?.length ?? 0
-  const remarks = missingImages + skippedRows
+  const remarks = missingImages + missingVariantImages + countryRemarks + skippedRows
 
   const counts = `Товаров: создать ${created}, обновить ${updated}`
   const remarksNote = remarks
@@ -171,7 +179,10 @@ export function ImportForm() {
         <p style={{ marginTop: '.4em', fontSize: '.8rem', color: 'var(--theme-elevation-600)' }}>
           На описания больше не влияет. Если в файле одна колонка <code>description</code>, её
           текст попадёт сразу во все языки, где описание пустое (готовые переводы не затираются) —
-          потом их нужно отредактировать вручную. Если есть колонки <code>description_ro</code>/
+          потом их нужно отредактировать вручную. Необязательные колонки{' '}
+          <code>country_of_origin</code> (<code>uae</code>/<code>europe</code>/<code>usa</code>) и{' '}
+          <code>variant_image</code> (фото под конкретный объём) описаны в{' '}
+          <code>docs/import-guide.md</code>. Если есть колонки <code>description_ro</code>/
           <code>description_ru</code>/<code>description_en</code>, язык берётся из самой колонки.
           Названия товаров не переводятся — они всегда общие. Выбор используется только для
           названий брендов, категорий и нот, которые импорт заводит автоматически.

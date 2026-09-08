@@ -24,6 +24,12 @@ description_ru/description_en — тогда все три локали пишу
 (/admin/catalog-import — у этого CLI команды для загрузки архивов нет),
 см. docs/import-guide.md.
 
+Ещё две необязательные колонки форматов A/B:
+  country_of_origin — страна товара: uae | europe | usa (берётся из первой
+                      строки handle; пустая ячейка ничего не меняет)
+  variant_image     — фото конкретного объёма, одно имя файла из медиатеки
+                      (в формате B — поле "image" внутри JSON-варианта)
+
 Шаблон с примером: docs/import-template.csv
 Шаблон с описанием на трёх языках и фото: docs/import-template-multilang.csv
 `

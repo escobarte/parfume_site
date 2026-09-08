@@ -201,6 +201,10 @@ export interface Product {
      * Показывать вариант на витрине.
      */
     isActive?: boolean | null;
+    /**
+     * Необязательно. Фото именно этого объёма — заменяет главное фото при выборе варианта.
+     */
+    image?: (number | null) | Media;
     id?: string | null;
   }[];
   /**
@@ -789,6 +793,7 @@ export interface ProductsSelect<T extends boolean = true> {
         oldPrice?: T;
         stock?: T;
         isActive?: T;
+        image?: T;
         id?: T;
       };
   notes?: T;

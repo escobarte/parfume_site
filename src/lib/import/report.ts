@@ -58,6 +58,38 @@ export function formatReport(result: ImportResult): string {
     if (plan.images.missing.length > 20) lines.push(`  … и ещё ${plan.images.missing.length - 20}`)
   }
 
+  // Фото вариантов — отдельным блоком от общей галереи: у них разный смысл
+  // («какой флакон показать при выборе объёма» против «галерея товара»), и
+  // ненайденное имя тут диагностируется по handle + объёму, а не по номеру
+  // строки в одиночку — так понятно, какой именно вариант остался без фото.
+  if (plan.variantImages.attached || plan.variantImages.missing.length) {
+    lines.push(
+      `Фото вариантов: привязано ${plan.variantImages.attached}` +
+        (plan.variantImages.missing.length
+          ? `, не найдено ${plan.variantImages.missing.length}`
+          : ''),
+    )
+    for (const miss of plan.variantImages.missing.slice(0, 20)) {
+      lines.push(`  строка ${miss.line}: ${miss.message}`)
+    }
+    if (plan.variantImages.missing.length > 20) {
+      lines.push(`  … и ещё ${plan.variantImages.missing.length - 20}`)
+    }
+  }
+
+  const country = plan.country
+  if (country.applied || country.unknown.length || country.conflicts.length) {
+    lines.push(`Страна-производитель: проставлена у ${country.applied}`)
+    for (const bad of country.unknown.slice(0, 20)) {
+      lines.push(`  ⚠ строка ${bad.line}: ${bad.message}`)
+    }
+    if (country.unknown.length > 20) lines.push(`  … и ещё ${country.unknown.length - 20}`)
+    for (const conflict of country.conflicts.slice(0, 20)) {
+      lines.push(`  ⚠ строка ${conflict.line}: ${conflict.message}`)
+    }
+    if (country.conflicts.length > 20) lines.push(`  … и ещё ${country.conflicts.length - 20}`)
+  }
+
   const auto = plan.autoCreate
   const autoTotal = auto.brands.length + auto.categories.length + auto.notes.length
   if (autoTotal) {

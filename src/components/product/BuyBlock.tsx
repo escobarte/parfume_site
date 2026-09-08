@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { useSelectedVariant } from './useSelectedVariant'
 import { useRouter } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { cartItemsToGaItems, trackEvent } from '@/lib/analytics/gtag'
@@ -14,22 +15,27 @@ import { DiscountBadge } from '@/components/catalog/DiscountBadge'
 
 /**
  * Переключатель объёма и кнопки покупки. Смена объёма меняет цену, SKU
- * и наличие без перезагрузки — состояние живёт в клиенте (PLAN.md §5.4).
- * Вариант с нулевым остатком выбрать нельзя.
+ * и наличие без перезагрузки. Состояние выбранного объёма живёт в URL
+ * (`?volume=full-size`, см. `useSelectedVariant`) — оттуда же его читает
+ * галерея в соседней колонке, поэтому фото меняется вместе с ценой без
+ * общего родителя. Вариант с нулевым остатком выбрать нельзя.
  */
-export function BuyBlock({ product, image }: { product: ProductView; image: string | null }) {
+export function BuyBlock({ product }: { product: ProductView }) {
   const t = useTranslations('Product')
   const locale = useLocale() as Locale
   const add = useCart((state) => state.add)
   const showCartToast = useToast((state) => state.showCartToast)
   const router = useRouter()
 
-  const firstAvailable = product.variants.findIndex((variant) => variant.stock > 0)
-  const [index, setIndex] = useState(firstAvailable >= 0 ? firstAvailable : 0)
+  const { variant, index, select } = useSelectedVariant(product)
   const [added, setAdded] = useState(false)
 
-  const variant = product.variants[index]
   if (!variant) return null
+
+  // В корзину и в тост — фото выбранного варианта, с тем же фоллбэком на
+  // первое фото товара: иначе в корзине у 3ml стояло бы фото полноразмерного
+  // флакона.
+  const image = variant.image?.url ?? product.images[0]?.url ?? null
 
   const available = variant.stock > 0
   // Пересчитывается при каждом переключении объёма — index меняет variant,
@@ -92,7 +98,7 @@ export function BuyBlock({ product, image }: { product: ProductView; image: stri
               key={item.sku}
               type="button"
               disabled={disabled}
-              onClick={() => setIndex(itemIndex)}
+              onClick={() => select(item)}
               className={`text-label rounded-sm border px-3 py-1.5 transition-colors ${
                 active
                   ? 'border-navy bg-navy text-cream'

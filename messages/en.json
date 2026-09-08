@@ -28,6 +28,7 @@
   },
   "Footer": {
     "contacts": "Contacts",
+    "addressOnMap": "Open the address on the map",
     "trackOrder": "Track order",
     "exchangeTitle": "Exchange & returns",
     "exchangeText": "Returns or exchanges — within 14 days of receipt, if the bottle is unopened and the packaging is intact.",

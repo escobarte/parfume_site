@@ -17,6 +17,11 @@ export type VariantView = {
   price: number
   oldPrice: number | null
   stock: number
+  /**
+   * Фото под реальный размер этого объёма. `null` — у варианта своего фото
+   * нет, витрина показывает первое фото товара (см. Gallery/BuyBlock).
+   */
+  image: { url: string; alt: string } | null
 }
 
 export type ProductView = {
@@ -82,13 +87,24 @@ function toView(doc: Product): ProductView {
       // рендериться пустой безымянной кнопкой, это ровно тот же случай, что
       // «этого объёма у товара нет» — кнопка просто отсутствует.
       .filter((variant) => variant.isActive !== false && Boolean(variant.volume))
-      .map((variant) => ({
-        sku: variant.sku,
-        volume: variant.volume as string,
-        price: variant.price,
-        oldPrice: variant.oldPrice ?? null,
-        stock: variant.stock ?? 0,
-      }))
+      .map((variant) => {
+        // `full` (1200px, без кропа), а не `card` — ровно по той же причине,
+        // что и у галереи выше: `card` жёстко кропает бока у широких кадров.
+        const image = typeof variant.image === 'object' && variant.image ? variant.image : null
+        return {
+          sku: variant.sku,
+          volume: variant.volume as string,
+          price: variant.price,
+          oldPrice: variant.oldPrice ?? null,
+          stock: variant.stock ?? 0,
+          image: image
+            ? {
+                url: image.sizes?.full?.url ?? image.url ?? '',
+                alt: image.alt ?? doc.title,
+              }
+            : null,
+        }
+      })
       .sort((a, b) => volumeOrder(a.volume) - volumeOrder(b.volume)),
     notes: notes.map((note) => ({ slug: note.slug, title: note.title })),
     pyramid: {

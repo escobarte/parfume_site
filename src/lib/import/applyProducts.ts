@@ -1,5 +1,10 @@
 import type { Payload, PayloadRequest } from 'payload'
 import type { Product } from '@/payload-types'
+import {
+  isProductCountry,
+  PRODUCT_COUNTRY_VALUES,
+  type ProductCountry,
+} from '@/lib/catalog/countries'
 import { isProductVolume, PRODUCT_VOLUMES, type ProductVolume } from '@/lib/catalog/volumes'
 import { paragraphs } from '@/lib/seed/richText'
 import { slugify } from '@/lib/slugify'
@@ -17,16 +22,42 @@ type VariantInput = {
   oldPrice: number | null
   stock: number
   isActive: boolean
+  /**
+   * Имя файла из медиатеки. `undefined` — ячейка пуста, и это значит «не
+   * трогать»: варианты склеиваются по sku через spread (mergeVariants), и
+   * попавший в объект `image: undefined` затёр бы уже привязанное фото.
+   */
+  image?: string
 }
 
 export type ProductInput = {
   line: number
-  base: Omit<FormatARow, 'volume' | 'sku' | 'price' | 'old_price' | 'stock' | 'is_active'>
+  base: Omit<
+    FormatARow,
+    'volume' | 'sku' | 'price' | 'old_price' | 'stock' | 'is_active' | 'variant_image'
+  >
   variants: VariantInput[]
 }
 
-const invalidVolumeMessage = (raw: string) =>
-  `volume: значение «${raw}» не из списка (${PRODUCT_VOLUMES.join(' / ')}) — вариант пропущен`
+/** Ключ сравнения объёмов «на глаз»: без регистра и без пробелов. */
+const volumeKey = (raw: string) => raw.toLowerCase().replace(/\s+/g, '')
+
+/**
+ * Похоже ли значение на канонический объём с точностью до регистра/пробелов
+ * («full size», «FullSize» → «Full Size»). Такое почти всегда опечатка, а не
+ * новый объём, и сообщение об этом должно отличаться от «просто не из списка»:
+ * в первом случае клиенту надо поправить регистр, во втором — понять, откуда
+ * вообще взялось значение.
+ */
+const canonicalVolumeLookalike = (raw: string): ProductVolume | undefined =>
+  PRODUCT_VOLUMES.find((volume) => volumeKey(volume) === volumeKey(raw))
+
+const invalidVolumeMessage = (raw: string) => {
+  const lookalike = canonicalVolumeLookalike(raw)
+  return lookalike
+    ? `volume: «${raw}» отличается от «${lookalike}» только регистром или пробелами — вероятно опечатка, вариант пропущен`
+    : `volume: значение «${raw}» не из списка (${PRODUCT_VOLUMES.join(' / ')}) — вариант пропущен`
+}
 
 /**
  * Формат A: строки одного handle склеиваются в один товар. Объём — не
@@ -40,16 +71,36 @@ const invalidVolumeMessage = (raw: string) =>
  * оказалась с плохим объёмом, не попадал бы в Map вообще и пропадал бы из
  * отчёта молча (не «пропущен с предупреждением», а просто отсутствовал бы).
  */
-export function groupFormatA(
-  rows: ValidatedRow<FormatARow>[],
-): { inputs: ProductInput[]; invalidVolumes: RowError[] } {
+export function groupFormatA(rows: ValidatedRow<FormatARow>[]): {
+  inputs: ProductInput[]
+  invalidVolumes: RowError[]
+  countryConflicts: RowError[]
+} {
   const grouped = new Map<string, ProductInput>()
   const invalidVolumes: RowError[] = []
+  const countryConflicts: RowError[] = []
 
   for (const { line, value } of rows) {
-    const { volume, sku, price, old_price, stock, is_active, ...base } = value
+    const { volume, sku, price, old_price, stock, is_active, variant_image, ...base } = value
     const existing = grouped.get(base.handle)
     if (!existing) grouped.set(base.handle, { line, base, variants: [] })
+
+    // Страна — поле товара, а строк на товар несколько: канон — первая строка
+    // handle (она и лежит в base). Расхождение внутри одного handle почти
+    // всегда опечатка, поэтому не молчим: берём первую, остальные — в отчёт.
+    if (existing) {
+      const first = existing.base.country_of_origin?.trim() ?? ''
+      const current = value.country_of_origin?.trim() ?? ''
+      if (current && current !== first) {
+        // Если расходящееся значение к тому же не из списка — говорим об этом
+        // прямо: иначе отчёт выглядит так, будто «Marte» — законная
+        // альтернатива, просто проигравшая первой строке.
+        const message = isProductCountry(current.toLowerCase())
+          ? `${base.handle}: строки указывают разные страны («${first || '—'}» и «${current}») — взята первая`
+          : `${base.handle}: страна «${current}» не из списка (${PRODUCT_COUNTRY_VALUES.join(' / ')}) и отличается от первой строки («${first || '—'}») — взята первая`
+        countryConflicts.push({ line, field: 'country_of_origin', message })
+      }
+    }
 
     if (!isProductVolume(volume)) {
       invalidVolumes.push({ line, field: 'volume', message: invalidVolumeMessage(volume) })
@@ -63,17 +114,24 @@ export function groupFormatA(
       oldPrice: old_price ?? null,
       stock: stock ?? 0,
       isActive: is_active ?? true,
+      ...(variant_image ? { image: variant_image } : {}),
     }
     grouped.get(base.handle)!.variants.push(variant)
   }
 
-  return { inputs: [...grouped.values()], invalidVolumes }
+  return { inputs: [...grouped.values()], invalidVolumes, countryConflicts }
 }
 
-/** Формат B: варианты уже пришли JSON-массивом — та же терпимость к объёму. */
-export function groupFormatB(
-  rows: ValidatedRow<FormatBRow>[],
-): { inputs: ProductInput[]; invalidVolumes: RowError[] } {
+/**
+ * Формат B: варианты уже пришли JSON-массивом — та же терпимость к объёму.
+ * `countryConflicts` здесь всегда пуст: строка = целый товар, расходиться
+ * внутри одного handle нечему (в отличие от формата A, где строк несколько).
+ */
+export function groupFormatB(rows: ValidatedRow<FormatBRow>[]): {
+  inputs: ProductInput[]
+  invalidVolumes: RowError[]
+  countryConflicts: RowError[]
+} {
   const invalidVolumes: RowError[] = []
 
   const inputs = rows.map(({ line, value }) => {
@@ -96,17 +154,26 @@ export function groupFormatB(
         oldPrice: variant.oldPrice ?? null,
         stock: variant.stock ?? 0,
         isActive: variant.isActive ?? true,
+        // Пустое/отсутствующее image не кладём — см. VariantInput.image.
+        ...(variant.image?.trim() ? { image: variant.image.trim() } : {}),
       })
     }
 
     return { line, base, variants: resolved }
   })
 
-  return { inputs, invalidVolumes }
+  return { inputs, invalidVolumes, countryConflicts: [] }
 }
 
+/**
+ * Вариант, готовый к записи: имя файла уже заменено на id записи Media.
+ * Ключ `image` отсутствует, если фото не задано или не нашлось — тогда
+ * spread в mergeVariants не тронет то, что уже привязано в базе.
+ */
+type VariantPayload = Omit<VariantInput, 'image'> & { image?: number | string }
+
 /** Варианты из файла накатываются на существующие по sku; чужие не трогаем. */
-function mergeVariants(existing: Product['variants'], incoming: VariantInput[]) {
+function mergeVariants(existing: Product['variants'], incoming: VariantPayload[]) {
   const merged = [...(existing ?? [])]
   let created = 0
   let updated = 0
@@ -114,7 +181,10 @@ function mergeVariants(existing: Product['variants'], incoming: VariantInput[]) 
   for (const variant of incoming) {
     const index = merged.findIndex((item) => item.sku === variant.sku)
     if (index >= 0) {
-      merged[index] = { ...merged[index], ...variant }
+      // Каст — из-за `image`: `ImageResolver` не завязан на тип id (`number |
+      // string`), а сгенерированный тип Payload знает, что в этом проекте id
+      // числовые. Приводим на границе, как и в ветке push ниже.
+      merged[index] = { ...merged[index], ...variant } as NonNullable<Product['variants']>[number]
       updated += 1
     } else {
       merged.push(variant as NonNullable<Product['variants']>[number])
@@ -242,7 +312,33 @@ export async function applyProducts(
       continue
     }
 
-    const merged = mergeVariants(current?.variants, variants)
+    // Имена файлов у вариантов → id записей Media. Ненайденное имя не рушит
+    // импорт и не затирает уже привязанное фото: ключ `image` просто не
+    // попадает в объект варианта, а имя уходит в отчёт (главный риск фичи —
+    // опечатка в имени, которая иначе прошла бы молча).
+    const resolvedVariants: VariantPayload[] = []
+    for (const variant of variants) {
+      const { image, ...rest } = variant
+      if (!image) {
+        resolvedVariants.push(rest)
+        continue
+      }
+
+      const imageId = await imageResolver.resolveOne(image)
+      if (imageId === null) {
+        plan.variantImages.missing.push({
+          line: input.line,
+          field: 'variant_image',
+          message: `${base.handle} · ${variant.volume}: файл «${image}» не найден в медиатеке — вариант остался без своего фото`,
+        })
+        resolvedVariants.push(rest)
+      } else {
+        resolvedVariants.push({ ...rest, image: imageId })
+        plan.variantImages.attached += 1
+      }
+    }
+
+    const merged = mergeVariants(current?.variants, resolvedVariants)
     plan.variants.created += merged.created
     plan.variants.updated += merged.updated
 
@@ -279,6 +375,27 @@ export async function applyProducts(
       data.pyramid = { top: topIds, heart: heartIds, base: baseIds }
     }
     if (base.gender) data.gender = base.gender
+
+    // Страна: канон — только value из списка (uae / europe / usa), синонимы и
+    // русские подписи не принимаем (решение владельца, тот же принцип, что у
+    // объёма). Регистр и пробелы прощаем. Пустая ячейка ничего не пишет —
+    // у существующего товара остаётся своё значение, у нового срабатывает
+    // defaultValue: 'europe' самого поля Payload. Неизвестное значение — тоже
+    // не пишем, только предупреждение: импорт из-за опечатки падать не должен.
+    const rawCountry = base.country_of_origin?.trim()
+    if (rawCountry) {
+      const normalized = rawCountry.toLowerCase()
+      if (isProductCountry(normalized)) {
+        data.countryOfOrigin = normalized satisfies ProductCountry
+        plan.country.applied += 1
+      } else {
+        plan.country.unknown.push({
+          line: input.line,
+          field: 'country_of_origin',
+          message: `${base.handle}: страна «${rawCountry}» не из списка (${PRODUCT_COUNTRY_VALUES.join(' / ')}) — поле не изменено`,
+        })
+      }
+    }
     // family — три независимые локали (family_ro/ru/en), пишутся отдельными
     // update'ами ниже, тем же принципом, что и мультиязычная description —
     // в основной data.family не кладётся, чтобы не завязываться на

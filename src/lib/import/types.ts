@@ -35,6 +35,20 @@ export type ImportPlan = {
   /** Форматы A/B: колонка images — сколько файлов реально привязано и какие имена не нашлись в медиатеке. */
   images: { attached: number; missing: RowError[] }
   /**
+   * Форматы A/B: фото вариантов (колонка variant_image / поле image внутри
+   * JSON-варианта). `missing` — построчный список ненайденных имён с handle и
+   * объёмом: без него опечатка в имени файла уходит молча, а это главный риск
+   * фичи — вариант просто тихо остаётся с общим фото товара.
+   */
+  variantImages: { attached: number; missing: RowError[] }
+  /**
+   * Форматы A/B: колонка country_of_origin.
+   * `unknown` — значение не из списка (uae / europe / usa): товар всё равно
+   * импортируется, поле не трогается. `conflicts` — внутри одного handle
+   * строки указывают разные страны: берётся первая, остальные в отчёт.
+   */
+  country: { applied: number; unknown: RowError[]; conflicts: RowError[] }
+  /**
    * Форматы A/B с ОДНОЙ колонкой description: сколько локалей получит дубль
    * этого текста (считаются только те, где описание было пустым). 0 — либо
    * файл трёхколоночный, либо везде уже есть перевод: предупреждать не о чем.
@@ -60,5 +74,7 @@ export const emptyPlan = (kind: ImportKind, locale: string): ImportPlan => ({
   skipped: [],
   descriptionLocales: [],
   images: { attached: 0, missing: [] },
+  variantImages: { attached: 0, missing: [] },
+  country: { applied: 0, unknown: [], conflicts: [] },
   descriptionDuplicated: 0,
 })

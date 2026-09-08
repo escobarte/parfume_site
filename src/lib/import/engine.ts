@@ -82,11 +82,20 @@ export async function runImport(
 
   try {
     if (kind === 'products-a' || kind === 'products-b') {
-      const { inputs, invalidVolumes }: { inputs: ProductInput[]; invalidVolumes: RowError[] } =
+      const {
+        inputs,
+        invalidVolumes,
+        countryConflicts,
+      }: {
+        inputs: ProductInput[]
+        invalidVolumes: RowError[]
+        countryConflicts: RowError[]
+      } =
         kind === 'products-a'
           ? groupFormatA(rows as { line: number; value: FormatARow }[])
           : groupFormatB(rows as { line: number; value: FormatBRow }[])
       plan.variants.invalidVolume = invalidVolumes
+      plan.country.conflicts = countryConflicts
       await applyProducts(payload, inputs, { locale, dryRun, req }, plan)
       plan.touched = inputs.length
     } else if (kind === 'prices') {

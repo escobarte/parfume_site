@@ -2,6 +2,7 @@ import type { ArrayFieldValidation, CollectionConfig } from 'payload'
 import { adminOnly, isStaff, staffOnly } from '@/access/roles'
 import { seoField } from '@/fields/seo'
 import { slugField } from '@/fields/slug'
+import { PRODUCT_COUNTRIES } from '@/lib/catalog/countries'
 import { PRODUCT_VOLUMES } from '@/lib/catalog/volumes'
 import { discountPercent } from '@/lib/pricing'
 import { denormalizeVariants, type VariantLike } from '@/lib/products/denormalize'
@@ -48,11 +49,9 @@ export const PRODUCT_CATEGORIES = [
 // Страна-производитель — новый фасет каталога (фаза 11.1, задача 3). Дефолт
 // 'europe' — так же, как выше: бэкфилл существующих ~100+ товаров без ручной
 // сверки (демо-каталог сейчас преимущественно европейские бренды).
-export const PRODUCT_COUNTRIES = [
-  { label: 'ОАЭ', value: 'uae' },
-  { label: 'Европа', value: 'europe' },
-  { label: 'США', value: 'usa' },
-] as const
+// Сам список переехал в `lib/catalog/countries.ts` — им пользуются ещё фасет
+// каталога и CSV-импортёр, дублировать значения по трём местам не нужно.
+export { PRODUCT_COUNTRIES }
 
 export const Products: CollectionConfig = {
   slug: 'products',
@@ -239,6 +238,21 @@ export const Products: CollectionConfig = {
                       admin: { width: '50%', description: 'Показывать вариант на витрине.' },
                     },
                   ],
+                },
+                {
+                  // Фото под реальный размер флакона: при выборе этого объёма
+                  // на странице товара оно заменяет главное фото галереи.
+                  // Необязательное — без него подставляется первое фото из
+                  // `images` товара. Одну и ту же запись Media можно назначить
+                  // вариантам разных товаров (атомайзер 5ml физически один и
+                  // тот же) — это обычная ссылка, дедуп не нужен.
+                  name: 'image',
+                  type: 'upload',
+                  relationTo: 'media',
+                  admin: {
+                    description:
+                      'Необязательно. Фото именно этого объёма — заменяет главное фото при выборе варианта.',
+                  },
                 },
               ],
             },

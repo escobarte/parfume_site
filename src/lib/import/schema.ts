@@ -63,6 +63,12 @@ const productBase = {
   slug: trimmed.optional(),
   title: trimmed.min(1, 'title: обязателен'),
   brand: trimmed.min(1, 'brand: обязателен (slug бренда)'),
+  // Страна-производитель. Как и volume — «пермиссивная» строка на уровне
+  // схемы, строгая сверка со списком (uae / europe / usa) происходит в
+  // applyProducts.ts: неизвестное значение не должно ронять весь файл, оно
+  // уходит предупреждением в отчёт, а товар импортируется со старым
+  // (для нового — дефолтным) значением поля.
+  country_of_origin: trimmed.optional(),
   categories: pipeList,
   notes: pipeList,
   notes_top: pipeList,
@@ -100,6 +106,11 @@ export const formatARow = z.object({
   old_price: optionalNumber('old_price'),
   stock: optionalNumber('stock'),
   is_active: boolFrom,
+  // Фото именно этого варианта — ОДНО имя файла, уже загруженного в Media
+  // (как и images, импортёр ничего не скачивает). Пустая ячейка или
+  // ненайденное имя — вариант остаётся без своего фото, на витрине
+  // подставится первое фото товара; и то и другое уходит в отчёт.
+  variant_image: trimmed.optional(),
 })
 
 export type FormatARow = z.infer<typeof formatARow>
@@ -111,6 +122,9 @@ export const variantJson = z.object({
   oldPrice: z.number().nonnegative().optional(),
   stock: z.number().nonnegative().optional(),
   isActive: z.boolean().optional(),
+  // Аналог колонки variant_image формата A — имя файла из медиатеки.
+  // Форматы не должны расходиться по возможностям.
+  image: z.string().optional(),
 })
 
 /** Формат B: варианты одной JSON-колонкой. */

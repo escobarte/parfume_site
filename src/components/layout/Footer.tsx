@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server'
 import { BrandMark } from '@/components/brand/BrandMark'
+import { mailHref, mapHref, messengerLinks, telHref } from '@/lib/contacts'
 import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { getNavigation, getSettings } from '@/lib/content/globals'
@@ -29,11 +30,9 @@ export async function Footer({ locale }: { locale: Locale }) {
 
   const columns = navigation.footerColumns ?? []
   const contacts = settings.contacts
-  const messengers = [
-    settings.messengers?.telegram && 'Telegram',
-    settings.messengers?.viber && 'Viber',
-    settings.messengers?.whatsapp && 'WhatsApp',
-  ].filter(Boolean)
+  // Раньше здесь собирался просто список названий для вывода текстом —
+  // теперь каждое название кликабельно, href строится в lib/contacts.ts.
+  const messengers = messengerLinks(settings.messengers)
 
   return (
     <footer className="bg-navy mt-auto px-5 pt-13 pb-8 md:px-8">
@@ -73,18 +72,43 @@ export async function Footer({ locale }: { locale: Locale }) {
               {t('contacts')}
             </div>
             {contacts?.address && (
-              <p className="text-ink-on-dark-muted text-link py-1">{contacts.address}</p>
+              <a
+                href={mapHref(contacts.address, contacts.mapUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${t('addressOnMap')}: ${contacts.address}`}
+                className="text-ink-on-dark-muted hover:text-cream text-link block py-1 transition-colors"
+              >
+                {contacts.address}
+              </a>
             )}
             {contacts?.phone && (
               <a
-                href={`tel:${contacts.phone.replace(/\s/g, '')}`}
+                href={telHref(contacts.phone)}
                 className="text-ink-on-dark-muted hover:text-cream text-link block py-1 transition-colors"
               >
                 {contacts.phone}
               </a>
             )}
+            {/* Мессенджеры остаются одной строкой с разделителем «·», как были
+                текстом, — меняется только то, что каждое название стало
+                ссылкой (телега/вотсап — веб, вайбер — своя схема viber://). */}
             {messengers.length > 0 && (
-              <p className="text-ink-on-dark-muted text-link py-1">{messengers.join(' · ')}</p>
+              <p className="text-ink-on-dark-muted text-link py-1">
+                {messengers.map((messenger, index) => (
+                  <span key={messenger.key}>
+                    {index > 0 && ' · '}
+                    <a
+                      href={messenger.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-cream transition-colors"
+                    >
+                      {messenger.label}
+                    </a>
+                  </span>
+                ))}
+              </p>
             )}
             {contacts?.workingHours && (
               <p className="text-ink-on-dark-faint text-eyebrow py-1">{contacts.workingHours}</p>
@@ -144,7 +168,7 @@ export async function Footer({ locale }: { locale: Locale }) {
             </div>
             {contacts?.phone && (
               <a
-                href={`tel:${contacts.phone.replace(/\s/g, '')}`}
+                href={telHref(contacts.phone)}
                 className="text-ink-on-dark-muted hover:text-cream text-eyebrow block py-0.5 transition-colors"
               >
                 {contacts.phone}
@@ -152,7 +176,7 @@ export async function Footer({ locale }: { locale: Locale }) {
             )}
             {contacts?.email && (
               <a
-                href={`mailto:${contacts.email}`}
+                href={mailHref(contacts.email)}
                 className="text-ink-on-dark-muted hover:text-cream text-eyebrow block py-0.5 transition-colors"
               >
                 {contacts.email}

@@ -16,16 +16,43 @@ const SWIPE_THRESHOLD = 40
  * Переключение между фото (клавиатуры ← →, свайп, стрелки на самом фото)
  * работает в обоих режимах — инлайн-просмотр и зум (багфикс, сентябрь 2026:
  * до этого единственным способом сменить фото был клик по миниатюре).
+ *
+ * `variantImage` — фото выбранного объёма (см. `useSelectedVariant`): оно
+ * ЗАМЕНЯЕТ главное фото, но НЕ попадает в ленту миниатюр — там по-прежнему
+ * только галерея товара. Ручной выбор (миниатюра, стрелка, свайп) перебивает
+ * фото варианта до следующей смены объёма — иначе пользователь не смог бы
+ * посмотреть остальные кадры, не сбросив объём.
  */
-export function Gallery({ images, title }: { images: GalleryImage[]; title: string }) {
+export function Gallery({
+  images,
+  title,
+  variantImage = null,
+}: {
+  images: GalleryImage[]
+  title: string
+  variantImage?: GalleryImage | null
+}) {
   const t = useTranslations('Product')
-  const [active, setActive] = useState(0)
+  // null — «показываем фото варианта» (или первое фото, если варианта нет).
+  const [manual, setManual] = useState<number | null>(null)
   const [zoom, setZoom] = useState(false)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const didSwipe = useRef(false)
 
+  // Смена объёма возвращает просмотр к фото этого объёма, отменяя ручной выбор.
+  // Это правка состояния при смене пропа прямо в рендере (штатный приём React
+  // «adjusting state when a prop changes»), а не useEffect: эффект тут дал бы
+  // лишний каскадный рендер и кадр со старым фото.
+  const variantUrl = variantImage?.url ?? ''
+  const [prevVariantUrl, setPrevVariantUrl] = useState(variantUrl)
+  if (variantUrl !== prevVariantUrl) {
+    setPrevVariantUrl(variantUrl)
+    setManual(null)
+  }
+
   const count = images.length
-  const goTo = (index: number) => setActive(((index % count) + count) % count)
+  const active = manual ?? 0
+  const goTo = (index: number) => setManual(((index % count) + count) % count)
   const goPrev = () => goTo(active - 1)
   const goNext = () => goTo(active + 1)
 
@@ -45,7 +72,9 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoom, active, count])
 
-  if (!images.length) {
+  // Фото варианта показывается и тогда, когда галереи товара нет вовсе —
+  // иначе у товара с фото только на вариантах осталась бы пустая заглушка.
+  if (!images.length && !variantImage) {
     return (
       <div className="bg-surface-warm border-line flex aspect-square items-center justify-center border">
         <BottleGlyph className="text-navy h-2/3 w-auto" />
@@ -53,7 +82,11 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
     )
   }
 
-  const current = images[Math.min(active, images.length - 1)]
+  // Ручной выбор > фото варианта > первое фото товара (фоллбэк по ТЗ).
+  const current =
+    manual !== null
+      ? images[Math.min(manual, images.length - 1)]
+      : (variantImage ?? images[0])
 
   const onTouchStart = (event: TouchEvent) => {
     const touch = event.touches[0]
@@ -174,15 +207,19 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
 
       {images.length > 1 && (
         <div className="mt-3 flex gap-2">
-          {images.map((image, index) => (
+          {images.map((image, index) => {
+            // Пока показано фото варианта, ни одна миниатюра не подсвечена —
+            // этого кадра в ленте нет, и врать про «активный» не нужно.
+            const highlighted = manual !== null ? index === manual : !variantImage && index === 0
+            return (
             <button
               key={image.url}
               type="button"
-              onClick={() => setActive(index)}
+              onClick={() => setManual(index)}
               aria-label={`${title} — ${index + 1}`}
-              aria-current={index === active}
+              aria-current={highlighted}
               className={`bg-surface-warm relative size-16 cursor-pointer border transition-colors ${
-                index === active ? 'border-navy' : 'border-line hover:border-navy'
+                highlighted ? 'border-navy' : 'border-line hover:border-navy'
               }`}
             >
               <Image
@@ -193,7 +230,8 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
                 className="object-contain p-1.5"
               />
             </button>
-          ))}
+            )
+          })}
         </div>
       )}
 

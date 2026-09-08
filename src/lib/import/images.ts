@@ -31,6 +31,16 @@ export class ImageResolver {
     return id
   }
 
+  /**
+   * Одно имя файла — для фото варианта (колонка `variant_image`).
+   * `null` — не найдено; вызывающий сам решает, что записать в отчёт.
+   * Кеш общий с `resolveMany`: одно и то же фото часто стоит и у вариантов
+   * разных товаров (атомайзер 5ml физически один), лишних запросов не будет.
+   */
+  async resolveOne(filename: string): Promise<number | string | null> {
+    return this.resolve(filename.trim())
+  }
+
   /** Порядок сохраняется — первое найденное имя становится обложкой карточки. */
   async resolveMany(
     filenames: string[] | undefined,
