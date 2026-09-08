@@ -3,6 +3,7 @@
 import { ShoppingBag, X } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useState } from 'react'
+import { CartItemThumb } from '@/components/cart/CartItemThumb'
 import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { selectCount, selectTotal, useCart } from '@/lib/cart/store'
@@ -71,7 +72,8 @@ export function MiniCart({ className }: { className?: string }) {
                 <ul className="divide-line divide-y">
                   {preview.map((item) => (
                     <li key={item.key} className="flex items-start justify-between gap-3 px-4 py-3">
-                      <div className="min-w-0">
+                      <CartItemThumb image={item.image} size="sm" />
+                      <div className="min-w-0 flex-1">
                         <p className="text-ink text-body-sm truncate font-medium">{item.title}</p>
                         <p className="text-ink-muted text-eyebrow mt-0.5">
                           {[

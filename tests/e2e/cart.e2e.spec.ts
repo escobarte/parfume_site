@@ -16,9 +16,14 @@ test('корзина: количество, итог и состояние пе�
   const totalBefore = await totalNode.innerText()
 
   // Увеличиваем количество первой позиции (кнопка «+» — второй button в блоке qty строки).
+  // Блок количества ищем по числу внутри него (`span.tabular-nums`), а не как
+  // «первый div.rounded-sm.border в строке»: под последнее с сентября 2026
+  // подходит ещё и миниатюра товара, и она стоит в строке первой.
   const firstRow = page.locator('li', { hasText: 'Signature Wood' }).first()
-  const qtyGroup = firstRow.locator('div.rounded-sm.border').first()
-  const qtyValue = qtyGroup.locator('span')
+  const qtyGroup = firstRow
+    .locator('div.rounded-sm.border', { has: page.locator('span.tabular-nums') })
+    .first()
+  const qtyValue = qtyGroup.locator('span.tabular-nums')
   const qtyBefore = await qtyValue.innerText()
   const plusButton = qtyGroup.locator('button').nth(1)
   await expect(async () => {
@@ -34,7 +39,7 @@ test('корзина: количество, итог и состояние пе�
   const qtyGroupAfterReload = page
     .locator('li', { hasText: 'Signature Wood' })
     .first()
-    .locator('div.rounded-sm.border')
+    .locator('div.rounded-sm.border', { has: page.locator('span.tabular-nums') })
     .first()
-  await expect(qtyGroupAfterReload.locator('span')).toHaveText(qtyAfter)
+  await expect(qtyGroupAfterReload.locator('span.tabular-nums')).toHaveText(qtyAfter)
 })

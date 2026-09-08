@@ -3,6 +3,7 @@
 import { Minus, Plus, X } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useEffect, useRef } from 'react'
+import { CartItemThumb } from '@/components/cart/CartItemThumb'
 import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { cartItemsToGaItems, cartValue, trackEvent } from '@/lib/analytics/gtag'
@@ -71,7 +72,15 @@ export function CartView() {
         <ul className="border-line divide-line divide-y border-y">
           {items.map((item) => (
             <li key={item.key} className="flex flex-wrap items-start gap-4 py-4">
-              <div className="min-w-0 flex-1">
+              <CartItemThumb image={item.image} />
+              {/* `min-w-40` — не косметика, а то, что удерживает раскладку на
+                  узком экране: строка уже была `flex-wrap`, но текстовая
+                  колонка (`flex-1 min-w-0`) сжималась до нескольких пикселей,
+                  и название переносилось по одному слову вместо того, чтобы
+                  количество/цена ушли на вторую строку. С минимальной шириной
+                  перенос происходит там, где задуман. На десктопе ничего не
+                  меняется — там места с избытком. */}
+              <div className="min-w-40 flex-1">
                 {item.brandTitle && (
                   <p className="text-ink-muted text-micro tracking-label uppercase">
                     {item.brandTitle}
