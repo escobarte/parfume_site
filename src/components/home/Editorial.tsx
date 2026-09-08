@@ -1,13 +1,16 @@
 import Image from 'next/image'
-import { BrandMark } from '@/components/brand/BrandMark'
+import logo from './logo/mon-flacon-logo-blue-transparent.png'
 import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { getHomepage } from '@/lib/content/globals'
 
 /**
  * Editorial-блок главной (WIREFRAMES.md §4): формула «1 image + 1 phrase +
- * logo» — двухколоночный navy/cream grid без зазора. Пусто изображение —
- * на cream-плите остаётся знак бренда (BrandMark), не пустая заливка.
+ * logo» — двухколоночный navy/cream grid без зазора. Пустое изображение —
+ * на cream-плите остаётся знак бренда, финальный full-lockup PNG от
+ * дизайнера (`docs/logo/Mon Flacon Logo Blue transparent.png` — синий/navy
+ * цвет специально, не тот же beige-файл, что в шапке/футере: тут фон cream,
+ * beige-на-cream был бы почти невидим), не пустая заливка.
  */
 export async function Editorial({ locale }: { locale: Locale }) {
   const homepage = await getHomepage(locale)
@@ -50,7 +53,7 @@ export async function Editorial({ locale }: { locale: Locale }) {
             className="object-cover"
           />
         ) : (
-          <BrandMark className="text-navy h-35 w-auto" strokeWidth={3} />
+          <Image src={logo} alt="Mon Flacon — Perfumes for everyone" className="h-35 w-auto" />
         )}
       </div>
     </section>

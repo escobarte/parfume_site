@@ -1,12 +1,29 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { ImageResponse } from 'next/og'
 
 export const size = { width: 32, height: 32 }
 export const contentType = 'image/png'
 
-const NAVY = '#16293D'
-const CREAM = '#E8CFB0'
+/*
+ * Фавикон витрины — знак бренда на navy-плашке (BRAND.md §4: знак отдельно
+ * для мелких форматов). Раньше — приближённая обводка от руки (SVG-пути);
+ * с 2026-09-08 — финальный PNG от дизайнера (`docs/logo/Mon Flacon Logo
+ * icon blue.png`, тот же файл, что и знак в шапке `/admin`, копия рядом
+ * с этим файлом — `next/og` ImageResponse не умеет читать произвольный
+ * путь в рантайме без сборки, поэтому ассет держим внутри `src/app/`, не
+ * в `docs/`). Скругление угла (`borderRadius`) сохранено тем же приёмом,
+ * что и раньше — оно не часть самого PNG (там прямоугольная плашка).
+ *
+ * Путь — строкой через `process.cwd()`, не `new URL(..., import.meta.url)`:
+ * Turbopack-сборка этого роута падает на `readFileSync(URL)` с «path argument
+ * must be of type string…», хотя сам Node.js такой вызов поддерживает —
+ * несовместимость именно бандлера, не рантайма.
+ */
+const iconSrc = `data:image/png;base64,${readFileSync(
+  join(process.cwd(), 'src/app/mon-flacon-icon-blue.png'),
+).toString('base64')}`
 
-/** Фавикон витрины — знак бренда на navy-плашке (BRAND.md §4: знак отдельно для мелких форматов). */
 export default function Icon() {
   return new ImageResponse(
     (
@@ -15,22 +32,11 @@ export default function Icon() {
           width: '100%',
           height: '100%',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: NAVY,
           borderRadius: 4,
+          overflow: 'hidden',
         }}
       >
-        <svg width="20" height="24" viewBox="0 0 100 118" fill="none">
-          <rect x="44" y="6" width="12" height="9" rx="1.5" stroke={CREAM} strokeWidth={7} />
-          <path d="M50 15v89M28 28h44" stroke={CREAM} strokeWidth={7} />
-          <path
-            d="M35.6 41.2A34 34 0 1 0 64.4 41.2"
-            stroke={CREAM}
-            strokeWidth={7}
-            fill="none"
-          />
-        </svg>
+        <img src={iconSrc} width={32} height={32} style={{ objectFit: 'cover' }} alt="" />
       </div>
     ),
     { ...size },

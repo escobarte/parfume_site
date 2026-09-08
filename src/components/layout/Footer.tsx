@@ -7,8 +7,18 @@ import { resolveLinkHref } from '@/lib/links'
 import { LocaleSwitcher } from './LocaleSwitcher'
 
 /**
- * Футер: 4 колонки 1.3fr / 1fr / 1fr / 1.1fr (WIREFRAMES.md §6).
- * Три колонки ссылок приходят из `navigation`, четвёртая — контакты из `settings`.
+ * Футер: логотип + до трёх колонок ссылок (`navigation.footerColumns`,
+ * необязательные, 0+) + контакты — в этом порядке (WIREFRAMES.md §6,
+ * пропорции ширины 1.3 / 1 / 1 / 1.1 сохранены как flex-grow).
+ *
+ * Раньше это была ЖЁСТКАЯ CSS-сетка на 4 колонки (`grid-cols-[1.3fr_1fr_
+ * 1fr_1.1fr]`) — при пустых `footerColumns` (реальный прод-кейс: владелец
+ * почистил контент, колонки навигации ещё не завёл) в разметке всего 2
+ * блока (лого + контакты), а сетка всё равно резервирует 4 трека — блоки
+ * попадали в первые два, третий/четвёртый пустовали справа: контент
+ * прижимался налево, будто «съехал». Flex + flex-wrap решает это без
+ * привязки к числу колонок — что есть, то и распределяется по ширине
+ * (0 колонок → 2 блока пополам, 2 колонки → как было раньше).
  */
 export async function Footer({ locale }: { locale: Locale }) {
   const [navigation, settings, t] = await Promise.all([
@@ -28,8 +38,8 @@ export async function Footer({ locale }: { locale: Locale }) {
   return (
     <footer className="bg-navy mt-auto px-5 pt-13 pb-8 md:px-8">
       <div className="mx-auto max-w-[1440px]">
-        <div className="border-line-on-dark-soft grid grid-cols-2 gap-8 border-b pb-9 md:grid-cols-[1.3fr_1fr_1fr_1.1fr]">
-          <div className="col-span-2 md:col-span-1">
+        <div className="border-line-on-dark-soft flex flex-wrap gap-x-8 gap-y-9 border-b pb-9">
+          <div className="min-w-56 flex-[1.3]">
             <BrandMark className="text-cream mb-3 h-9 w-auto" />
             <div className="text-cream text-label tracking-brandline font-light uppercase">
               {settings.siteName ?? 'Mon Flacon'}
@@ -42,7 +52,7 @@ export async function Footer({ locale }: { locale: Locale }) {
           </div>
 
           {columns.map((column) => (
-            <div key={column.id ?? column.title}>
+            <div key={column.id ?? column.title} className="min-w-32 flex-1">
               <div className="text-cream text-eyebrow tracking-display mb-3.5 uppercase">
                 {column.title}
               </div>
@@ -58,7 +68,7 @@ export async function Footer({ locale }: { locale: Locale }) {
             </div>
           ))}
 
-          <div>
+          <div className="min-w-44 flex-[1.1]">
             <div className="text-cream text-eyebrow tracking-display mb-3.5 uppercase">
               {t('contacts')}
             </div>

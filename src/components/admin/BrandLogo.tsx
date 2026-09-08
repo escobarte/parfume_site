@@ -19,7 +19,9 @@ export function BrandLogo() {
         gap: '.75rem',
       }}
     >
-      <BrandMark strokeWidth={5} style={{ width: '2.75rem', height: '2.75rem' }} />
+      {/* `strokeWidth` больше не проп: финальный знак от дизайнера — заливка
+          (`fill: currentColor`), а не обводка, толщину линий задаёт сам контур. */}
+      <BrandMark style={{ width: '2.75rem', height: '2.75rem' }} />
       <span
         style={{
           fontSize: '.9rem',

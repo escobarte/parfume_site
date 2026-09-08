@@ -1,8 +1,10 @@
-import { Link } from '@/i18n/navigation'
 import { BrandMark } from '@/components/brand/BrandMark'
+import { Link } from '@/i18n/navigation'
 
 /**
  * Логотип шапки: знак + MON FLACON + дескриптор (WIREFRAMES.md §Шапка).
+ * Знак — финальный SVG от дизайнера (`BrandMark`, красится `text-cream`),
+ * текст — живой HTML рядом, не запечён в картинку.
  * При sticky-сжатии остаётся только знак — правило брендбука о малых форматах
  * (BRAND.md §4), поэтому текстовая часть управляется пропом `compact`.
  */
