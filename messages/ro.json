@@ -243,6 +243,33 @@
   "PromoBar": {
     "close": "Închide"
   },
+  "PromoPopup": {
+    "title": "Primiți prima dvs. reducere",
+    "subtitle": "la prima comandă în Mon Flacon",
+    "namePlaceholder": "Numele dvs.",
+    "emailPlaceholder": "Email-ul dvs.",
+    "phonePlaceholder": "Telefonul dvs.",
+    "submit": "Obțineți codul promoțional",
+    "submitting": "Se trimite…",
+    "footer": "Codul promoțional va veni pe email-ul indicat.",
+    "close": "Închide",
+    "successTitle": "Codul dvs. promoțional",
+    "successHint": "Introduceți-l în coș la plasarea comenzii.",
+    "existingTitle": "Ați primit deja bonusul",
+    "existingHint": "Acesta este codul emis pentru acest email.",
+    "usedHint": "Acest cod a fost deja folosit într-o comandă.",
+    "copy": "Copiază",
+    "copied": "Copiat",
+    "errorValidation": "Verificați câmpurile completate.",
+    "errorRateLimit": "Prea multe încercări. Încercați peste un minut.",
+    "errorGeneric": "Nu am reușit să emitem codul. Încercați mai târziu."
+  },
+  "PromoCodeEmail": {
+    "subject": "Codul dvs. promoțional MON FLACON",
+    "greeting": "{name}, bună ziua!",
+    "intro": "Codul dvs. promoțional cu reducere de {percent}% pentru prima comandă:",
+    "hint": "Introduceți-l în coș la plasarea comenzii."
+  },
   "LinkTargets": {
     "home": "Pagina principală",
     "catalog": "Catalog",

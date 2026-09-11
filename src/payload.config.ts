@@ -20,6 +20,7 @@ import { PromoCodes } from './collections/PromoCodes'
 import { Users } from './collections/Users'
 import { Homepage } from './globals/Homepage'
 import { Navigation } from './globals/Navigation'
+import { PromoPopupSettings } from './globals/PromoPopupSettings'
 import { Settings } from './globals/Settings'
 import { adminCatalogEndpoints } from './endpoints/adminCatalog'
 import { adminMediaEndpoints } from './endpoints/adminMedia'
@@ -93,7 +94,7 @@ export default buildConfig({
     fallbackLanguage: 'ru',
   },
   collections: [Products, Brands, Categories, Notes, GiftItems, Pages, Media, Orders, PromoCodes, Users],
-  globals: [Homepage, Settings, Navigation],
+  globals: [Homepage, Settings, Navigation, PromoPopupSettings],
   // Импорт каталога, загрузка фото архивом и сброс кэша витрины из /admin —
   // вне пространства коллекций (не /api/<slug>, см. docs/GOTCHAS.md «Роуты и API»).
   endpoints: [...adminCatalogEndpoints, ...adminMediaEndpoints, ...adminNotesEndpoints],

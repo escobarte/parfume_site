@@ -20,6 +20,7 @@ import * as migration_20260906_122443_phase13_notes_title_description_not_locali
 import * as migration_20260906_142023_new_volume_model from './20260906_142023_new_volume_model';
 import * as migration_20260908_060926_phase_variant_image_country from './20260908_060926_phase_variant_image_country';
 import * as migration_20260911_085054_brands_title_description_not_localized from './20260911_085054_brands_title_description_not_localized';
+import * as migration_20260911_104827_promo_code_types_and_popup_settings from './20260911_104827_promo_code_types_and_popup_settings';
 
 export const migrations = [
   {
@@ -130,6 +131,11 @@ export const migrations = [
   {
     up: migration_20260911_085054_brands_title_description_not_localized.up,
     down: migration_20260911_085054_brands_title_description_not_localized.down,
-    name: '20260911_085054_brands_title_description_not_localized'
+    name: '20260911_085054_brands_title_description_not_localized',
+  },
+  {
+    up: migration_20260911_104827_promo_code_types_and_popup_settings.up,
+    down: migration_20260911_104827_promo_code_types_and_popup_settings.down,
+    name: '20260911_104827_promo_code_types_and_popup_settings'
   },
 ];

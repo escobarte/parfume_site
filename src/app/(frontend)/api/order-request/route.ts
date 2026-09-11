@@ -99,7 +99,9 @@ export async function POST(request: Request) {
 
   // Код помечается использованным ТОЛЬКО после того, как заказ реально создан
   // (не в момент проверки) — см. комментарий в src/lib/orders/promo.ts.
-  if (promo?.ok) {
+  // И только персональный: публичный код многоразовый, пометка убила бы его
+  // после первой же заявки (типы кодов — 2026-09-11).
+  if (promo?.ok && promo.codeType === 'personal') {
     const claimed = await claimPromoCode(payload, promo.id, order.id)
     if (!claimed) {
       // Крайне маловероятная гонка (два одновременных оформления одним кодом)

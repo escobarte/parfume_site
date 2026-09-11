@@ -243,6 +243,33 @@
   "PromoBar": {
     "close": "Закрыть"
   },
+  "PromoPopup": {
+    "title": "Получите свою первую скидку",
+    "subtitle": "на первый заказ в Mon Flacon",
+    "namePlaceholder": "Ваше имя",
+    "emailPlaceholder": "Ваш email",
+    "phonePlaceholder": "Ваш телефон",
+    "submit": "Получить промокод",
+    "submitting": "Отправляем…",
+    "footer": "Промокод придёт на указанный email.",
+    "close": "Закрыть",
+    "successTitle": "Ваш промокод",
+    "successHint": "Введите его в корзине при оформлении заказа.",
+    "existingTitle": "Вы уже получали бонус",
+    "existingHint": "Это код, который мы выдали на этот email.",
+    "usedHint": "Этот код уже использован в заказе.",
+    "copy": "Скопировать",
+    "copied": "Скопировано",
+    "errorValidation": "Проверьте заполненные поля.",
+    "errorRateLimit": "Слишком много попыток. Попробуйте через минуту.",
+    "errorGeneric": "Не получилось выдать код. Попробуйте позже."
+  },
+  "PromoCodeEmail": {
+    "subject": "Ваш промокод MON FLACON",
+    "greeting": "{name}, здравствуйте!",
+    "intro": "Ваш промокод на скидку {percent}% для первого заказа:",
+    "hint": "Введите его в корзине при оформлении заказа."
+  },
   "LinkTargets": {
     "home": "Главная",
     "catalog": "Каталог",

@@ -10,6 +10,7 @@ import { CartToast } from '@/components/cart/CartToast'
 import { Footer } from '@/components/layout/Footer'
 import { Header } from '@/components/layout/Header'
 import { PromoBanner } from '@/components/layout/PromoBanner'
+import { PromoPopup } from '@/components/promo/PromoPopup'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { inter } from '@/lib/fonts'
 import { routing, type Locale } from '@/i18n/routing'
@@ -86,6 +87,8 @@ export default async function LocaleLayout(props: {
             <Header locale={locale} />
             <main className="flex-1">{children}</main>
             <Footer locale={locale} />
+            {/* Попап «первая скидка» — в конце разметки: оверлей, на поток не влияет. */}
+            <PromoPopup locale={locale} />
             <ConsentBanner />
             {/* Тост «добавлено в корзину» — поверх любой страницы (фаза 9.1). */}
             <CartToast />

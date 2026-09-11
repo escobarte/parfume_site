@@ -107,11 +107,13 @@ export interface Config {
     homepage: Homepage;
     settings: Setting;
     navigation: Navigation;
+    'promo-popup-settings': PromoPopupSetting;
   };
   globalsSelect: {
     homepage: HomepageSelect<false> | HomepageSelect<true>;
     settings: SettingsSelect<false> | SettingsSelect<true>;
     navigation: NavigationSelect<false> | NavigationSelect<true>;
+    'promo-popup-settings': PromoPopupSettingsSelect<false> | PromoPopupSettingsSelect<true>;
   };
   locale: 'ro' | 'ru' | 'en';
   widgets: {
@@ -608,7 +610,11 @@ export interface Order {
 export interface PromoCode {
   id: number;
   /**
-   * Хранится и сравнивается без учёта регистра (авто-UPPERCASE при сохранении).
+   * Персональный — выдаётся попапом на email, одноразовый, бессрочный. Публичный — для соцсетей, многоразовый, но со сроком действия.
+   */
+  codeType: 'personal' | 'public';
+  /**
+   * Хранится и сравнивается без учёта регистра (авто-UPPERCASE). У персональных генерируется бэкендом.
    */
   code: string;
   /**
@@ -616,17 +622,26 @@ export interface PromoCode {
    */
   percent: number;
   /**
-   * Снять, чтобы отключить код, не удаляя его.
+   * Снять, чтобы отключить код, не удаляя его. Действует на оба типа.
    */
   isActive?: boolean | null;
   /**
-   * Выставляется автоматически после успешного оформления заявки — руками не трогать.
+   * Только для персональных: ставится автоматически после оформления заявки.
    */
   isUsed?: boolean | null;
   /**
-   * Необязательно — срок клиент не оговаривал, логика проверки готова.
+   * Обязательно для публичного кода — других ограничений у него нет.
    */
   expiresAt?: string | null;
+  /**
+   * Кому выдан код. Один код на один email.
+   */
+  email?: string | null;
+  phone?: string | null;
+  /**
+   * Имя из формы попапа.
+   */
+  customerName?: string | null;
   /**
    * Заявка, в которой код был применён — для трейсинга.
    */
@@ -1026,11 +1041,15 @@ export interface OrdersSelect<T extends boolean = true> {
  * via the `definition` "promo-codes_select".
  */
 export interface PromoCodesSelect<T extends boolean = true> {
+  codeType?: T;
   code?: T;
   percent?: T;
   isActive?: T;
   isUsed?: T;
   expiresAt?: T;
+  email?: T;
+  phone?: T;
+  customerName?: T;
   usedInOrder?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1333,6 +1352,35 @@ export interface Navigation {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "promo-popup-settings".
+ */
+export interface PromoPopupSetting {
+  id: number;
+  /**
+   * Показывать попап на сайте. Выключено по умолчанию — включайте, когда тексты и процент проверены.
+   */
+  isEnabled?: boolean | null;
+  /**
+   * Процент, который показывается в попапе И записывается в выданный промокод.
+   */
+  discountPercent: number;
+  /**
+   * Делать телефон обязательным полем формы.
+   */
+  requirePhone?: boolean | null;
+  /**
+   * Заголовок над процентом. Пусто — возьмётся стандартный текст локали.
+   */
+  title?: string | null;
+  /**
+   * Подпись под кнопкой. Пусто — возьмётся стандартный текст локали.
+   */
+  footerText?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "homepage_select".
  */
 export interface HomepageSelect<T extends boolean = true> {
@@ -1473,6 +1521,20 @@ export interface NavigationSelect<T extends boolean = true> {
             };
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "promo-popup-settings_select".
+ */
+export interface PromoPopupSettingsSelect<T extends boolean = true> {
+  isEnabled?: T;
+  discountPercent?: T;
+  requirePhone?: T;
+  title?: T;
+  footerText?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

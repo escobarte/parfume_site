@@ -210,3 +210,57 @@ export async function sendCustomerEmail(order: Order): Promise<NotifyResult> {
     }
   }
 }
+
+/**
+ * Письмо с персональным промокодом из попапа «первая скидка» (2026-09-11).
+ * Тот же контур Resend, что у писем о заказе: без ключа (CHANGEME) тихо
+ * пропускается — код клиент в любом случае видит прямо в попапе, письмо
+ * это дубль, а не единственный канал доставки.
+ */
+export async function sendPromoCodeEmail({
+  to,
+  name,
+  code,
+  percent,
+  locale,
+}: {
+  to: string
+  name: string
+  code: string
+  percent: number
+  locale: string
+}): Promise<NotifyResult> {
+  const apiKey = process.env.RESEND_API_KEY
+  const from = process.env.ORDER_EMAIL_FROM ?? 'MON FLACON <onboarding@resend.dev>'
+
+  if (isPlaceholder(apiKey)) return { ok: false, skipped: 'promo email skipped (no key)' }
+  if (isPlaceholder(to)) return { ok: false, skipped: 'promo email skipped (no address)' }
+
+  const messages = CUSTOMER_EMAIL_MESSAGES[locale as keyof typeof CUSTOMER_EMAIL_MESSAGES] ?? ro
+  const t = createTranslator({ locale, messages, namespace: 'PromoCodeEmail' })
+
+  const html = `
+    <div style="font-family:Inter,Arial,sans-serif;color:#16293D;max-width:520px">
+      <p style="font-size:15px">${t('greeting', { name })}</p>
+      <p style="font-size:14px">${t('intro', { percent })}</p>
+      <p style="font-size:22px;letter-spacing:.08em;border:1px solid #E3DACA;padding:14px 18px;display:inline-block">
+        <b>${code}</b>
+      </p>
+      <p style="font-size:13px;color:#4A5A6B">${t('hint')}</p>
+    </div>`
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to: [to], subject: t('subject'), html }),
+    })
+    if (!response.ok) {
+      const body = await response.text()
+      return { ok: false, error: `resend (promo) ${response.status}: ${body.slice(0, 200)}` }
+    }
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, error: `resend (promo): ${error instanceof Error ? error.message : error}` }
+  }
+}

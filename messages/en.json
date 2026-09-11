@@ -243,6 +243,33 @@
   "PromoBar": {
     "close": "Close"
   },
+  "PromoPopup": {
+    "title": "Get your first discount",
+    "subtitle": "on your first order at Mon Flacon",
+    "namePlaceholder": "Your name",
+    "emailPlaceholder": "Your email",
+    "phonePlaceholder": "Your phone",
+    "submit": "Get promo code",
+    "submitting": "Sending…",
+    "footer": "The promo code will be sent to the email you provide.",
+    "close": "Close",
+    "successTitle": "Your promo code",
+    "successHint": "Enter it in the cart at checkout.",
+    "existingTitle": "You already received a bonus",
+    "existingHint": "This is the code we issued for this email.",
+    "usedHint": "This code has already been used in an order.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "errorValidation": "Please check the fields.",
+    "errorRateLimit": "Too many attempts. Try again in a minute.",
+    "errorGeneric": "Could not issue the code. Please try later."
+  },
+  "PromoCodeEmail": {
+    "subject": "Your MON FLACON promo code",
+    "greeting": "Hello, {name}!",
+    "intro": "Your {percent}% discount code for your first order:",
+    "hint": "Enter it in the cart at checkout."
+  },
   "LinkTargets": {
     "home": "Home",
     "catalog": "Catalog",
