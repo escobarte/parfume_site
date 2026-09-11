@@ -69,6 +69,12 @@ const productBase = {
   // уходит предупреждением в отчёт, а товар импортируется со старым
   // (для нового — дефолтным) значением поля.
   country_of_origin: trimmed.optional(),
+  // Раздел каталога (perfume / bodyCare) — ровно та же «пермиссивная» строка
+  // на уровне схемы и та же строгая сверка в applyProducts.ts, что и у
+  // country_of_origin: списки короткие, опечатка в одной ячейке не должна
+  // ронять весь файл. Не путать с колонкой `categories` ниже — та про
+  // таксономию (коллекция Categories), а эта про поле Products.productCategory.
+  product_category: trimmed.optional(),
   categories: pipeList,
   notes: pipeList,
   notes_top: pipeList,

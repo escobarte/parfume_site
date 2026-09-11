@@ -3,6 +3,7 @@ import { adminOnly, isStaff, staffOnly } from '@/access/roles'
 import { seoField } from '@/fields/seo'
 import { slugField } from '@/fields/slug'
 import { PRODUCT_COUNTRIES } from '@/lib/catalog/countries'
+import { PRODUCT_CATEGORIES } from '@/lib/catalog/productCategories'
 import { PRODUCT_VOLUMES } from '@/lib/catalog/volumes'
 import { discountPercent } from '@/lib/pricing'
 import { denormalizeVariants, type VariantLike } from '@/lib/products/denormalize'
@@ -41,10 +42,10 @@ export const GENDERS = [
 // Тип товара — не «Кому» (пол), а категория назначения. Дефолт совпадает
 // с прежним неявным поведением (все текущие ~100+ товаров — парфюмерия),
 // поэтому обратная миграция бэкфилится без ручной сверки (фаза 11, задача 1).
-export const PRODUCT_CATEGORIES = [
-  { label: 'Парфюмерия', value: 'perfume' },
-  { label: 'Уход за телом', value: 'bodyCare' },
-] as const
+// Сам список переехал в `lib/catalog/productCategories.ts` — им пользуется
+// ещё и CSV-импортёр (колонка `product_category`), дублировать значения
+// по двум местам не нужно.
+export { PRODUCT_CATEGORIES }
 
 // Страна-производитель — новый фасет каталога (фаза 11.1, задача 3). Дефолт
 // 'europe' — так же, как выше: бэкфилл существующих ~100+ товаров без ручной

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { normalizeHeader, parseCsv, toTable } from '@/lib/import/csv'
 import { detectKind } from '@/lib/import/detect'
-import { groupFormatA } from '@/lib/import/applyProducts'
+import { groupFormatA, groupFormatB } from '@/lib/import/applyProducts'
+import { COUNTRY_SPEC, PRODUCT_CATEGORY_SPEC, resolveScalar } from '@/lib/import/productScalars'
+import { canonicalProductCategory } from '@/lib/catalog/productCategories'
 import { formatARow } from '@/lib/import/schema'
 import { findDuplicates, validateRows } from '@/lib/import/validate'
 import { denormalizeVariants } from '@/lib/products/denormalize'
@@ -131,6 +133,121 @@ describe('формат A', () => {
     // applyProducts() мог явно пропустить его с предупреждением, а не потерять
     // молча (см. комментарий над groupFormatA в applyProducts.ts).
     expect(productB?.variants).toHaveLength(0)
+  })
+})
+
+describe('скалярные поля товара (country_of_origin / product_category)', () => {
+  const groupA = (csv: string) => {
+    const table = toTable(csv)
+    const { rows, errors } = validateRows<never>('products-a', table.records)
+    expect(errors).toHaveLength(0)
+    return groupFormatA(rows)
+  }
+
+  it('канон принимается без учёта регистра и краевых пробелов', () => {
+    expect(canonicalProductCategory(' BODYCARE ')).toBe('bodyCare')
+    expect(canonicalProductCategory('bodycare')).toBe('bodyCare')
+    expect(canonicalProductCategory('Perfume')).toBe('perfume')
+    // Русская подпись из админки — не канон, как и у объёма со страной.
+    expect(canonicalProductCategory('Уход за телом')).toBeUndefined()
+    // Пробел ВНУТРИ значения — уже другое значение, прощаем только краевые.
+    expect(canonicalProductCategory('body care')).toBeUndefined()
+  })
+
+  it('значение не из списка — предупреждение, поле не трогается', () => {
+    const resolved = resolveScalar(PRODUCT_CATEGORY_SPEC, 'A', 7, 'парфюм')
+    expect(resolved.kind).toBe('unknown')
+    expect(resolved.kind === 'unknown' && resolved.error).toMatchObject({
+      line: 7,
+      field: 'product_category',
+    })
+    expect(resolved.kind === 'unknown' && resolved.error.message).toContain('perfume / bodyCare')
+  })
+
+  it('пустая ячейка — поле не трогается (ни записи, ни предупреждения)', () => {
+    expect(resolveScalar(PRODUCT_CATEGORY_SPEC, 'A', 2, '').kind).toBe('skip')
+    expect(resolveScalar(PRODUCT_CATEGORY_SPEC, 'A', 2, '   ').kind).toBe('skip')
+    expect(resolveScalar(PRODUCT_CATEGORY_SPEC, 'A', 2, undefined).kind).toBe('skip')
+    expect(resolveScalar(COUNTRY_SPEC, 'A', 2, undefined).kind).toBe('skip')
+  })
+
+  it('формат A: канон берётся из первой строки handle', () => {
+    const { inputs } = groupA(
+      [
+        'handle,title,brand,product_category,volume,sku,price',
+        'A,Название,b,bodyCare,5ml,A-5,100',
+        'A,Название,b,,Full Size,A-30,300',
+      ].join('\n'),
+    )
+    expect(inputs[0].base.product_category).toBe('bodyCare')
+  })
+
+  it('формат A: разные разделы внутри одного handle — предупреждение, взята первая', () => {
+    const { inputs, scalarConflicts } = groupA(
+      [
+        'handle,title,brand,product_category,volume,sku,price',
+        'A,Название,b,perfume,5ml,A-5,100',
+        'A,Название,b,bodyCare,Full Size,A-30,300',
+      ].join('\n'),
+    )
+    expect(inputs[0].base.product_category).toBe('perfume')
+    expect(scalarConflicts.productCategory).toHaveLength(1)
+    expect(scalarConflicts.productCategory[0]).toMatchObject({ line: 3, field: 'product_category' })
+    expect(scalarConflicts.productCategory[0].message).toContain('взята первая')
+    expect(scalarConflicts.country).toHaveLength(0)
+  })
+
+  it('формат A: расходящееся значение ещё и не из списка — в тексте сказано и то, и другое', () => {
+    const { scalarConflicts } = groupA(
+      [
+        'handle,title,brand,product_category,volume,sku,price',
+        'A,Название,b,perfume,5ml,A-5,100',
+        'A,Название,b,косметика,Full Size,A-30,300',
+      ].join('\n'),
+    )
+    const message = scalarConflicts.productCategory[0].message
+    expect(message).toContain('не из списка')
+    expect(message).toContain('взята первая')
+  })
+
+  it('одинаковое значение во всех строках handle — не конфликт', () => {
+    const { scalarConflicts } = groupA(
+      [
+        'handle,title,brand,product_category,country_of_origin,volume,sku,price',
+        'A,Название,b,bodyCare,uae,5ml,A-5,100',
+        'A,Название,b,bodyCare,uae,Full Size,A-30,300',
+      ].join('\n'),
+    )
+    expect(scalarConflicts.productCategory).toHaveLength(0)
+    expect(scalarConflicts.country).toHaveLength(0)
+  })
+
+  it('формат B: конфликтов не бывает — строка есть целый товар', () => {
+    const table = toTable(
+      [
+        'handle,title,brand,product_category,variants',
+        'A,Название,b,bodyCare,"[{""volume"":""5ml"",""sku"":""A-5"",""price"":100}]"',
+      ].join('\n'),
+    )
+    const { rows, errors } = validateRows<never>('products-b', table.records)
+    expect(errors).toHaveLength(0)
+
+    const { inputs, scalarConflicts } = groupFormatB(rows)
+    // Колонка доступна в обоих форматах одинаково — расхождений по
+    // возможностям между A и B быть не должно.
+    expect(inputs[0].base.product_category).toBe('bodyCare')
+    expect(scalarConflicts.productCategory).toHaveLength(0)
+  })
+
+  it('неизвестное значение не является ошибкой формата — файл валиден целиком', () => {
+    const table = toTable(
+      [
+        'handle,title,brand,product_category,volume,sku,price',
+        'A,Название,b,косметика,5ml,A-5,100',
+      ].join('\n'),
+    )
+    const { errors } = validateRows<never>('products-a', table.records)
+    expect(errors).toHaveLength(0)
   })
 })
 

@@ -1,11 +1,12 @@
 import type { Payload, PayloadRequest } from 'payload'
 import type { Product } from '@/payload-types'
-import {
-  isProductCountry,
-  PRODUCT_COUNTRY_VALUES,
-  type ProductCountry,
-} from '@/lib/catalog/countries'
 import { isProductVolume, PRODUCT_VOLUMES, type ProductVolume } from '@/lib/catalog/volumes'
+import {
+  COUNTRY_SPEC,
+  PRODUCT_CATEGORY_SPEC,
+  resolveScalar,
+  scalarConflict,
+} from './productScalars'
 import { paragraphs } from '@/lib/seed/richText'
 import { slugify } from '@/lib/slugify'
 import { DESCRIPTION_LOCALES, type DescriptionLocale } from './detect'
@@ -37,6 +38,17 @@ export type ProductInput = {
     'volume' | 'sku' | 'price' | 'old_price' | 'stock' | 'is_active' | 'variant_image'
   >
   variants: VariantInput[]
+}
+
+/**
+ * Результат группировки строк в товары. `scalarConflicts` — расхождения полей
+ * уровня товара внутри одного handle (см. productScalars.ts); в формате B
+ * всегда пусты: строка = целый товар, расходиться нечему.
+ */
+export type GroupResult = {
+  inputs: ProductInput[]
+  invalidVolumes: RowError[]
+  scalarConflicts: { country: RowError[]; productCategory: RowError[] }
 }
 
 /** Ключ сравнения объёмов «на глаз»: без регистра и без пробелов. */
@@ -71,35 +83,39 @@ const invalidVolumeMessage = (raw: string) => {
  * оказалась с плохим объёмом, не попадал бы в Map вообще и пропадал бы из
  * отчёта молча (не «пропущен с предупреждением», а просто отсутствовал бы).
  */
-export function groupFormatA(rows: ValidatedRow<FormatARow>[]): {
-  inputs: ProductInput[]
-  invalidVolumes: RowError[]
-  countryConflicts: RowError[]
-} {
+export function groupFormatA(rows: ValidatedRow<FormatARow>[]): GroupResult {
   const grouped = new Map<string, ProductInput>()
   const invalidVolumes: RowError[] = []
   const countryConflicts: RowError[] = []
+  const productCategoryConflicts: RowError[] = []
 
   for (const { line, value } of rows) {
     const { volume, sku, price, old_price, stock, is_active, variant_image, ...base } = value
     const existing = grouped.get(base.handle)
     if (!existing) grouped.set(base.handle, { line, base, variants: [] })
 
-    // Страна — поле товара, а строк на товар несколько: канон — первая строка
-    // handle (она и лежит в base). Расхождение внутри одного handle почти
-    // всегда опечатка, поэтому не молчим: берём первую, остальные — в отчёт.
+    // Страна и раздел каталога — поля товара, а строк на товар несколько:
+    // канон — первая строка handle (она и лежит в base). Расхождение внутри
+    // одного handle почти всегда опечатка, поэтому не молчим: берём первую,
+    // остальные — в отчёт.
     if (existing) {
-      const first = existing.base.country_of_origin?.trim() ?? ''
-      const current = value.country_of_origin?.trim() ?? ''
-      if (current && current !== first) {
-        // Если расходящееся значение к тому же не из списка — говорим об этом
-        // прямо: иначе отчёт выглядит так, будто «Marte» — законная
-        // альтернатива, просто проигравшая первой строке.
-        const message = isProductCountry(current.toLowerCase())
-          ? `${base.handle}: строки указывают разные страны («${first || '—'}» и «${current}») — взята первая`
-          : `${base.handle}: страна «${current}» не из списка (${PRODUCT_COUNTRY_VALUES.join(' / ')}) и отличается от первой строки («${first || '—'}») — взята первая`
-        countryConflicts.push({ line, field: 'country_of_origin', message })
-      }
+      const country = scalarConflict(
+        COUNTRY_SPEC,
+        base.handle,
+        line,
+        existing.base.country_of_origin,
+        value.country_of_origin,
+      )
+      if (country) countryConflicts.push(country)
+
+      const productCategory = scalarConflict(
+        PRODUCT_CATEGORY_SPEC,
+        base.handle,
+        line,
+        existing.base.product_category,
+        value.product_category,
+      )
+      if (productCategory) productCategoryConflicts.push(productCategory)
     }
 
     if (!isProductVolume(volume)) {
@@ -119,19 +135,19 @@ export function groupFormatA(rows: ValidatedRow<FormatARow>[]): {
     grouped.get(base.handle)!.variants.push(variant)
   }
 
-  return { inputs: [...grouped.values()], invalidVolumes, countryConflicts }
+  return {
+    inputs: [...grouped.values()],
+    invalidVolumes,
+    scalarConflicts: { country: countryConflicts, productCategory: productCategoryConflicts },
+  }
 }
 
 /**
  * Формат B: варианты уже пришли JSON-массивом — та же терпимость к объёму.
- * `countryConflicts` здесь всегда пуст: строка = целый товар, расходиться
+ * `scalarConflicts` здесь всегда пуст: строка = целый товар, расходиться
  * внутри одного handle нечему (в отличие от формата A, где строк несколько).
  */
-export function groupFormatB(rows: ValidatedRow<FormatBRow>[]): {
-  inputs: ProductInput[]
-  invalidVolumes: RowError[]
-  countryConflicts: RowError[]
-} {
+export function groupFormatB(rows: ValidatedRow<FormatBRow>[]): GroupResult {
   const invalidVolumes: RowError[] = []
 
   const inputs = rows.map(({ line, value }) => {
@@ -162,7 +178,11 @@ export function groupFormatB(rows: ValidatedRow<FormatBRow>[]): {
     return { line, base, variants: resolved }
   })
 
-  return { inputs, invalidVolumes, countryConflicts: [] }
+  return {
+    inputs,
+    invalidVolumes,
+    scalarConflicts: { country: [], productCategory: [] },
+  }
 }
 
 /**
@@ -376,24 +396,25 @@ export async function applyProducts(
     }
     if (base.gender) data.gender = base.gender
 
-    // Страна: канон — только value из списка (uae / europe / usa), синонимы и
-    // русские подписи не принимаем (решение владельца, тот же принцип, что у
-    // объёма). Регистр и пробелы прощаем. Пустая ячейка ничего не пишет —
-    // у существующего товара остаётся своё значение, у нового срабатывает
-    // defaultValue: 'europe' самого поля Payload. Неизвестное значение — тоже
-    // не пишем, только предупреждение: импорт из-за опечатки падать не должен.
-    const rawCountry = base.country_of_origin?.trim()
-    if (rawCountry) {
-      const normalized = rawCountry.toLowerCase()
-      if (isProductCountry(normalized)) {
-        data.countryOfOrigin = normalized satisfies ProductCountry
-        plan.country.applied += 1
-      } else {
-        plan.country.unknown.push({
-          line: input.line,
-          field: 'country_of_origin',
-          message: `${base.handle}: страна «${rawCountry}» не из списка (${PRODUCT_COUNTRY_VALUES.join(' / ')}) — поле не изменено`,
-        })
+    // Страна и раздел каталога: канон — только value из списка
+    // (uae / europe / usa и perfume / bodyCare), синонимы и русские подписи не
+    // принимаем (решение владельца, тот же принцип, что у объёма). Регистр и
+    // краевые пробелы прощаем. Пустая ячейка ничего не пишет — у существующего
+    // товара остаётся своё значение, у нового срабатывает defaultValue самого
+    // поля Payload ('europe' / 'perfume'). Неизвестное значение — тоже не
+    // пишем, только предупреждение: импорт из-за опечатки падать не должен.
+    // Правила общие на оба поля, см. productScalars.ts.
+    const scalars = [
+      { spec: COUNTRY_SPEC, raw: base.country_of_origin, stat: plan.country },
+      { spec: PRODUCT_CATEGORY_SPEC, raw: base.product_category, stat: plan.productCategory },
+    ]
+    for (const { spec, raw, stat } of scalars) {
+      const resolved = resolveScalar(spec, base.handle, input.line, raw)
+      if (resolved.kind === 'apply') {
+        data[spec.target] = resolved.value
+        stat.applied += 1
+      } else if (resolved.kind === 'unknown') {
+        stat.unknown.push(resolved.error)
       }
     }
     // family — три независимые локали (family_ro/ru/en), пишутся отдельными

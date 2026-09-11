@@ -1,7 +1,7 @@
 import type { Payload, PayloadRequest } from 'payload'
 import { toTable } from './csv'
 import { detectDescriptionLocales, detectKind } from './detect'
-import { applyProducts, groupFormatA, groupFormatB, type ProductInput } from './applyProducts'
+import { applyProducts, groupFormatA, groupFormatB, type GroupResult } from './applyProducts'
 import { applyPrices, applyTranslations } from './applyUpdates'
 import type { FormatARow, FormatBRow, PriceRow, TranslationRow } from './schema'
 import { emptyPlan, type ImportResult, type RowError } from './types'
@@ -82,20 +82,13 @@ export async function runImport(
 
   try {
     if (kind === 'products-a' || kind === 'products-b') {
-      const {
-        inputs,
-        invalidVolumes,
-        countryConflicts,
-      }: {
-        inputs: ProductInput[]
-        invalidVolumes: RowError[]
-        countryConflicts: RowError[]
-      } =
+      const { inputs, invalidVolumes, scalarConflicts }: GroupResult =
         kind === 'products-a'
           ? groupFormatA(rows as { line: number; value: FormatARow }[])
           : groupFormatB(rows as { line: number; value: FormatBRow }[])
       plan.variants.invalidVolume = invalidVolumes
-      plan.country.conflicts = countryConflicts
+      plan.country.conflicts = scalarConflicts.country
+      plan.productCategory.conflicts = scalarConflicts.productCategory
       await applyProducts(payload, inputs, { locale, dryRun, req }, plan)
       plan.touched = inputs.length
     } else if (kind === 'prices') {

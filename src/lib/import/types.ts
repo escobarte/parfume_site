@@ -49,6 +49,14 @@ export type ImportPlan = {
    */
   country: { applied: number; unknown: RowError[]; conflicts: RowError[] }
   /**
+   * Форматы A/B: колонка product_category — раздел каталога
+   * (`Products.productCategory`), не таксономия `categories`.
+   * Структура и правила те же, что у country: `unknown` — значение не из
+   * списка (perfume / bodyCare), товар импортируется, поле не трогается;
+   * `conflicts` — строки одного handle указывают разные разделы, берётся первая.
+   */
+  productCategory: { applied: number; unknown: RowError[]; conflicts: RowError[] }
+  /**
    * Форматы A/B с ОДНОЙ колонкой description: сколько локалей получит дубль
    * этого текста (считаются только те, где описание было пустым). 0 — либо
    * файл трёхколоночный, либо везде уже есть перевод: предупреждать не о чем.
@@ -76,5 +84,6 @@ export const emptyPlan = (kind: ImportKind, locale: string): ImportPlan => ({
   images: { attached: 0, missing: [] },
   variantImages: { attached: 0, missing: [] },
   country: { applied: 0, unknown: [], conflicts: [] },
+  productCategory: { applied: 0, unknown: [], conflicts: [] },
   descriptionDuplicated: 0,
 })

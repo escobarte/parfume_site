@@ -1,6 +1,31 @@
 import { KIND_LABELS } from './detect'
 import { list } from './format'
-import type { ImportResult } from './types'
+import type { ImportPlan, ImportResult, RowError } from './types'
+
+/** Предупреждения одним списком, не длиннее 20 строк — общий хвост разделов. */
+function pushWarnings(lines: string[], errors: RowError[]) {
+  for (const error of errors.slice(0, 20)) {
+    lines.push(`  ⚠ строка ${error.line}: ${error.message}`)
+  }
+  if (errors.length > 20) lines.push(`  … и ещё ${errors.length - 20}`)
+}
+
+/**
+ * Раздел отчёта для скалярного поля товара (страна, категория): счётчик
+ * применённых + предупреждения о значениях не из списка и о расхождениях
+ * внутри одного handle. Раздел одинаков для всех таких полей — иначе они
+ * начинают расходиться по формулировкам и по тому, что вообще показывают.
+ */
+function pushScalarSection(
+  lines: string[],
+  label: string,
+  stat: ImportPlan['country'] | ImportPlan['productCategory'],
+) {
+  if (!stat.applied && !stat.unknown.length && !stat.conflicts.length) return
+  lines.push(`${label} ${stat.applied}`)
+  pushWarnings(lines, stat.unknown)
+  pushWarnings(lines, stat.conflicts)
+}
 
 /** Человекочитаемый отчёт для CLI — одинаковый для dry-run и боевого прогона. */
 export function formatReport(result: ImportResult): string {
@@ -77,18 +102,11 @@ export function formatReport(result: ImportResult): string {
     }
   }
 
-  const country = plan.country
-  if (country.applied || country.unknown.length || country.conflicts.length) {
-    lines.push(`Страна-производитель: проставлена у ${country.applied}`)
-    for (const bad of country.unknown.slice(0, 20)) {
-      lines.push(`  ⚠ строка ${bad.line}: ${bad.message}`)
-    }
-    if (country.unknown.length > 20) lines.push(`  … и ещё ${country.unknown.length - 20}`)
-    for (const conflict of country.conflicts.slice(0, 20)) {
-      lines.push(`  ⚠ строка ${conflict.line}: ${conflict.message}`)
-    }
-    if (country.conflicts.length > 20) lines.push(`  … и ещё ${country.conflicts.length - 20}`)
-  }
+  // Поля уровня товара из отдельных колонок (см. lib/import/productScalars.ts):
+  // раздел печатается, только если поле в файле вообще участвовало — молчание
+  // означает «колонки нет или она пуста», а не «всё проставлено».
+  pushScalarSection(lines, 'Страна-производитель: проставлена у', plan.country)
+  pushScalarSection(lines, 'Категория товара: проставлена у', plan.productCategory)
 
   const auto = plan.autoCreate
   const autoTotal = auto.brands.length + auto.categories.length + auto.notes.length

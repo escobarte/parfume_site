@@ -9,7 +9,8 @@ import { formatReport } from '../src/lib/import/report.js'
 const USAGE = `
 Импорт каталога из CSV.
 
-  pnpm import <файл.csv> [--dry-run] [--locale=ro|ru|en]
+  pnpm run import <файл.csv> [--dry-run] [--locale=ro|ru|en]
+  (именно "pnpm run import" — короткое "pnpm import" перехватывается самим pnpm)
 
 Форматы определяются по заголовку автоматически:
   handle,title,brand,…,volume,sku,price,stock   — формат A (строка = вариант)
@@ -24,9 +25,12 @@ description_ru/description_en — тогда все три локали пишу
 (/admin/catalog-import — у этого CLI команды для загрузки архивов нет),
 см. docs/import-guide.md.
 
-Ещё две необязательные колонки форматов A/B:
+Ещё три необязательные колонки форматов A/B:
   country_of_origin — страна товара: uae | europe | usa (берётся из первой
                       строки handle; пустая ячейка ничего не меняет)
+  product_category  — раздел каталога: perfume | bodyCare (те же правила, что
+                      у country_of_origin; не путать с колонкой categories —
+                      та про таксономию)
   variant_image     — фото конкретного объёма, одно имя файла из медиатеки
                       (в формате B — поле "image" внутри JSON-варианта)
 
