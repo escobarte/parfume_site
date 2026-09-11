@@ -60,7 +60,10 @@ export async function POST(request: Request) {
   let promo: Awaited<ReturnType<typeof resolvePromoCode>> | null = null
   let discount = 0
   if (data.promoCode) {
-    promo = await resolvePromoCode(payload, data.promoCode)
+    // Телефон заявки — он же авторитет для персонального кода: код выдан на
+    // конкретный номер, и финальная проверка сверяет именно его, а не то, что
+    // клиент подтвердил в корзине (то подтверждение — превью, как и percent).
+    promo = await resolvePromoCode(payload, data.promoCode, data.phone)
     if (!promo.ok) {
       return NextResponse.json(
         { ok: false, error: 'promo_invalid', promoError: promo.error },

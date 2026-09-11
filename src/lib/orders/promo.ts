@@ -1,5 +1,6 @@
 import type { Payload } from 'payload'
 import type { PromoCodeType } from '@/collections/PromoCodes'
+import { normalizePhone } from '@/lib/orders/schema'
 
 /**
  * Промокоды — общая точка резолва для проверки (`/api/promo-code-check`,
@@ -15,9 +16,19 @@ import type { PromoCodeType } from '@/collections/PromoCodes'
  * | `public`   | да       | **не проверяется**  | да (обязателен)    |
  */
 
+export type PromoCheckError =
+  | 'not_found'
+  | 'inactive'
+  | 'used'
+  | 'expired'
+  /** Персональный код найден, но нужен телефон — это ШАГ, а не отказ. */
+  | 'phone_required'
+  | 'phone_mismatch'
+
 export type PromoCheckResult =
   | { ok: true; id: number | string; code: string; percent: number; codeType: PromoCodeType }
-  | { ok: false; error: 'not_found' | 'inactive' | 'used' | 'expired' }
+  /** `code` заполняется только у `phone_required`: экрану нужно его показать. */
+  | { ok: false; error: PromoCheckError; code?: string }
 
 /** Регистронезависимость (assumption клиента) — верхний регистр, не ILIKE на каждый запрос. */
 export const normalizePromoCode = (value: string): string => value.trim().toUpperCase()
@@ -25,7 +36,32 @@ export const normalizePromoCode = (value: string): string => value.trim().toUppe
 /** Email как ключ поиска персонального кода: регистр в почте не значим. */
 export const normalizePromoEmail = (value: string): string => value.trim().toLowerCase()
 
-export async function resolvePromoCode(payload: Payload, rawCode: string): Promise<PromoCheckResult> {
+/**
+ * Сверка телефона для персонального кода (2026-09-11). Оба номера приводятся
+ * к `+373XXXXXXXX` тем же `normalizePhone`, что и форма заявки, — клиент
+ * может ввести номер со скобками, пробелами и без кода страны.
+ *
+ * Пустой телефон В БАЗЕ означает «сверять не с чем»: такие коды остались от
+ * времён до типизации (миграция пометила их `personal`, но email/phone у них
+ * нет). Требовать у них номер — значит сломать их навсегда, поэтому сверка
+ * пропускается. У кодов из попапа телефон есть всегда — схема требует.
+ */
+const phoneMatches = (stored: string | null | undefined, given: string): boolean => {
+  const expected = (stored ?? '').trim()
+  if (!expected) return true
+  return normalizePhone(expected) === normalizePhone(given)
+}
+
+/**
+ * @param rawPhone телефон для сверки персонального кода. `undefined` на шаге
+ * превью в корзине — тогда вернётся `phone_required`, и фронт покажет поле
+ * подтверждения. Для `public` параметр игнорируется полностью.
+ */
+export async function resolvePromoCode(
+  payload: Payload,
+  rawCode: string,
+  rawPhone?: string,
+): Promise<PromoCheckResult> {
   const code = normalizePromoCode(rawCode)
   if (!code) return { ok: false, error: 'not_found' }
 
@@ -47,6 +83,13 @@ export async function resolvePromoCode(payload: Payload, rawCode: string): Promi
     // Одноразовый и бессрочный: срок действия у персонального кода
     // намеренно не проверяется, даже если поле чем-то заполнено.
     if (promo.isUsed) return { ok: false, error: 'used' }
+
+    // Телефон сверяется ПОСЛЕ проверки самого кода: иначе по ответу можно
+    // было бы отличить «кода нет» от «код есть, но номер не тот» и
+    // перебирать номера к чужому коду.
+    const phone = rawPhone?.trim()
+    if (!phone) return { ok: false, error: 'phone_required', code: promo.code }
+    if (!phoneMatches(promo.phone, phone)) return { ok: false, error: 'phone_mismatch' }
   } else {
     // Многоразовый, но со сроком. Пустой expiresAt у публичного кода схема
     // не даёт сохранить; если он всё же пуст (правка мимо админки) — считаем

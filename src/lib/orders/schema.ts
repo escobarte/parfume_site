@@ -8,7 +8,12 @@ import { PRODUCT_VOLUMES } from '@/lib/catalog/volumes'
 export const PHONE_PATTERN = /^\+373\d{8}$/
 
 export const normalizePhone = (value: string) => {
-  const digits = value.replace(/[^\d]/g, '')
+  // Ведущие нули снимаются ДО проверки кода страны: «060 123 456» — обычная
+  // местная запись (0 — национальный префикс, в международном формате его
+  // не бывает), а «00373…» — международный префикс набора. Без этого шага
+  // оба варианта превращались в +373060123456 / +37300373… и не проходили
+  // PHONE_PATTERN, хотя человек ввёл корректный номер.
+  const digits = value.replace(/[^\d]/g, '').replace(/^0+/, '')
   const local = digits.startsWith('373') ? digits.slice(3) : digits
   return `+373${local}`
 }

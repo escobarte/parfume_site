@@ -11,7 +11,14 @@ import { getPayloadClient } from '@/lib/payload'
  * истины. Авторитетная переоценка — ещё раз, в `order-request/route.ts`
  * при реальном оформлении (тот же resolvePromoCode).
  */
-const bodySchema = z.object({ code: z.string().trim().min(1).max(50) })
+const bodySchema = z.object({
+  code: z.string().trim().min(1).max(50),
+  /**
+   * Второй шаг для персонального кода: телефон, на который он выдан.
+   * Пусто/отсутствует — первый шаг, ответ будет `phone_required`.
+   */
+  phone: z.string().trim().max(40).optional(),
+})
 
 export async function POST(request: Request) {
   const ip = clientIp(request)
@@ -38,10 +45,16 @@ export async function POST(request: Request) {
   }
 
   const payload = await getPayloadClient()
-  const result = await resolvePromoCode(payload, parsed.data.code)
+  const result = await resolvePromoCode(payload, parsed.data.code, parsed.data.phone)
 
   if (!result.ok) {
-    return NextResponse.json(result, { status: 404 })
+    // `phone_required` — не отказ, а штатный промежуточный шаг: код найден и
+    // годен, форме осталось спросить номер. Отдавать на него 404 было бы
+    // враньём и мешало бы отличать его от «кода нет» в логах и мониторинге.
+    // `phone_mismatch` — ошибка ввода, повторная попытка разрешена (человек
+    // мог опечататься), поэтому 400, а не 404.
+    const status = result.error === 'phone_required' ? 200 : result.error === 'phone_mismatch' ? 400 : 404
+    return NextResponse.json(result, { status })
   }
   return NextResponse.json(result)
 }

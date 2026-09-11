@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Payload } from 'payload'
+import { normalizePhone, PHONE_PATTERN } from '@/lib/orders/schema'
 import {
   findPersonalCodeByEmail,
   generatePersonalCode,
@@ -43,6 +44,8 @@ const fakePayload = (docs: Doc[]) => {
   return { payload, calls }
 }
 
+const PHONE = '+37360123456'
+
 const personal = (over: Doc = {}): Doc => ({
   id: 1,
   code: 'WELCOME-ABC123',
@@ -51,6 +54,7 @@ const personal = (over: Doc = {}): Doc => ({
   isActive: true,
   isUsed: false,
   email: 'a@b.c',
+  phone: PHONE,
   ...over,
 })
 
@@ -75,10 +79,30 @@ describe('нормализация промокода', () => {
   })
 })
 
+describe('normalizePhone — общая функция формы заявки и сверки промокода', () => {
+  it.each([
+    ['+373 60 123 456', '+37360123456'],
+    ['+373-60-123-456', '+37360123456'],
+    ['(373) 60 123 456', '+37360123456'],
+    ['37360123456', '+37360123456'],
+    ['60123456', '+37360123456'],
+    // Ведущий 0 — национальный префикс местной записи, в международном
+    // формате его нет. До 2026-09-11 давал «+373060123456» и не проходил
+    // PHONE_PATTERN: форма заявки отвергала корректно набранный номер.
+    ['060123456', '+37360123456'],
+    ['0 60 123 456', '+37360123456'],
+    // Международный префикс набора.
+    ['00373 60123456', '+37360123456'],
+  ])('%s → %s', (typed, expected) => {
+    expect(normalizePhone(typed)).toBe(expected)
+    expect(PHONE_PATTERN.test(normalizePhone(typed))).toBe(true)
+  })
+})
+
 describe('resolvePromoCode — персональный код', () => {
-  it('валиден, пока не использован', async () => {
+  it('валиден, пока не использован (с верным телефоном)', async () => {
     const { payload } = fakePayload([personal()])
-    await expect(resolvePromoCode(payload, 'welcome-abc123')).resolves.toMatchObject({
+    await expect(resolvePromoCode(payload, 'welcome-abc123', PHONE)).resolves.toMatchObject({
       ok: true,
       percent: 15,
       codeType: 'personal',
@@ -96,7 +120,9 @@ describe('resolvePromoCode — персональный код', () => {
   it('БЕССРОЧНЫЙ: просроченная дата игнорируется, код остаётся рабочим', async () => {
     const past = new Date(Date.now() - 86_400_000).toISOString()
     const { payload } = fakePayload([personal({ expiresAt: past })])
-    await expect(resolvePromoCode(payload, 'WELCOME-ABC123')).resolves.toMatchObject({ ok: true })
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123', PHONE)).resolves.toMatchObject({
+      ok: true,
+    })
   })
 
   it('снятая галочка «активен» отключает код', async () => {
@@ -170,6 +196,120 @@ describe('resolvePromoCode — общее', () => {
     await expect(resolvePromoCode(payload, 'WELCOME-ABC123')).resolves.toEqual({
       ok: false,
       error: 'used',
+    })
+  })
+})
+
+describe('сверка телефона у персонального кода', () => {
+  it('без телефона — не отказ, а запрос подтверждения, и код возвращается экрану', async () => {
+    const { payload } = fakePayload([personal()])
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123')).resolves.toEqual({
+      ok: false,
+      error: 'phone_required',
+      code: 'WELCOME-ABC123',
+    })
+  })
+
+  it('номер не совпал — скидка не выдаётся', async () => {
+    const { payload } = fakePayload([personal()])
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123', '+37360999999')).resolves.toEqual({
+      ok: false,
+      error: 'phone_mismatch',
+    })
+  })
+
+  it.each([
+    '+373 60 123 456',
+    '+373-60-123-456',
+    '(373) 60 123 456',
+    '060123456',
+    '60123456',
+    '  +37360123456  ',
+  ])('формат записи номера не важен: %s', async (typed) => {
+    const { payload } = fakePayload([personal()])
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123', typed)).resolves.toMatchObject({
+      ok: true,
+    })
+  })
+
+  it('сначала проверяется сам код, и только потом телефон', async () => {
+    // Иначе по ответу можно было бы отличить «кода нет» от «код есть, но
+    // номер не тот» и перебирать номера к чужому коду.
+    const { payload } = fakePayload([personal({ isUsed: true })])
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123', '+37360999999')).resolves.toEqual({
+      ok: false,
+      error: 'used',
+    })
+  })
+
+  it('у кода без телефона в базе сверка пропускается, код не ломается', async () => {
+    // Коды, оставшиеся от времён до типизации: миграция пометила их personal,
+    // но phone у них нет. Требовать номер — значит убить их навсегда.
+    const { payload } = fakePayload([personal({ phone: null })])
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123', '+37360999999')).resolves.toMatchObject(
+      { ok: true },
+    )
+  })
+
+  it('ПУБЛИЧНЫЙ код сверки телефона не требует и не проверяет', async () => {
+    const { payload } = fakePayload([publicCode()])
+    // Ни без телефона, ни с заведомо чужим — поведение одинаковое.
+    await expect(resolvePromoCode(payload, 'AUTUMN20')).resolves.toMatchObject({ ok: true })
+    await expect(resolvePromoCode(payload, 'AUTUMN20', '+37360999999')).resolves.toMatchObject({
+      ok: true,
+    })
+  })
+})
+
+describe('инвариант: превью НЕ расходует код', () => {
+  /**
+   * Ключевая гарантия механики: `isUsed` выставляется только
+   * `claimPromoCode()` из `order-request` — после создания заказа. Проверка в
+   * корзине (сколько бы раз её ни повторили) код не сжигает.
+   *
+   * Заглушка Payload намеренно БЕЗ `update`: любая попытка записи упала бы
+   * с TypeError, и тест бы это поймал. Проверяется поведение, а не намерение.
+   */
+  it('проверка кода не пишет в базу вообще', async () => {
+    const { payload } = fakePayload([personal()])
+    expect((payload as unknown as Record<string, unknown>).update).toBeUndefined()
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123', PHONE)).resolves.toMatchObject({
+      ok: true,
+    })
+  })
+
+  it('код проходит проверку повторно: превью и сверка телефона его не расходуют', async () => {
+    const doc = personal()
+    const { payload } = fakePayload([doc])
+
+    // Полный путь корзины: запрос подтверждения → успешная сверка.
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123')).resolves.toMatchObject({
+      error: 'phone_required',
+    })
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123', PHONE)).resolves.toMatchObject({
+      ok: true,
+    })
+
+    // Клиент ушёл, вернулся, ввёл тот же код снова — он всё ещё годен.
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123', PHONE)).resolves.toMatchObject({
+      ok: true,
+    })
+    // И документ не изменился: isUsed как был false.
+    expect(doc.isUsed).toBe(false)
+  })
+
+  it('даже неудачная сверка телефона код не сжигает', async () => {
+    const doc = personal()
+    const { payload } = fakePayload([doc])
+
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123', '+37360999999')).resolves.toEqual({
+      ok: false,
+      error: 'phone_mismatch',
+    })
+    expect(doc.isUsed).toBe(false)
+    // Повторная попытка с верным номером проходит — опечатка не наказывается.
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123', PHONE)).resolves.toMatchObject({
+      ok: true,
     })
   })
 })

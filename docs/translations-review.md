@@ -34,7 +34,7 @@
 | `GiftItem` | 5 | 🔴 | Разделы «Gift Card»/«Gift Box» (фаза 11.1, задача 2) — коллекция `gift-items` | `type.giftBox` и `type.certificate` намеренно на английском, как `CatalogNav.giftBox` — переводить не нужно |
 | `Product` | 15 | 🔴 | Страница товара | Пирамида нот (top/heart/base) — устоявшиеся термины парфюмерии, не бытовой перевод |
 | `OrderForm` | 27 | 🔴 | Форма заявки в корзине | Текст согласия (`agreement`) — не юридический документ, но задаёт тон доверия; `deliveryMethod*`/`errorAddress` — фаза 11.2 задача 5, `paymentMethod*` — задача 6, `errorPromoInvalid` — задача 7 |
-| `Cart` | 23 | 🔴 | Страница корзины | `promo*` — фаза 11.2, задача 7 (поле промокода, ошибки проверки, строка скидки) |
+| `Cart` | 29 | 🔴 | Страница корзины | `promo*` — фаза 11.2, задача 7 (поле промокода, ошибки проверки, строка скидки). **🆕 TODO review** — шесть строк шага сверки телефона добавлены 2026-09-11 (`promoConfirmPhoneTitle`, `promoPhonePlaceholder`, `promoConfirm`, `promoConfirming`, `promoChange`, `promoError_phone_mismatch`), RO/EN машинный перевод |
 | `ThankYou` | 11 | 🔴 | Страница «Спасибо» | Текст должен звучать тепло, не казённо (BRAND.md §7) |
 | `Search` | 9 | 🔴 | Поиск, автодополнение | — |
 | `Nav` | 7 | 🔴 | Меню шапки, breadcrumbs | — |

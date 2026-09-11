@@ -6,6 +6,7 @@ import {
   generatePersonalCode,
   normalizePromoEmail,
 } from '@/lib/orders/promo'
+import { normalizePhone } from '@/lib/orders/schema'
 import { checkRateLimit, clientIp } from '@/lib/orders/rateLimit'
 import { getPayloadClient } from '@/lib/payload'
 import { routing } from '@/i18n/routing'
@@ -103,7 +104,9 @@ export async function POST(request: Request) {
       isActive: true,
       isUsed: false,
       email,
-      phone: parsed.data.phone || undefined,
+      // Храним в каноничном виде (+373XXXXXXXX): сверка в корзине не должна
+      // зависеть от того, как человек набрал номер, получая код.
+      phone: parsed.data.phone ? normalizePhone(parsed.data.phone) : undefined,
       customerName: parsed.data.name,
     },
   })

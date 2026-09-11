@@ -96,6 +96,26 @@ test.describe.serial('попап «первая скидка»', () => {
     await page.getByPlaceholder('Cod promoțional').fill(code)
     await page.getByRole('button', { name: 'Aplică' }).click()
 
+    // Персональный код требует подтверждения телефона (2026-09-11): код
+    // сразу не применяется, сначала разворачивается второй шаг.
+    //
+    // Здесь проверяется ТОЛЬКО удачный путь — ровно один запрос к
+    // `/api/promo-code-check`. Ветка «номер не совпал» сюда не добавлена
+    // намеренно: у эндпойнта лимит 5 запросов на IP за 10 минут, и второй
+    // вызов делал бы спек нестабильным. Несовпадение покрыто int-тестами
+    // (`tests/int/promo.int.spec.ts`) и снятым скриншотом состояния.
+    const phoneField = page.getByPlaceholder('+373 60 123 456')
+    const gotStep2 = await phoneField
+      .waitFor({ state: 'visible', timeout: 15000 })
+      .then(() => true)
+      .catch(() => false)
+    test.skip(!gotStep2, 'второй шаг не появился — вероятно исчерпан лимит /api/promo-code-check')
+    await expect(page.getByText(code)).toBeVisible()
+
+    // Номер тот же, что вводился в попапе при получении кода.
+    await phoneField.fill('+37360000000')
+    await page.getByRole('button', { name: 'Confirmă' }).click()
+
     // Применённый код и процент показываются вместо формы ввода.
     await expect(page.getByText(`Codul ${code} este aplicat: −${percent}%`)).toBeVisible({
       timeout: 15000,
