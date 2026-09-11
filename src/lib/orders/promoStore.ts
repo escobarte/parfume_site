@@ -13,13 +13,26 @@ import { create } from 'zustand'
 type PromoState = {
   code: string | null
   percent: number | null
-  apply: (code: string, percent: number) => void
+  /**
+   * Телефон, которым код подтвердили на шаге сверки в корзине (2026-09-11).
+   * Уезжает в заявку ОТДЕЛЬНО от телефона доставки: код выдан на конкретный
+   * номер, а заказ человек может оформлять на другой (например, телефон
+   * получателя). Для публичного кода остаётся `null` — ему сверка не нужна.
+   *
+   * Секретом это значение не является и защиту не ослабляет: сервер при
+   * оформлении всё равно сверяет его с тем, что лежит в БД у кода. Клиент,
+   * не знающий нужного номера, подставить его не сможет — в этом и смысл
+   * шага сверки.
+   */
+  phone: string | null
+  apply: (code: string, percent: number, phone?: string | null) => void
   clear: () => void
 }
 
 export const usePromo = create<PromoState>()((set) => ({
   code: null,
   percent: null,
-  apply: (code, percent) => set({ code, percent }),
-  clear: () => set({ code: null, percent: null }),
+  phone: null,
+  apply: (code, percent, phone = null) => set({ code, percent, phone }),
+  clear: () => set({ code: null, percent: null, phone: null }),
 }))

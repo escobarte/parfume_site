@@ -314,6 +314,63 @@ describe('инвариант: превью НЕ расходует код', () =
   })
 })
 
+describe('телефон доставки ≠ телефон сверки кода', () => {
+  /**
+   * Решение владельца 2026-09-11: при оформлении сверяется номер, которым код
+   * подтвердили В КОРЗИНЕ (`promoPhone`), а не телефон доставки из формы.
+   * Код выдан на личный номер, а заказ человек вправе оформить на номер
+   * получателя — блокировать такую заявку незачем.
+   *
+   * Здесь проверяется само правило резолва: ему передаётся именно номер
+   * сверки, и телефон доставки на результат не влияет никак, потому что в
+   * `resolvePromoCode()` он не попадает в принципе.
+   */
+  const DELIVERY_PHONE = '+37379000000'
+
+  it('код принимается по номеру сверки, каким бы ни был номер доставки', async () => {
+    const { payload } = fakePayload([personal()])
+    // Номер сверки — тот, на который выдан код.
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123', PHONE)).resolves.toMatchObject({
+      ok: true,
+      percent: 15,
+    })
+    // Телефон доставки заведомо другой и к проверке отношения не имеет:
+    // если бы сверялся он, тот же вызов вернул бы phone_mismatch.
+    expect(DELIVERY_PHONE).not.toBe(PHONE)
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123', DELIVERY_PHONE)).resolves.toEqual({
+      ok: false,
+      error: 'phone_mismatch',
+    })
+  })
+
+  it('подмена номера сверки не помогает: сверка идёт с тем, что в БД', async () => {
+    // Защита не ослабла оттого, что значение приходит от клиента — сервер
+    // сравнивает его с телефоном кода в базе.
+    const { payload } = fakePayload([personal()])
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123', '+37360000001')).resolves.toEqual({
+      ok: false,
+      error: 'phone_mismatch',
+    })
+  })
+
+  it('пустой номер сверки при оформлении — код не применяется молча', async () => {
+    // Публичный код сюда не попадает (ему сверка не нужна), а персональный
+    // без номера обязан вернуть phone_required, а не тихо пройти без скидки.
+    const { payload } = fakePayload([personal()])
+    await expect(resolvePromoCode(payload, 'WELCOME-ABC123', undefined)).resolves.toMatchObject({
+      ok: false,
+      error: 'phone_required',
+    })
+  })
+
+  it('публичному коду номер сверки не нужен вовсе', async () => {
+    const { payload } = fakePayload([publicCode()])
+    await expect(resolvePromoCode(payload, 'AUTUMN20', undefined)).resolves.toMatchObject({
+      ok: true,
+    })
+  })
+})
+
 describe('генерация персонального кода', () => {
   it('формат WELCOME-XXXXXX, 6 символов из безопасного алфавита', async () => {
     const { payload } = fakePayload([])

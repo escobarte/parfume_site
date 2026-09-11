@@ -36,6 +36,8 @@ export function OrderForm() {
   const router = useRouter()
   const items = useCart((state) => state.items)
   const promoCode = usePromo((state) => state.code)
+  // Телефон сверки кода — отдельно от телефона доставки в полях формы.
+  const promoPhone = usePromo((state) => state.phone)
   const clearPromo = usePromo((state) => state.clear)
 
   const [name, setName] = useState('')
@@ -84,6 +86,7 @@ export function OrderForm() {
           source: 'cart',
           company,
           promoCode: promoCode ?? undefined,
+          promoPhone: promoPhone ?? undefined,
           items: items.map((item) => ({
             kind: item.kind ?? 'product',
             productId: item.productId,

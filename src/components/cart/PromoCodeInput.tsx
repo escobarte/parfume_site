@@ -74,7 +74,9 @@ export function PromoCodeInput() {
         return
       }
 
-      apply(data.code, data.percent)
+      // Номер запоминается только если им реально подтверждали код: у
+      // публичного кода шага сверки нет, и телефон тут пустой.
+      apply(data.code, data.percent, rawPhone ?? null)
       setPendingCode(null)
       setPhone('')
       setChecking(false)

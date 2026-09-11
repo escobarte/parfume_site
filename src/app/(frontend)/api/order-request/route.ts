@@ -60,10 +60,13 @@ export async function POST(request: Request) {
   let promo: Awaited<ReturnType<typeof resolvePromoCode>> | null = null
   let discount = 0
   if (data.promoCode) {
-    // Телефон заявки — он же авторитет для персонального кода: код выдан на
-    // конкретный номер, и финальная проверка сверяет именно его, а не то, что
-    // клиент подтвердил в корзине (то подтверждение — превью, как и percent).
-    promo = await resolvePromoCode(payload, data.promoCode, data.phone)
+    // Сверяется телефон, которым код подтвердили в КОРЗИНЕ, а не телефон
+    // доставки из формы: код выдан на конкретный номер, а заказ человек
+    // вправе оформить на другой (телефон получателя, рабочий и т.п.) —
+    // блокировать такую заявку незачем (решение владельца 2026-09-11).
+    // Защита не слабеет: значение всё равно сверяется с тем, что лежит в БД
+    // у кода, так что подставить произвольный номер бесполезно.
+    promo = await resolvePromoCode(payload, data.promoCode, data.promoPhone)
     if (!promo.ok) {
       return NextResponse.json(
         { ok: false, error: 'promo_invalid', promoError: promo.error },
