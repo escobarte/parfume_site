@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { sendPromoCodeEmail } from '@/lib/orders/email'
 import {
@@ -70,6 +70,12 @@ export async function POST(request: Request) {
 
   const email = normalizePromoEmail(parsed.data.email)
 
+  // Письмо шлётся только при выдаче НОВОГО кода. Повторная отправка формы
+  // тем же адресом письмо не дублирует: код и так показывается на экране, а
+  // «переотправка по запросу» открыла бы почтовую бомбардировку чужого ящика
+  // (лимит 5 запросов на IP за 10 минут её только ограничивает, но не
+  // исключает). Если понадобится «прислать ещё раз» — это осознанная
+  // отдельная ручка с собственным лимитом, а не побочный эффект этой.
   const existing = await findPersonalCodeByEmail(payload, email)
   if (existing) {
     return NextResponse.json({
@@ -102,19 +108,33 @@ export async function POST(request: Request) {
     },
   })
 
-  // Письмо — «если получится»: ключа Resend может не быть (CHANGEME), и это
-  // не повод не отдать код в самом попапе. Клиент видит его на экране в любом
-  // случае, письмо — дубль.
-  const mail = await sendPromoCodeEmail({
-    to: email,
-    name: parsed.data.name,
-    code,
-    percent,
-    locale: parsed.data.locale ?? routing.defaultLocale,
+  // Письмо уходит ПОСЛЕ ответа и не задерживает попап: `after()` из
+  // next/server, а не «висячий» промис — рантайм гарантирует, что работа
+  // доживёт до конца, тогда как брошенный промис может быть убит вместе с
+  // завершением запроса. Сбой почты на UX не влияет вообще: код клиент уже
+  // видит на экране, письмо — дубль канала, а не единственная доставка.
+  after(async () => {
+    try {
+      const mail = await sendPromoCodeEmail({
+        to: email,
+        name: parsed.data.name,
+        code,
+        percent,
+        locale: parsed.data.locale ?? routing.defaultLocale,
+      })
+      if (mail.skipped) {
+        payload.logger.info(`Письмо с промокодом ${code} пропущено: ${mail.skipped}`)
+      } else if (!mail.ok) {
+        payload.logger.error(`Письмо с промокодом ${code} не ушло: ${mail.error}`)
+      }
+    } catch (error) {
+      // Отдельный catch: исключение внутри after() уже некому поймать —
+      // ответ клиенту отправлен, всплывать ему некуда.
+      payload.logger.error(
+        `Письмо с промокодом ${code} упало: ${error instanceof Error ? error.message : error}`,
+      )
+    }
   })
-  if (!mail.ok && mail.error) {
-    payload.logger.warn(`Письмо с промокодом ${code} не ушло: ${mail.error}`)
-  }
 
   return NextResponse.json({ ok: true, existing: false, code, percent, isUsed: false })
 }
