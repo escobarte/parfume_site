@@ -118,20 +118,20 @@
   "CatalogNav": {
     "title": "Навигация по каталогу",
     "mobileHeading": "Каталог",
-    "forHer": "Для неё",
-    "forHim": "Для него",
-    "bodyCare": "Уход за телом",
+    "forHer": "Для Нее",
+    "forHim": "Для Него",
+    "bodyCare": "Уход за Телом",
     "kids": "Детям",
-    "giftCertificates": "Подарочные сертификаты",
-    "giftBox": "Gift box",
+    "giftCertificates": "Gift Card",
+    "giftBox": "Gift Box",
     "brands": "Бренды",
-    "about": "О нас"
+    "about": "О Нас"
   },
   "GiftItem": {
     "amount": "Номинал",
     "type": {
-      "certificate": "Подарочный сертификат",
-      "giftBox": "Gift box"
+      "certificate": "Gift Card",
+      "giftBox": "Gift Box"
     },
     "empty": "Пока нет активных позиций",
     "emptyHint": "Загляните позже — раздел скоро наполнится."

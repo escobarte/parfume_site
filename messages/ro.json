@@ -118,20 +118,20 @@
   "CatalogNav": {
     "title": "Navigare catalog",
     "mobileHeading": "Catalog",
-    "forHer": "Pentru ea",
-    "forHim": "Pentru el",
-    "bodyCare": "Îngrijire corporală",
+    "forHer": "Pentru Ea",
+    "forHim": "Pentru El",
+    "bodyCare": "Îngrijire Corporală",
     "kids": "Copii",
-    "giftCertificates": "Certificate cadou",
-    "giftBox": "Gift box",
+    "giftCertificates": "Gift Card",
+    "giftBox": "Gift Box",
     "brands": "Branduri",
-    "about": "Despre noi"
+    "about": "Despre Noi"
   },
   "GiftItem": {
     "amount": "Valoare",
     "type": {
-      "certificate": "Certificat cadou",
-      "giftBox": "Gift box"
+      "certificate": "Gift Card",
+      "giftBox": "Gift Box"
     },
     "empty": "Deocamdată nu sunt poziții active",
     "emptyHint": "Reveniți mai târziu — secțiunea se va completa curând."

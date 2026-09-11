@@ -118,20 +118,20 @@
   "CatalogNav": {
     "title": "Catalog navigation",
     "mobileHeading": "Catalog",
-    "forHer": "For her",
-    "forHim": "For him",
-    "bodyCare": "Body care",
+    "forHer": "For Her",
+    "forHim": "For Him",
+    "bodyCare": "Body Care",
     "kids": "Kids",
-    "giftCertificates": "Gift certificates",
-    "giftBox": "Gift box",
+    "giftCertificates": "Gift Card",
+    "giftBox": "Gift Box",
     "brands": "Brands",
-    "about": "About us"
+    "about": "About Us"
   },
   "GiftItem": {
     "amount": "Denomination",
     "type": {
-      "certificate": "Gift certificate",
-      "giftBox": "Gift box"
+      "certificate": "Gift Card",
+      "giftBox": "Gift Box"
     },
     "empty": "No active items yet",
     "emptyHint": "Check back later — this section is filling up soon."
