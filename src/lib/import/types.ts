@@ -57,6 +57,13 @@ export type ImportPlan = {
    */
   productCategory: { applied: number; unknown: RowError[]; conflicts: RowError[] }
   /**
+   * Форматы A/B: колонка brand_logo. Область — БРЕНД, а не строка:
+   * `applied` считает бренды (не строки файла), `missing` — имена, которых
+   * нет в медиатеке, `conflicts` — строки одного бренда с разными именами
+   * файлов (берётся первое).
+   */
+  brandLogos: { applied: number; missing: RowError[]; conflicts: RowError[] }
+  /**
    * Форматы A/B с ОДНОЙ колонкой description: сколько локалей получит дубль
    * этого текста (считаются только те, где описание было пустым). 0 — либо
    * файл трёхколоночный, либо везде уже есть перевод: предупреждать не о чем.
@@ -85,5 +92,6 @@ export const emptyPlan = (kind: ImportKind, locale: string): ImportPlan => ({
   variantImages: { attached: 0, missing: [] },
   country: { applied: 0, unknown: [], conflicts: [] },
   productCategory: { applied: 0, unknown: [], conflicts: [] },
+  brandLogos: { applied: 0, missing: [], conflicts: [] },
   descriptionDuplicated: 0,
 })

@@ -26,6 +26,10 @@
     "menu": "Meniu",
     "breadcrumbs": "Navigare"
   },
+  "BrandsPage": {
+    "indexLabel": "Index alfabetic",
+    "empty": "Deocamdată nu există niciun brand."
+  },
   "Footer": {
     "contacts": "Contacte",
     "addressOnMap": "Deschide adresa pe hartă",

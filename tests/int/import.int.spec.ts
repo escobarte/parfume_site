@@ -6,6 +6,13 @@ import { COUNTRY_SPEC, PRODUCT_CATEGORY_SPEC, resolveScalar } from '@/lib/import
 import { canonicalProductCategory } from '@/lib/catalog/productCategories'
 import { formatARow } from '@/lib/import/schema'
 import { findDuplicates, validateRows } from '@/lib/import/validate'
+import { BrandLogoApplier } from '@/lib/import/brandLogos'
+import { emptyPlan } from '@/lib/import/types'
+import {
+  brandLetter,
+  brandLetterAnchor,
+  groupBrandsByLetter,
+} from '@/lib/catalog/brands'
 import { denormalizeVariants } from '@/lib/products/denormalize'
 import { discountPercent } from '@/lib/pricing'
 import { slugify } from '@/lib/slugify'
@@ -248,6 +255,133 @@ describe('скалярные поля товара (country_of_origin / product_
     )
     const { errors } = validateRows<never>('products-a', table.records)
     expect(errors).toHaveLength(0)
+  })
+})
+
+describe('логотипы брендов (колонка brand_logo)', () => {
+  const plan = () => emptyPlan('products-a', 'ro')
+
+  it('пустая ячейка не регистрируется — лого бренда не трогается', () => {
+    const p = plan()
+    const applier = new BrandLogoApplier()
+    applier.register('maison-orphee', '', 2, p)
+    applier.register('maison-orphee', undefined, 3, p)
+    applier.register('maison-orphee', '   ', 4, p)
+    expect(p.brandLogos.conflicts).toHaveLength(0)
+    expect(p.brandLogos.applied).toBe(0)
+  })
+
+  it('одно и то же имя в разных строках одного бренда — не конфликт', () => {
+    const p = plan()
+    const applier = new BrandLogoApplier()
+    applier.register('maison-orphee', 'mo.png', 2, p)
+    applier.register('maison-orphee', 'mo.png', 3, p)
+    applier.register('maison-orphee', ' mo.png ', 4, p)
+    expect(p.brandLogos.conflicts).toHaveLength(0)
+  })
+
+  it('разные имена у одного бренда — предупреждение, берётся первое', () => {
+    const p = plan()
+    const applier = new BrandLogoApplier()
+    applier.register('maison-orphee', 'first.png', 2, p)
+    applier.register('maison-orphee', 'second.png', 5, p)
+    expect(p.brandLogos.conflicts).toHaveLength(1)
+    expect(p.brandLogos.conflicts[0]).toMatchObject({ line: 5, field: 'brand_logo' })
+    expect(p.brandLogos.conflicts[0].message).toContain('взят первый')
+  })
+
+  it('бренд опознаётся по slug, а не по написанию ячейки', () => {
+    const p = plan()
+    const applier = new BrandLogoApplier()
+    applier.register('Maison Orphée', 'a.png', 2, p)
+    // Та же запись бренда (slug maison-orphee) — расхождение должно найтись.
+    applier.register('maison-orphee', 'b.png', 3, p)
+    expect(p.brandLogos.conflicts).toHaveLength(1)
+  })
+
+  it('разные бренды не мешают друг другу', () => {
+    const p = plan()
+    const applier = new BrandLogoApplier()
+    applier.register('maison-orphee', 'mo.png', 2, p)
+    applier.register('nord-atelier', 'na.png', 3, p)
+    expect(p.brandLogos.conflicts).toHaveLength(0)
+  })
+
+  it('колонка попадает в разобранную строку формата A', () => {
+    const table = toTable(
+      [
+        'handle,title,brand,brand_logo,volume,sku,price',
+        'A,Название,maison-orphee,mo.png,5ml,A-5,100',
+      ].join('\n'),
+    )
+    const { rows, errors } = validateRows<never>('products-a', table.records)
+    expect(errors).toHaveLength(0)
+    expect(groupFormatA(rows).inputs[0].base.brand_logo).toBe('mo.png')
+  })
+
+  it('колонка одинаково доступна в формате B', () => {
+    const table = toTable(
+      [
+        'handle,title,brand,brand_logo,variants',
+        'A,Название,maison-orphee,mo.png,"[{""volume"":""5ml"",""sku"":""A-5"",""price"":100}]"',
+      ].join('\n'),
+    )
+    const { rows, errors } = validateRows<never>('products-b', table.records)
+    expect(errors).toHaveLength(0)
+    expect(groupFormatB(rows).inputs[0].base.brand_logo).toBe('mo.png')
+  })
+})
+
+describe('группировка брендов по алфавиту (/brands)', () => {
+  const brand = (title: string) =>
+    ({ id: title, slug: title, title, description: null, country: null, logo: null, seo: null })
+
+  it('буква берётся через slugify: диакритика и кириллица ложатся на латиницу', () => {
+    expect(brandLetter('Élysée Parfums')).toBe('E')
+    expect(brandLetter('Îles du Sud')).toBe('I')
+    expect(brandLetter('Ателье Норд')).toBe('A')
+    expect(brandLetter('maison orphee')).toBe('M')
+  })
+
+  it('цифры и символы уходят в «#»', () => {
+    expect(brandLetter('9 Avenue')).toBe('#')
+    expect(brandLetter('«Ёлка»')).toBe('E')
+  })
+
+  it('группы идут по алфавиту, «#» — последней', () => {
+    const groups = groupBrandsByLetter([
+      brand('Zephyr'),
+      brand('9 Avenue'),
+      brand('Acqua'),
+      brand('Bois'),
+    ])
+    expect(groups.map((g) => g.letter)).toEqual(['A', 'B', 'Z', '#'])
+  })
+
+  it('пустые буквы в группы не попадают, порядок внутри группы сохраняется', () => {
+    const groups = groupBrandsByLetter([brand('Acqua'), brand('Ambre'), brand('Bois')])
+    expect(groups).toHaveLength(2)
+    expect(groups[0].brands.map((b) => b.title)).toEqual(['Acqua', 'Ambre'])
+  })
+
+  it('якорь буквы пригоден для href и id', () => {
+    expect(brandLetterAnchor('A')).toBe('brands-a')
+    expect(brandLetterAnchor('#')).toBe('brands-other')
+  })
+
+  it('пустой список — пустые группы, страница покажет заглушку', () => {
+    expect(groupBrandsByLetter([])).toEqual([])
+  })
+
+  // Регрессия 2026-09-11: бренд, заведённый в админке только в одной локали,
+  // приходил на остальные с title === undefined и ронял /brands целиком
+  // (`slugify(undefined)`). Схему с тех пор починили — title больше не
+  // localized, — но группировка обязана пережить пустое имя в любом случае.
+  it('пустое или отсутствующее название не роняет группировку', () => {
+    expect(brandLetter(undefined)).toBe('#')
+    expect(brandLetter(null)).toBe('#')
+    expect(brandLetter('')).toBe('#')
+    expect(brandLetter('   ')).toBe('#')
   })
 })
 

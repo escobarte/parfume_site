@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { BrandAlphabet } from '@/components/brands/BrandAlphabet'
+import { BrandGrid } from '@/components/brands/BrandGrid'
 import { CatalogShell } from '@/components/catalog/CatalogShell'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
-import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
-import { getAllBrands } from '@/lib/catalog/brands'
+import { getAllBrands, groupBrandsByLetter } from '@/lib/catalog/brands'
 import { buildMetadata } from '@/lib/seo/metadata'
 
 export async function generateMetadata(props: {
@@ -15,13 +16,21 @@ export async function generateMetadata(props: {
   return buildMetadata({ locale, path: '/brands', title: t('brands') })
 }
 
-/** Алфавитный указатель брендов (WIREFRAMES.md: страница ещё не утверждена
- * пиксельно — переносит паттерны сайта: линии-разделители, типографику §3). */
+/**
+ * Каталог брендов: сетка карточек с логотипами + алфавитный указатель.
+ * WIREFRAMES.md эту страницу пиксельно не описывает — раскладка переносит
+ * паттерны каталога (карточка §3, колонки сетки, линии-разделители).
+ */
 export default async function BrandsPage(props: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await props.params
   setRequestLocale(locale)
 
-  const [brands, t] = await Promise.all([getAllBrands(locale), getTranslations('Nav')])
+  const [brands, t, tb] = await Promise.all([
+    getAllBrands(locale),
+    getTranslations('Nav'),
+    getTranslations('BrandsPage'),
+  ])
+  const groups = groupBrandsByLetter(brands)
 
   return (
     <>
@@ -30,25 +39,17 @@ export default async function BrandsPage(props: { params: Promise<{ locale: Loca
         <h1 className="text-ink text-section tracking-display border-line border-b pb-5 font-light uppercase">
           {t('brands')}
         </h1>
-        <ul className="mt-2">
-          {brands.map((brand) => (
-            <li key={brand.id} className="border-line border-b">
-              <Link
-                href={`/brands/${brand.slug}`}
-                className="group flex items-center justify-between gap-4 py-4"
-              >
-                <span className="text-ink group-hover:text-ink-muted text-body font-medium uppercase transition-colors">
-                  {brand.title}
-                </span>
-                {brand.country && (
-                  <span className="text-ink-subtle text-label tracking-label shrink-0 uppercase">
-                    {brand.country}
-                  </span>
-                )}
-              </Link>
-            </li>
-          ))}
-        </ul>
+
+        {groups.length === 0 ? (
+          <p className="text-ink-muted text-body mt-8">{tb('empty')}</p>
+        ) : (
+          <>
+            <BrandAlphabet groups={groups} label={tb('indexLabel')} />
+            <div className="mt-8">
+              <BrandGrid groups={groups} />
+            </div>
+          </>
+        )}
       </CatalogShell>
     </>
   )

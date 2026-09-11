@@ -26,6 +26,10 @@
     "menu": "Меню",
     "breadcrumbs": "Навигация"
   },
+  "BrandsPage": {
+    "indexLabel": "Указатель по алфавиту",
+    "empty": "Пока нет ни одного бренда."
+  },
   "Footer": {
     "contacts": "Контакты",
     "addressOnMap": "Открыть адрес на карте",

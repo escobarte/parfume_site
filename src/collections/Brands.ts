@@ -23,9 +23,15 @@ export const Brands: CollectionConfig = {
     afterDelete: [() => revalidateTaxonomy()],
   },
   fields: [
-    { name: 'title', type: 'text', required: true, localized: true, index: true },
+    // title/description НЕ localized (решение владельца 2026-09-11): название
+    // бренда одинаково на всех языках, а описание ведётся «для себя». Раньше
+    // оба поля были локализованы, и бренд, заведённый в админке на одном
+    // языке, приходил на остальные локали с пустым title — страница /brands
+    // падала на нём (см. docs/GOTCHAS.md). Тот же принцип уже применён к
+    // Notes.title/description (ПРОМПТ 13) и Products.title (фаза 8.1).
+    { name: 'title', type: 'text', required: true, index: true },
     slugField(),
-    { name: 'description', type: 'textarea', localized: true },
+    { name: 'description', type: 'textarea' },
     { name: 'logo', type: 'upload', relationTo: 'media' },
     {
       name: 'country',

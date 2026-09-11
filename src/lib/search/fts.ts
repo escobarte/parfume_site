@@ -59,6 +59,8 @@ async function runQuery(term: string, locale: Locale, limit: number): Promise<Ro
   const [raw, rawAlt] = [words[0].toLowerCase(), (words[1] ?? words[0]).toLowerCase()]
 
   // $1 tsquery · $2 запрос как ввели · $3 транслитерация · $4 локаль · $5 лимит
+  // $4 нужен только категориям: название бренда и товара с фаз 8.1/2026-09-11
+  // не локализовано, оба берутся прямо из brands/products без join к _locales.
   const matches = (column: string) => `(
     to_tsvector('${config}', ${column}) @@ q.ts
     OR ${column} ILIKE '%' || q.raw || '%'
@@ -78,20 +80,19 @@ async function runQuery(term: string, locale: Locale, limit: number): Promise<Ro
     WITH q AS (SELECT to_tsquery('${config}', $1) AS ts, $2::text AS raw, $3::text AS alt)
     SELECT * FROM (
       SELECT 'product'::text AS type, p.title, p.slug,
-             ${rank("coalesce(p.title, '') || ' ' || coalesce(bl.title, '')")} AS rank
+             ${rank("coalesce(p.title, '') || ' ' || coalesce(b.title, '')")} AS rank
       FROM products p
-      LEFT JOIN brands_locales bl ON bl._parent_id = p.brand_id AND bl._locale = $4
+      LEFT JOIN brands b ON b.id = p.brand_id
       CROSS JOIN q
       WHERE p._status = 'published'
-        AND ${matches("coalesce(p.title, '') || ' ' || coalesce(bl.title, '')")}
+        AND ${matches("coalesce(p.title, '') || ' ' || coalesce(b.title, '')")}
 
       UNION ALL
 
-      SELECT 'brand'::text, bl2.title, b.slug, ${rank('bl2.title')} AS rank
-      FROM brands b
-      JOIN brands_locales bl2 ON bl2._parent_id = b.id AND bl2._locale = $4
+      SELECT 'brand'::text, b2.title, b2.slug, ${rank('b2.title')} AS rank
+      FROM brands b2
       CROSS JOIN q
-      WHERE ${matches('bl2.title')}
+      WHERE ${matches('b2.title')}
 
       UNION ALL
 

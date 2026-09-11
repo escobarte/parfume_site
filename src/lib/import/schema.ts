@@ -63,6 +63,10 @@ const productBase = {
   slug: trimmed.optional(),
   title: trimmed.min(1, 'title: обязателен'),
   brand: trimmed.min(1, 'brand: обязателен (slug бренда)'),
+  // Логотип бренда — имя файла из медиатеки, как images/variant_image
+  // (импортёр ничего не скачивает). Пишется не в товар, а в запись
+  // бренда, один раз за прогон — см. brandLogos.ts.
+  brand_logo: trimmed.optional(),
   // Страна-производитель. Как и volume — «пермиссивная» строка на уровне
   // схемы, строгая сверка со списком (uae / europe / usa) происходит в
   // applyProducts.ts: неизвестное значение не должно ронять весь файл, оно

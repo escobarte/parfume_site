@@ -1,5 +1,5 @@
 import { KIND_LABELS } from './detect'
-import { list } from './format'
+import { list, plural } from './format'
 import type { ImportPlan, ImportResult, RowError } from './types'
 
 /** Предупреждения одним списком, не длиннее 20 строк — общий хвост разделов. */
@@ -107,6 +107,18 @@ export function formatReport(result: ImportResult): string {
   // означает «колонки нет или она пуста», а не «всё проставлено».
   pushScalarSection(lines, 'Страна-производитель: проставлена у', plan.country)
   pushScalarSection(lines, 'Категория товара: проставлена у', plan.productCategory)
+
+  // Логотипы брендов — счёт идёт по БРЕНДАМ, а не по строкам файла: у бренда
+  // с 40 товарами ячейка повторяется 40 раз, но запись обновляется один раз.
+  // Формулировка «у N брендов» именно поэтому, не «привязано N».
+  const logos = plan.brandLogos
+  if (logos.applied || logos.missing.length || logos.conflicts.length) {
+    lines.push(
+      `Логотипы брендов: проставлены у ${logos.applied} ${plural(logos.applied, 'бренда', 'брендов', 'брендов')}`,
+    )
+    pushWarnings(lines, logos.missing)
+    pushWarnings(lines, logos.conflicts)
+  }
 
   const auto = plan.autoCreate
   const autoTotal = auto.brands.length + auto.categories.length + auto.notes.length

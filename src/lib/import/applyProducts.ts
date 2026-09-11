@@ -10,6 +10,7 @@ import {
 import { paragraphs } from '@/lib/seed/richText'
 import { slugify } from '@/lib/slugify'
 import { DESCRIPTION_LOCALES, type DescriptionLocale } from './detect'
+import { BrandLogoApplier } from './brandLogos'
 import { ImageResolver } from './images'
 import { RelationResolver } from './relations'
 import type { FormatARow, FormatBRow } from './schema'
@@ -304,6 +305,7 @@ export async function applyProducts(
   const { locale, dryRun, req } = options
   const resolver = new RelationResolver(payload, locale, dryRun, req)
   const imageResolver = new ImageResolver(payload, req)
+  const brandLogos = new BrandLogoApplier()
 
   for (const input of inputs) {
     const { base, variants } = input
@@ -363,6 +365,9 @@ export async function applyProducts(
     plan.variants.updated += merged.updated
 
     const brandId = await resolver.resolve('brands', base.brand)
+    // Лого бренда только запоминается: пишется оно один раз за прогон,
+    // после цикла по товарам (см. brandLogos.ts).
+    brandLogos.register(base.brand, base.brand_logo, input.line, plan)
     const categoryIds = await resolver.resolveMany('categories', base.categories)
     const noteIds = await resolver.resolveMany('notes', base.notes)
     const topIds = await resolver.resolveMany('notes', base.notes_top)
@@ -530,6 +535,11 @@ export async function applyProducts(
       }
     }
   }
+
+  // Логотипы брендов — после цикла: к этому моменту все бренды файла уже
+  // заведены и закэшированы резолвером, а каждая запись бренда обновляется
+  // ровно один раз, сколько бы товаров на неё ни ссылалось.
+  await brandLogos.apply(payload, resolver, imageResolver, plan, dryRun, req)
 
   plan.autoCreate.brands = resolver.created.brands
   plan.autoCreate.categories = resolver.created.categories

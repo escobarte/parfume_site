@@ -26,6 +26,10 @@
     "menu": "Menu",
     "breadcrumbs": "Breadcrumbs"
   },
+  "BrandsPage": {
+    "indexLabel": "Alphabetical index",
+    "empty": "No brands yet."
+  },
   "Footer": {
     "contacts": "Contacts",
     "addressOnMap": "Open the address on the map",
