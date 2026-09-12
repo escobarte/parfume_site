@@ -1,6 +1,7 @@
 import type { Payload, PayloadRequest } from 'payload'
 import type { Product } from '@/payload-types'
 import { isProductVolume, PRODUCT_VOLUMES, type ProductVolume } from '@/lib/catalog/volumes'
+import { discountPercent } from '@/lib/pricing'
 import {
   COUNTRY_SPEC,
   PRODUCT_CATEGORY_SPEC,
@@ -12,6 +13,7 @@ import { slugify } from '@/lib/slugify'
 import { DESCRIPTION_LOCALES, type DescriptionLocale } from './detect'
 import { BrandLogoApplier } from './brandLogos'
 import { ImageResolver } from './images'
+import { describeError } from './payloadErrors'
 import { RelationResolver } from './relations'
 import type { FormatARow, FormatBRow } from './schema'
 import type { ImportPlan, RowError } from './types'
@@ -21,7 +23,15 @@ type VariantInput = {
   volume: ProductVolume
   sku: string
   price: number
-  oldPrice: number | null
+  /**
+   * Цена до скидки. Ключ ОТСУТСТВУЕТ, если ячейка пуста — то же правило и по
+   * той же причине, что у `image` ниже: варианты склеиваются по sku через
+   * spread (mergeVariants), поэтому `oldPrice: null` в объекте затёр бы уже
+   * сохранённую зачёркнутую цену. До 2026-09-12 так и было: обычная
+   * перезаливка прайса без колонки `old_price` молча снимала уценку со всех
+   * товаров сразу.
+   */
+  oldPrice?: number | null
   stock: number
   isActive: boolean
   /**
@@ -128,7 +138,9 @@ export function groupFormatA(rows: ValidatedRow<FormatARow>[]): GroupResult {
       volume,
       sku,
       price,
-      oldPrice: old_price ?? null,
+      // Сверка именно с `undefined`, а не проверка на истинность: 0 — валидное
+      // число после разбора ячейки, и `old_price ? …` пропустил бы его.
+      ...(old_price !== undefined ? { oldPrice: old_price } : {}),
       stock: stock ?? 0,
       isActive: is_active ?? true,
       ...(variant_image ? { image: variant_image } : {}),
@@ -168,7 +180,8 @@ export function groupFormatB(rows: ValidatedRow<FormatBRow>[]): GroupResult {
         volume: variant.volume,
         sku: variant.sku,
         price: variant.price,
-        oldPrice: variant.oldPrice ?? null,
+        // Отсутствующий в JSON oldPrice не кладём — см. VariantInput.oldPrice.
+        ...(variant.oldPrice !== undefined ? { oldPrice: variant.oldPrice } : {}),
         stock: variant.stock ?? 0,
         isActive: variant.isActive ?? true,
         // Пустое/отсутствующее image не кладём — см. VariantInput.image.
@@ -187,14 +200,87 @@ export function groupFormatB(rows: ValidatedRow<FormatBRow>[]): GroupResult {
 }
 
 /**
+ * Отказ записи КОНКРЕТНОГО товара. Payload бросает `ValidationError`, у
+ * которой в `message` только «Следующее поле недействительно: …» — без товара
+ * и без причины. Здесь к ней прикладывается контекст, который есть только на
+ * этом уровне: строка CSV, handle и список SKU из этой строки, — чтобы отчёт
+ * мог показать человеку, что именно править, не заглядывая в код.
+ */
+export class ProductWriteError extends Error {
+  constructor(
+    readonly line: number,
+    readonly handle: string,
+    /** Описания вариантов строки: SKU + состояние уценки. */
+    readonly variants: string[],
+    readonly reason: string,
+    options?: { cause?: unknown },
+  ) {
+    // Многострочно с отступом: это фатальная ошибка, ради которой человек
+    // полезет в файл, и списком варианты читаются кратно быстрее, чем
+    // перечислением через запятую в одну строку. Отступ подогнан под формат
+    // вывода ошибок в report.ts.
+    const list = variants.length ? variants.map((row) => `\n        · ${row}`).join('') : ''
+    super(`товар ${handle} — ${reason}${list}`, options)
+    this.name = 'ProductWriteError'
+  }
+}
+
+/**
+ * Подпись варианта для сообщения об отказе: цена, уценка и ФАКТИЧЕСКОЕ
+ * наличие скидки. Чаще всего отказ именно из-за `variantsDiscountConsistent`,
+ * и без такой раскладки человеку пришлось бы сверять строки файла руками.
+ *
+ * Состояние считается тем же `discountPercent()`, которым пользуется сама
+ * валидация, — иначе подпись разошлась бы с причиной отказа. Показать просто
+ * «есть old_price / нет old_price» недостаточно: `old_price` может быть
+ * заполнен, но НЕ выше цены (перезалили прайс с подорожанием) — формально
+ * поле есть, скидки при этом нет, и именно такой случай выглядит самым
+ * загадочным для заливающего.
+ *
+ * Это вывод данных, а не повтор правила: здесь не решается, что допустимо,
+ * — печатается то, что уходит в базу.
+ */
+const describeVariant = (variant: {
+  sku: string
+  price?: number | null
+  oldPrice?: number | null
+}): string => {
+  const percent = discountPercent(variant.price, variant.oldPrice)
+  if (percent !== null) return `${variant.sku}: ${variant.price} вместо ${variant.oldPrice} (−${percent}%)`
+  if (variant.oldPrice === null || variant.oldPrice === undefined) {
+    return `${variant.sku}: ${variant.price}, old_price пуст — скидки нет`
+  }
+  return `${variant.sku}: ${variant.price}, old_price ${variant.oldPrice} не выше цены — скидки нет`
+}
+
+/** Оборачивает запись товара, добавляя к отказу контекст строки и SKU. */
+async function writeProduct<T>(
+  input: { line: number; handle: string; variants: string[] },
+  write: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await write()
+  } catch (error) {
+    if (error instanceof ProductWriteError) throw error
+    throw new ProductWriteError(input.line, input.handle, input.variants, describeError(error), {
+      cause: error,
+    })
+  }
+}
+
+/**
  * Вариант, готовый к записи: имя файла уже заменено на id записи Media.
  * Ключ `image` отсутствует, если фото не задано или не нашлось — тогда
  * spread в mergeVariants не тронет то, что уже привязано в базе.
  */
 type VariantPayload = Omit<VariantInput, 'image'> & { image?: number | string }
 
-/** Варианты из файла накатываются на существующие по sku; чужие не трогаем. */
-function mergeVariants(existing: Product['variants'], incoming: VariantPayload[]) {
+/**
+ * Варианты из файла накатываются на существующие по sku; чужие не трогаем.
+ * Экспортируется ради тестов (как `groupFormatA`/`groupFormatB`): именно
+ * здесь работает правило «отсутствующий ключ не затирает сохранённое».
+ */
+export function mergeVariants(existing: Product['variants'], incoming: VariantPayload[]) {
   const merged = [...(existing ?? [])]
   let created = 0
   let updated = 0
@@ -473,28 +559,39 @@ export async function applyProducts(
     if (base.is_new !== undefined) data.isNew = base.is_new
     if (base.is_hit !== undefined) data.isHit = base.is_hit
 
+    // Контекст для сообщения об отказе: строка файла, handle и SKU этой строки.
+    const where = {
+      line: input.line,
+      handle: base.handle,
+      variants: merged.merged.map(describeVariant),
+    }
+
     let productId = current?.id
     if (current) {
       plan.update.push(base.handle)
       if (!dryRun) {
-        await payload.update({
-          collection: 'products',
-          id: current.id,
-          locale: locale as 'ro',
-          data: data as never,
-          req: req as PayloadRequest,
-        })
+        await writeProduct(where, () =>
+          payload.update({
+            collection: 'products',
+            id: current.id,
+            locale: locale as 'ro',
+            data: data as never,
+            req: req as PayloadRequest,
+          }),
+        )
       }
     } else {
       plan.create.push(base.handle)
       if (!dryRun) {
-        const created = await payload.create({
-          collection: 'products',
-          locale: locale as 'ro',
-          // Новый товар публикуем сразу — прайс клиента это живой каталог.
-          data: { ...data, _status: 'published' } as never,
-          req: req as PayloadRequest,
-        })
+        const created = await writeProduct(where, () =>
+          payload.create({
+            collection: 'products',
+            locale: locale as 'ro',
+            // Новый товар публикуем сразу — прайс клиента это живой каталог.
+            data: { ...data, _status: 'published' } as never,
+            req: req as PayloadRequest,
+          }),
+        )
         productId = created.id
       }
     }

@@ -1,9 +1,16 @@
 import type { Payload, PayloadRequest } from 'payload'
 import { toTable } from './csv'
 import { detectDescriptionLocales, detectKind } from './detect'
-import { applyProducts, groupFormatA, groupFormatB, type GroupResult } from './applyProducts'
+import {
+  applyProducts,
+  groupFormatA,
+  groupFormatB,
+  ProductWriteError,
+  type GroupResult,
+} from './applyProducts'
 import { applyPrices, applyTranslations } from './applyUpdates'
 import type { FormatARow, FormatBRow, PriceRow, TranslationRow } from './schema'
+import { describeError } from './payloadErrors'
 import { emptyPlan, type ImportResult, type RowError } from './types'
 import { findDuplicates, validateRows } from './validate'
 
@@ -111,16 +118,15 @@ export async function runImport(
     return { ok: true, dryRun, plan, errors: [] }
   } catch (error) {
     if (transactionID) await payload.db.rollbackTransaction(transactionID)
-    return {
-      ok: false,
-      dryRun,
-      plan,
-      errors: [
-        {
-          line: 0,
-          message: `импорт откачен целиком: ${error instanceof Error ? error.message : String(error)}`,
-        },
-      ],
-    }
+    // У отказа на конкретном товаре есть строка файла, handle и SKU
+    // (ProductWriteError) — показываем их, иначе заливающий прайс видит
+    // только «Следующее поле недействительно» и не знает, что править.
+    // Для всего остального (сеть, БД) остаётся прежний общий текст.
+    const failure: RowError =
+      error instanceof ProductWriteError
+        ? { line: error.line, field: 'variants', message: `импорт откачен целиком — ${error.message}` }
+        : { line: 0, message: `импорт откачен целиком: ${describeError(error)}` }
+
+    return { ok: false, dryRun, plan, errors: [failure] }
   }
 }

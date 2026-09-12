@@ -1,13 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { normalizeHeader, parseCsv, toTable } from '@/lib/import/csv'
 import { detectKind } from '@/lib/import/detect'
-import { groupFormatA, groupFormatB } from '@/lib/import/applyProducts'
+import {
+  groupFormatA,
+  groupFormatB,
+  mergeVariants,
+  ProductWriteError,
+} from '@/lib/import/applyProducts'
+import { describeError, fieldErrorsOf } from '@/lib/import/payloadErrors'
+import { formatReport } from '@/lib/import/report'
+import { emptyPlan } from '@/lib/import/types'
 import { COUNTRY_SPEC, PRODUCT_CATEGORY_SPEC, resolveScalar } from '@/lib/import/productScalars'
 import { canonicalProductCategory } from '@/lib/catalog/productCategories'
 import { formatARow } from '@/lib/import/schema'
 import { findDuplicates, validateRows } from '@/lib/import/validate'
 import { BrandLogoApplier } from '@/lib/import/brandLogos'
-import { emptyPlan } from '@/lib/import/types'
 import {
   brandLetter,
   brandLetterAnchor,
@@ -382,6 +389,186 @@ describe('группировка брендов по алфавиту (/brands)'
     expect(brandLetter(null)).toBe('#')
     expect(brandLetter('')).toBe('#')
     expect(brandLetter('   ')).toBe('#')
+  })
+})
+
+describe('old_price: пустая ячейка не обнуляет уценку', () => {
+  /**
+   * Регрессия 2026-09-12. Раньше `oldPrice: old_price ?? null` попадал в
+   * объект варианта безусловно, и spread в `mergeVariants` затирал им уже
+   * сохранённую зачёркнутую цену: обычная перезаливка прайса без колонки
+   * `old_price` молча снимала уценку со ВСЕХ товаров сразу.
+   *
+   * Теперь правило то же, что у `images`/`country_of_origin`/`variant_image`:
+   * пустая ячейка — «не трогать», ключ в объект не кладётся.
+   */
+  const groupA = (csv: string) => {
+    const table = toTable(csv)
+    const { rows, errors } = validateRows<never>('products-a', table.records)
+    expect(errors).toHaveLength(0)
+    return groupFormatA(rows)
+  }
+
+  it('колонки old_price нет вовсе — ключ не попадает в вариант', () => {
+    const { inputs } = groupA(
+      ['handle,title,brand,volume,sku,price', 'A,Название,b,5ml,A-5,200'].join('\n'),
+    )
+    expect('oldPrice' in inputs[0].variants[0]).toBe(false)
+  })
+
+  it('колонка есть, но ячейка пустая — ключ тоже не попадает', () => {
+    const { inputs } = groupA(
+      ['handle,title,brand,volume,sku,price,old_price', 'A,Название,b,5ml,A-5,200,'].join('\n'),
+    )
+    expect('oldPrice' in inputs[0].variants[0]).toBe(false)
+  })
+
+  it('заполненная ячейка кладётся как раньше', () => {
+    const { inputs } = groupA(
+      ['handle,title,brand,volume,sku,price,old_price', 'A,Название,b,5ml,A-5,200,250'].join('\n'),
+    )
+    expect(inputs[0].variants[0].oldPrice).toBe(250)
+  })
+
+  it('0 не теряется: проверка идёт на undefined, а не на истинность', () => {
+    const { inputs } = groupA(
+      ['handle,title,brand,volume,sku,price,old_price', 'A,Название,b,5ml,A-5,200,0'].join('\n'),
+    )
+    expect(inputs[0].variants[0].oldPrice).toBe(0)
+  })
+
+  it('формат B ведёт себя так же — форматы не расходятся', () => {
+    const table = toTable(
+      [
+        'handle,title,brand,variants',
+        'A,Название,b,"[{""volume"":""5ml"",""sku"":""A-5"",""price"":200}]"',
+        'B,Другое,b,"[{""volume"":""5ml"",""sku"":""B-5"",""price"":200,""oldPrice"":250}]"',
+      ].join('\n'),
+    )
+    const { rows, errors } = validateRows<never>('products-b', table.records)
+    expect(errors).toHaveLength(0)
+    const { inputs } = groupFormatB(rows)
+    expect('oldPrice' in inputs[0].variants[0]).toBe(false)
+    expect(inputs[1].variants[0].oldPrice).toBe(250)
+  })
+
+  it('ПЕРЕЗАЛИВКА: цена обновляется, сохранённая уценка остаётся на месте', () => {
+    // Товар уже в базе со скидкой 250 → 200.
+    const existing = [{ volume: '5ml', sku: 'A-5', price: 200, oldPrice: 250, stock: 3, isActive: true }]
+    // Новый прайс без колонки old_price — меняем только цену.
+    const { inputs } = groupA(
+      ['handle,title,brand,volume,sku,price', 'A,Название,b,5ml,A-5,180'].join('\n'),
+    )
+
+    const { merged, updated } = mergeVariants(
+      existing as never,
+      inputs[0].variants as never,
+    )
+    expect(updated).toBe(1)
+    expect(merged[0].price).toBe(180)
+    // Главное: зачёркнутая цена не обнулилась.
+    expect(merged[0].oldPrice).toBe(250)
+  })
+
+  it('ПЕРЕЗАЛИВКА с непустой ячейкой всё так же перезаписывает уценку', () => {
+    const existing = [{ volume: '5ml', sku: 'A-5', price: 200, oldPrice: 250, stock: 3, isActive: true }]
+    const { inputs } = groupA(
+      ['handle,title,brand,volume,sku,price,old_price', 'A,Название,b,5ml,A-5,180,300'].join('\n'),
+    )
+    const { merged } = mergeVariants(existing as never, inputs[0].variants as never)
+    expect(merged[0].oldPrice).toBe(300)
+  })
+})
+
+describe('отказ валидации доезжает до отчёта импорта читаемым', () => {
+  /**
+   * Регрессия 2026-09-12. Отчёт печатал только `error.message` Payload —
+   * «Следующее поле недействительно: Варианты > Variants»: ни товара, ни
+   * причины. Текст самой validate-функции лежит глубже, в `data.errors[]`.
+   *
+   * Форма ошибки снята с живого Payload (`payload.update` на товаре,
+   * нарушающем variantsDiscountConsistent), а не придумана.
+   */
+  const VALIDATE_TEXT =
+    'Old Price (скидка) должна быть заполнена на ВСЕХ активных вариантах товара сразу, либо ни на одном — выборочная скидка по объёмам не поддерживается.'
+
+  const payloadValidationError = () =>
+    Object.assign(new Error('Следующее поле недействительно: Варианты > Variants'), {
+      name: 'ValidationError',
+      status: 400,
+      data: {
+        id: 50,
+        collection: 'products',
+        errors: [{ label: 'Варианты > Variants', message: VALIDATE_TEXT, path: 'variants' }],
+      },
+    })
+
+  it('оригинальный текст валидации достаётся из data.errors', () => {
+    expect(fieldErrorsOf(payloadValidationError())).toEqual([
+      { label: 'Варианты > Variants', message: VALIDATE_TEXT, path: 'variants' },
+    ])
+    expect(describeError(payloadValidationError())).toBe(VALIDATE_TEXT)
+  })
+
+  it('обычная ошибка (не ValidationError) отдаёт свой message как раньше', () => {
+    expect(describeError(new Error('соединение с базой потеряно'))).toBe(
+      'соединение с базой потеряно',
+    )
+    expect(fieldErrorsOf(new Error('x'))).toEqual([])
+    expect(fieldErrorsOf(null)).toEqual([])
+    expect(fieldErrorsOf({ data: { errors: 'не массив' } })).toEqual([])
+  })
+
+  it('в отчёте видно строку, товар, SKU и причину — без заглядывания в код', () => {
+    // Ровно то, что собирает applyProducts → engine на реальном отказе.
+    const error = new ProductWriteError(
+      2,
+      'MO-AMBER-SALE',
+      [
+        'MO-AS-05: 300, old_price 250 не выше цены — скидки нет',
+        'MO-AS-10: 370 вместо 450 (−18%)',
+        'MO-AS-30: 790 вместо 1200 (−34%)',
+      ],
+      describeError(payloadValidationError()),
+    )
+
+    const report = formatReport({
+      ok: false,
+      dryRun: false,
+      plan: emptyPlan('products-a', 'ro'),
+      errors: [
+        { line: error.line, field: 'variants', message: `импорт откачен целиком — ${error.message}` },
+      ],
+    })
+
+    // Номер строки файла — чтобы человек знал, куда смотреть.
+    expect(report).toContain('строка 2')
+    // Товар и все его SKU.
+    expect(report).toContain('MO-AMBER-SALE')
+    expect(report).toContain('MO-AS-05')
+    expect(report).toContain('MO-AS-10')
+    expect(report).toContain('MO-AS-30')
+    // Что именно не сошлось: у одного варианта скидки нет, у других есть.
+    expect(report).toContain('скидки нет')
+    expect(report).toContain('−18%')
+    // И оригинальная формулировка правила.
+    expect(report).toContain(VALIDATE_TEXT)
+    // Общего Payload-текста, который был раньше, в отчёте больше нет.
+    expect(report).not.toContain('Следующее поле недействительно')
+  })
+
+  it('ProductWriteError несёт строку и handle для адресной ошибки', () => {
+    const error = new ProductWriteError(7, 'CL-PIPER', ['CL-P-05: 100, old_price пуст — скидки нет'], 'причина')
+    expect(error.line).toBe(7)
+    expect(error.handle).toBe('CL-PIPER')
+    expect(error.message).toContain('CL-PIPER')
+    expect(error.message).toContain('причина')
+    expect(error.message).toContain('CL-P-05')
+  })
+
+  it('отказ без вариантов не ломает формат сообщения', () => {
+    const error = new ProductWriteError(3, 'X-1', [], 'поле title обязательно')
+    expect(error.message).toBe('товар X-1 — поле title обязательно')
   })
 })
 
