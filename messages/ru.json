@@ -15,6 +15,10 @@
       "newTitle": "Новинки",
       "hitsTitle": "Хиты",
       "seeAll": "Смотреть все"
+    },
+    "banners": {
+      "label": "Промо-баннеры",
+      "goTo": "Баннер {index}"
     }
   },
   "Nav": {

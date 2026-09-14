@@ -2,10 +2,12 @@ import { chromium } from '@playwright/test'
 import { readFileSync } from 'fs'
 
 /**
- * Скидки, промо-баннер и акционный hero (PLAN.md §4.5).
+ * Скидки и промо-баннер (PLAN.md §4.5). Раздел про акционный hero снят
+ * 2026-09-14 вместе с самим hero — первый экран главной теперь карусель
+ * баннеров, её проверяет tests/e2e/hero-carousel.e2e.spec.ts.
  * Запуск: node scripts/check-promo.mjs
  *
- * Даты баннера/hero проверяются через Local-эквивалент — REST-запросы
+ * Даты баннера проверяются через Local-эквивалент — REST-запросы
  * админа к /api/globals/*, теми же PATCH, что делает владелец в /admin.
  * Между PATCH и проверкой всегда два запроса подряд («прогрев» + чтение):
  * revalidateTag после правки глобала иногда отдаёт ещё не обновлённый кэш
@@ -428,107 +430,6 @@ await patchGlobal('settings', 'ru', {
     endDate: null,
   },
 })
-
-// ═══════════════════════════════════════════════════════════════════════
-// 4. Акционный hero: подмена по датам, без слайдера, SSR
-// ═══════════════════════════════════════════════════════════════════════
-const NORMAL_TITLE = 'Find your signature.'
-const PROMO_TITLE = 'Vânzare de vară.'
-
-await patchGlobal('homepage', 'ro', {
-  promoHero: { enabled: true, startDate: '2099-01-01T00:00:00.000Z', endDate: null },
-})
-html = await settle('/ro')
-check(
-  'до начала акции — обычный hero (чистый SSR, без JS)',
-  html.includes(NORMAL_TITLE) && !html.includes(PROMO_TITLE),
-)
-
-await patchGlobal('homepage', 'ro', {
-  promoHero: {
-    startDate: '2020-01-01T00:00:00.000Z',
-    endDate: '2099-01-01T00:00:00.000Z',
-    ctaTarget: 'catalogDiscounted',
-  },
-})
-html = await settle('/ro')
-check(
-  'внутри интервала — акционный hero целиком (чистый SSR, без JS)',
-  html.includes(PROMO_TITLE) && !html.includes(NORMAL_TITLE),
-)
-check(
-  'select ctaTarget=catalogDiscounted даёт каталог с фильтром «со скидкой»',
-  html.includes('href="/ro/catalog?flags=hasDiscount"'),
-)
-
-// Override должен побеждать выбор из select и здесь же — без префикса локали.
-await patchGlobal('homepage', 'ro', {
-  promoHero: { ctaTarget: 'catalogDiscounted', ctaTargetOverride: '/catalog?flags=isHit' },
-})
-html = await settle('/ro')
-check(
-  'override-поле CTA акционного hero побеждает выбор из select',
-  html.includes('href="/ro/catalog?flags=isHit"') &&
-    !html.includes('href="/ro/catalog?flags=hasDiscount"'),
-)
-await patchGlobal('homepage', 'ro', {
-  promoHero: { ctaTarget: 'catalogDiscounted', ctaTargetOverride: null },
-})
-
-await patchGlobal('homepage', 'ro', {
-  promoHero: { startDate: '2020-01-01T00:00:00.000Z', endDate: '2020-02-01T00:00:00.000Z' },
-})
-html = await settle('/ro')
-check(
-  'после endDate — обычный hero возвращается сам',
-  html.includes(NORMAL_TITLE) && !html.includes(PROMO_TITLE),
-)
-
-await patchGlobal('homepage', 'ro', {
-  promoHero: {
-    enabled: false,
-    startDate: '2020-01-01T00:00:00.000Z',
-    endDate: '2099-01-01T00:00:00.000Z',
-  },
-})
-html = await settle('/ro')
-check('enabled=false побеждает даже внутри интервала дат', html.includes(NORMAL_TITLE))
-
-// Композиция и типографика одинаковы у обеих версий — проверяем на активной.
-await patchGlobal('homepage', 'ro', {
-  promoHero: {
-    enabled: true,
-    startDate: '2020-01-01T00:00:00.000Z',
-    endDate: '2099-01-01T00:00:00.000Z',
-  },
-})
-await settle('/ro')
-await page.goto(`${BASE}/ro`, { waitUntil: 'domcontentloaded' })
-await page.waitForTimeout(300)
-const heroStyle = await page.evaluate(() => {
-  const h1 = document.querySelector('h1')
-  const cs = getComputedStyle(h1)
-  return {
-    fontSize: cs.fontSize,
-    tracking: cs.letterSpacing,
-    transform: cs.textTransform,
-    color: cs.color,
-  }
-})
-check(
-  'типографика акционного hero совпадает с обычным (те же классы §1)',
-  heroStyle.fontSize === '40px' &&
-    heroStyle.transform === 'uppercase' &&
-    heroStyle.color === 'rgb(232, 207, 176)',
-  JSON.stringify(heroStyle),
-)
-
-// Возвращаем hero в выключенное состояние — таким его оставил seed.
-for (const locale of ['ro', 'ru', 'en']) {
-  await patchGlobal('homepage', locale, {
-    promoHero: { enabled: false, startDate: null, endDate: null },
-  })
-}
 
 await browser.close()
 

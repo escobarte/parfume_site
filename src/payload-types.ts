@@ -1288,63 +1288,39 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
  */
 export interface Homepage {
   id: number;
-  hero: {
-    /**
-     * Фирменная EN-фраза — не переводится.
-     */
-    eyebrow?: string | null;
-    /**
-     * Фирменные EN-фразы оставляйте на английском.
-     */
-    title: string;
-    subtitle?: string | null;
-    ctaLabel?: string | null;
-    /**
-     * Без префикса локали.
-     */
-    ctaHref?: string | null;
-  };
   /**
-   * Пока включена и дата попадает в интервал — заменяет hero целиком. Один экран, без слайдера.
+   * Карусель вверху главной. Порядок слайдов — порядок строк (перетаскиванием). Весь текст — на самой картинке. Один баннер — статичная картинка, пусто — секции нет.
    */
-  promoHero?: {
-    enabled?: boolean | null;
-    /**
-     * Пусто — берётся обычный «Perfumes for everyone».
-     */
-    eyebrow?: string | null;
-    title?: string | null;
-    subtitle?: string | null;
-    /**
-     * Пусто — берётся подпись выбранной цели.
-     */
-    ctaLabel?: string | null;
-    ctaTargetMode?: ('system' | 'page') | null;
-    /**
-     * Каталог, Бренды, Главная и т.п. — не Pages-контент.
-     */
-    ctaTarget?: ('home' | 'catalog' | 'catalogDiscounted' | 'catalogNew' | 'brands' | 'orderLookup') | null;
-    /**
-     * О нас, Доставка, Контакты и другой контент из коллекции Страницы.
-     */
-    ctaTargetPage?: (number | null) | Page;
-    /**
-     * Заполнено — используется вместо выбора выше (внешний URL или внутренний путь без префикса локали, напр. /catalog).
-     */
-    ctaTargetOverride?: string | null;
-    /**
-     * Необязательно. Пусто — фон остаётся navy.
-     */
-    image?: (number | null) | Media;
-    /**
-     * Пусто — без ограничения снизу.
-     */
-    startDate?: string | null;
-    /**
-     * Пусто — без ограничения сверху.
-     */
-    endDate?: string | null;
-  };
+  heroBanners?:
+    | {
+        /**
+         * Снимите, чтобы временно скрыть баннер, не удаляя его.
+         */
+        enabled?: boolean | null;
+        /**
+         * Обязательно хотя бы на одном языке: где картинки нет, показывается загруженная на другом. Все баннеры — одной пропорции, ширина от 1920 px.
+         */
+        image?: (number | null) | Media;
+        /**
+         * Коротко, что на картинке — для незрячих и поисковиков. Не повторяйте текст с баннера. Пусто — берётся alt файла из Медиа.
+         */
+        alt?: string | null;
+        linkMode?: ('system' | 'page') | null;
+        /**
+         * Каталог, Бренды, Главная и т.п. — не Pages-контент.
+         */
+        link?: ('home' | 'catalog' | 'catalogDiscounted' | 'catalogNew' | 'brands' | 'orderLookup') | null;
+        /**
+         * О нас, Доставка, Контакты и другой контент из коллекции Страницы.
+         */
+        linkPage?: (number | null) | Page;
+        /**
+         * Заполнено — используется вместо выбора выше (внешний URL или внутренний путь без префикса локали, напр. /catalog).
+         */
+        linkOverride?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   /**
    * Четыре плитки; счётчики товаров считаются из БД.
    */
@@ -1371,19 +1347,6 @@ export interface Homepage {
     title?: string | null;
     linkLabel?: string | null;
     limit?: number | null;
-  };
-  editorial?: {
-    /**
-     * Фирменная EN-фраза — не переводится.
-     */
-    phrase?: string | null;
-    text?: string | null;
-    linkLabel?: string | null;
-    linkHref?: string | null;
-    /**
-     * Пусто — на плите cream остаётся знак бренда.
-     */
-    image?: (number | null) | Media;
   };
   /**
    * Одна центрированная строка названий без логотипов.
@@ -1548,30 +1511,17 @@ export interface PromoPopupSetting {
  * via the `definition` "homepage_select".
  */
 export interface HomepageSelect<T extends boolean = true> {
-  hero?:
-    | T
-    | {
-        eyebrow?: T;
-        title?: T;
-        subtitle?: T;
-        ctaLabel?: T;
-        ctaHref?: T;
-      };
-  promoHero?:
+  heroBanners?:
     | T
     | {
         enabled?: T;
-        eyebrow?: T;
-        title?: T;
-        subtitle?: T;
-        ctaLabel?: T;
-        ctaTargetMode?: T;
-        ctaTarget?: T;
-        ctaTargetPage?: T;
-        ctaTargetOverride?: T;
         image?: T;
-        startDate?: T;
-        endDate?: T;
+        alt?: T;
+        linkMode?: T;
+        link?: T;
+        linkPage?: T;
+        linkOverride?: T;
+        id?: T;
       };
   categoryTiles?:
     | T
@@ -1594,15 +1544,6 @@ export interface HomepageSelect<T extends boolean = true> {
         title?: T;
         linkLabel?: T;
         limit?: T;
-      };
-  editorial?:
-    | T
-    | {
-        phrase?: T;
-        text?: T;
-        linkLabel?: T;
-        linkHref?: T;
-        image?: T;
       };
   featuredBrands?: T;
   updatedAt?: T;

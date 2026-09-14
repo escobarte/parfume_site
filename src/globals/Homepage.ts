@@ -1,12 +1,43 @@
-import type { GlobalConfig } from 'payload'
+import type { GlobalConfig, UploadField, Validate } from 'payload'
 import { adminOnly, isAdmin, publicRead } from '@/access/roles'
 import { internalLinkFields } from '@/fields/internalLink'
 import { HOMEPAGE_TAG, revalidateCatalog } from '@/lib/revalidate'
 
 /**
- * Главная страница — состав секций по docs/WIREFRAMES.md §Главная
- * (мокап docs/mockups/home.html). Порядок секций в вёрстке фиксирован,
- * из админки управляется наполнение.
+ * Картинка баннера обязательна, но НЕ в каждой локали: владелец может
+ * загрузить одну картинку на одном языке, остальные локали покажут её же
+ * (фолбэк на любую заполненную локаль — `src/lib/content/heroBanners.ts`).
+ * Поэтому не `required: true`: Payload проверяет его в той локали, которую
+ * сейчас редактируют, и заставил бы грузить картинку трижды.
+ *
+ * Проверка — «есть ли картинка у этой строки хоть в одной ДРУГОЙ локали»
+ * по сохранённому документу. Текущая локаль исключается: иначе очистка
+ * единственной картинки прошла бы проверку по ещё не перезаписанной базе.
+ * Запрос к базе — только на сохранении, не на каждом изменении формы.
+ */
+const imageInSomeLocale: Validate<unknown, unknown, { id?: string | null }, UploadField> = async (
+  value,
+  { event, req, siblingData },
+) => {
+  if (value) return true
+  if (event === 'onChange') return true
+
+  const rowId = siblingData?.id
+  if (rowId) {
+    const saved = await req.payload.findGlobal({ slug: 'homepage', locale: 'all', depth: 0 })
+    const row = (saved.heroBanners ?? []).find((banner) => banner.id === rowId)
+    const byLocale = (row?.image ?? {}) as unknown as Record<string, unknown>
+    const elsewhere = Object.entries(byLocale).some(
+      ([locale, image]) => locale !== req.locale && Boolean(image),
+    )
+    if (elsewhere) return true
+  }
+  return 'Загрузите картинку баннера хотя бы на одном языке.'
+}
+
+/**
+ * Главная страница — состав секций по docs/WIREFRAMES.md §Главная.
+ * Порядок секций в вёрстке фиксирован, из админки управляется наполнение.
  */
 export const Homepage: GlobalConfig = {
   slug: 'homepage',
@@ -19,96 +50,51 @@ export const Homepage: GlobalConfig = {
       type: 'tabs',
       tabs: [
         {
-          label: 'Hero',
+          label: 'Баннеры',
           fields: [
             {
-              name: 'hero',
-              type: 'group',
-              fields: [
-                {
-                  name: 'eyebrow',
-                  type: 'text',
-                  defaultValue: 'Perfumes for everyone',
-                  admin: { description: 'Фирменная EN-фраза — не переводится.' },
-                },
-                {
-                  name: 'title',
-                  type: 'text',
-                  required: true,
-                  localized: true,
-                  defaultValue: 'Find your signature.',
-                  admin: { description: 'Фирменные EN-фразы оставляйте на английском.' },
-                },
-                { name: 'subtitle', type: 'textarea', localized: true },
-                {
-                  type: 'row',
-                  fields: [
-                    {
-                      name: 'ctaLabel',
-                      type: 'text',
-                      localized: true,
-                      admin: { width: '50%' },
-                    },
-                    {
-                      name: 'ctaHref',
-                      type: 'text',
-                      defaultValue: '/catalog',
-                      admin: { width: '50%', description: 'Без префикса локали.' },
-                    },
-                  ],
-                },
-              ],
-            },
-            {
-              // Подмена по датам, не слайдер (PLAN.md §4.5, WIREFRAMES.md §1):
-              // пока promoHero включён и дата внутри интервала — hero целиком
-              // рендерится в этой версии вместо обычной; вне интервала —
-              // обычный hero выше. Композиция и типографика те же.
-              name: 'promoHero',
-              type: 'group',
-              label: 'Акционная версия hero (подмена по датам)',
+              // Карусель вверху главной (2026-09-14) — заменила статичный hero,
+              // акционный hero по датам и editorial-блок. Текст, заголовки и
+              // CTA дизайнер вшивает прямо в картинку, отдельных полей нет.
+              name: 'heroBanners',
+              type: 'array',
+              label: 'Баннеры',
+              labels: { singular: 'Баннер', plural: 'Баннеры' },
               admin: {
                 description:
-                  'Пока включена и дата попадает в интервал — заменяет hero целиком. Один экран, без слайдера.',
+                  'Карусель вверху главной. Порядок слайдов — порядок строк (перетаскиванием). Весь текст — на самой картинке. Один баннер — статичная картинка, пусто — секции нет.',
               },
               fields: [
-                { name: 'enabled', type: 'checkbox', defaultValue: false, label: 'Включена' },
                 {
-                  name: 'eyebrow',
-                  type: 'text',
-                  localized: true,
-                  admin: { description: 'Пусто — берётся обычный «Perfumes for everyone».' },
+                  name: 'enabled',
+                  type: 'checkbox',
+                  label: 'Показывать',
+                  defaultValue: true,
+                  admin: { description: 'Снимите, чтобы временно скрыть баннер, не удаляя его.' },
                 },
-                { name: 'title', type: 'text', localized: true },
-                { name: 'subtitle', type: 'textarea', localized: true },
-                {
-                  name: 'ctaLabel',
-                  type: 'text',
-                  localized: true,
-                  admin: { description: 'Пусто — берётся подпись выбранной цели.' },
-                },
-                ...internalLinkFields('ctaTarget'),
                 {
                   name: 'image',
                   type: 'upload',
                   relationTo: 'media',
-                  admin: { description: 'Необязательно. Пусто — фон остаётся navy.' },
+                  localized: true,
+                  label: 'Картинка',
+                  validate: imageInSomeLocale,
+                  admin: {
+                    description:
+                      'Обязательно хотя бы на одном языке: где картинки нет, показывается загруженная на другом. Все баннеры — одной пропорции, ширина от 1920 px.',
+                  },
                 },
                 {
-                  type: 'row',
-                  fields: [
-                    {
-                      name: 'startDate',
-                      type: 'date',
-                      admin: { width: '50%', description: 'Пусто — без ограничения снизу.' },
-                    },
-                    {
-                      name: 'endDate',
-                      type: 'date',
-                      admin: { width: '50%', description: 'Пусто — без ограничения сверху.' },
-                    },
-                  ],
+                  name: 'alt',
+                  type: 'text',
+                  localized: true,
+                  label: 'Описание картинки (alt)',
+                  admin: {
+                    description:
+                      'Коротко, что на картинке — для незрячих и поисковиков. Не повторяйте текст с баннера. Пусто — берётся alt файла из Медиа.',
+                  },
                 },
+                ...internalLinkFields('link'),
               ],
             },
           ],
@@ -162,39 +148,6 @@ export const Homepage: GlobalConfig = {
                 { name: 'title', type: 'text', localized: true, defaultValue: 'Хиты' },
                 { name: 'linkLabel', type: 'text', localized: true },
                 { name: 'limit', type: 'number', defaultValue: 4, min: 2, max: 12 },
-              ],
-            },
-          ],
-        },
-        {
-          label: 'Editorial',
-          fields: [
-            {
-              name: 'editorial',
-              type: 'group',
-              label: 'Editorial-блок (1 image + 1 phrase + logo)',
-              fields: [
-                {
-                  name: 'phrase',
-                  type: 'text',
-                  localized: true,
-                  defaultValue: 'A scent for every story.',
-                  admin: { description: 'Фирменная EN-фраза — не переводится.' },
-                },
-                { name: 'text', type: 'textarea', localized: true },
-                {
-                  type: 'row',
-                  fields: [
-                    { name: 'linkLabel', type: 'text', localized: true, admin: { width: '50%' } },
-                    { name: 'linkHref', type: 'text', admin: { width: '50%' } },
-                  ],
-                },
-                {
-                  name: 'image',
-                  type: 'upload',
-                  relationTo: 'media',
-                  admin: { description: 'Пусто — на плите cream остаётся знак бренда.' },
-                },
               ],
             },
           ],

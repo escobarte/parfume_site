@@ -23,6 +23,7 @@ import * as migration_20260911_085054_brands_title_description_not_localized fro
 import * as migration_20260911_104827_promo_code_types_and_popup_settings from './20260911_104827_promo_code_types_and_popup_settings';
 import * as migration_20260912_120009_order_item_line_discounts from './20260912_120009_order_item_line_discounts';
 import * as migration_20260912_130301_discount_campaigns from './20260912_130301_discount_campaigns';
+import * as migration_20260914_132807_hero_banners_carousel from './20260914_132807_hero_banners_carousel';
 
 export const migrations = [
   {
@@ -148,6 +149,11 @@ export const migrations = [
   {
     up: migration_20260912_130301_discount_campaigns.up,
     down: migration_20260912_130301_discount_campaigns.down,
-    name: '20260912_130301_discount_campaigns'
+    name: '20260912_130301_discount_campaigns',
+  },
+  {
+    up: migration_20260914_132807_hero_banners_carousel.up,
+    down: migration_20260914_132807_hero_banners_carousel.down,
+    name: '20260914_132807_hero_banners_carousel'
   },
 ];

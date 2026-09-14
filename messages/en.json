@@ -15,6 +15,10 @@
       "newTitle": "New arrivals",
       "hitsTitle": "Bestsellers",
       "seeAll": "See all"
+    },
+    "banners": {
+      "label": "Promotional banners",
+      "goTo": "Banner {index}"
     }
   },
   "Nav": {

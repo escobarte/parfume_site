@@ -446,82 +446,34 @@ async function seedGlobals(
 
   const home: Record<Locale, Record<string, string>> = {
     ro: {
-      subtitle:
-        'Galerie de parfumuri în Chișinău. Aroma este o alegere personală: explorați, încercați, găsiți-o pe a voastră.',
-      cta: 'Deschide catalogul',
       newTitle: 'Noutăți',
       newLink: 'Vezi toate',
-      editorialText: 'Fiecare aromă are un context: un oraș, o oră, o persoană.',
-      editorialLink: 'Ghidul aromelor',
       hitsTitle: 'Populare',
-      promoEyebrow: 'Ofertă limitată',
-      promoTitle: 'Vânzare de vară.',
-      promoSubtitle: 'Reduceri de până la 30% la o selecție de arome, pe timp limitat.',
-      promoCta: 'Vezi reducerile',
     },
     ru: {
-      subtitle:
-        'Современная парфюмерная галерея в Кишинёве. Аромат — личный выбор: исследуйте, пробуйте, находите своё.',
-      cta: 'Открыть каталог',
       newTitle: 'Новинки',
       newLink: 'Смотреть все',
-      editorialText: 'У каждого аромата есть контекст: город, час, человек.',
-      editorialLink: 'Гид по ароматам',
       hitsTitle: 'Хиты',
-      promoEyebrow: 'Ограниченное предложение',
-      promoTitle: 'Летняя распродажа.',
-      promoSubtitle: 'Скидки до 30% на подборку ароматов — ограниченное время.',
-      promoCta: 'Смотреть скидки',
     },
     en: {
-      subtitle:
-        'A perfume gallery in Chisinau. Scent is a personal choice: explore, try, find your own.',
-      cta: 'Open the catalog',
       newTitle: 'New arrivals',
       newLink: 'See all',
-      editorialText: 'Every scent has a context: a city, an hour, a person.',
-      editorialLink: 'Fragrance guide',
       hitsTitle: 'Bestsellers',
-      promoEyebrow: 'Limited offer',
-      promoTitle: 'Summer sale.',
-      promoSubtitle: 'Up to 30% off a selection of scents, for a limited time.',
-      promoCta: 'See the sale',
     },
   }
 
+  // Баннеры первого экрана (`heroBanners`) сид не заполняет: это готовые
+  // картинки дизайнера с вшитым текстом, плейсхолдер вместо них ничего бы не
+  // проверил. Пустой массив — секции на главной просто нет.
   for (const locale of LOCALES) {
     const text = home[locale]
     await payload.updateGlobal({
       slug: 'homepage',
       locale,
       data: {
-        hero: {
-          eyebrow: 'Perfumes for everyone',
-          title: 'Find your signature.',
-          subtitle: text.subtitle,
-          ctaLabel: text.cta,
-          ctaHref: '/catalog',
-        },
-        // Выключена по умолчанию — контент готов, владелец включает
-        // галочкой и датами на время реальной акции (фаза 4.5).
-        // ctaTarget ведёт сразу в каталог с фильтром «со скидкой».
-        promoHero: {
-          enabled: false,
-          eyebrow: text.promoEyebrow,
-          title: text.promoTitle,
-          subtitle: text.promoSubtitle,
-          ctaLabel: text.promoCta,
-          ctaTarget: 'catalogDiscounted',
-        },
         categoryTiles: categories.map((category) => ({ category: categoryIds.get(category.slug) })),
         newRow: { title: text.newTitle, linkLabel: text.newLink, limit: 4 },
         hitsRow: { enabled: false, title: text.hitsTitle, linkLabel: text.newLink, limit: 4 },
-        editorial: {
-          phrase: 'A scent for every story.',
-          text: text.editorialText,
-          linkLabel: text.editorialLink,
-          linkHref: '/about',
-        },
         featuredBrands: brands.map((brand) => brandIds.get(brand.slug)),
       } as never,
     })

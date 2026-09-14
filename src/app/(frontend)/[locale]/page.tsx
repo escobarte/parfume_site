@@ -1,28 +1,38 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { BrandStrip } from '@/components/home/BrandStrip'
 import { CategoryRibbon } from '@/components/home/CategoryRibbon'
-import { Editorial } from '@/components/home/Editorial'
-import { Hero } from '@/components/home/Hero'
+import { HeroCarousel } from '@/components/home/HeroCarousel'
 import { ProductRow } from '@/components/home/ProductRow'
 import type { Locale } from '@/i18n/routing'
-import { getHomepage } from '@/lib/content/globals'
+import { getHomepage, getSettings } from '@/lib/content/globals'
 
 /**
- * Главная (WIREFRAMES.md §Главная, мокап docs/mockups/mockup-home.html):
- * Hero → Лента категорий → Новинки → Editorial → Бренд-строка →
- * [опц. Хиты]. Порядок секций фиксирован вёрсткой, наполнение — из global
- * `homepage` (Payload).
+ * Главная (WIREFRAMES.md §Главная):
+ * Карусель баннеров → Лента категорий → Новинки → Бренд-строка → [опц. Хиты].
+ * Порядок секций фиксирован вёрсткой, наполнение — из global `homepage`.
+ *
+ * С 2026-09-14 текст первого экрана вшит в картинки баннеров, видимого
+ * заголовка на странице нет. `h1` остаётся — визуально скрытым, из названия
+ * и дескриптора сайта: у страницы должен быть заголовок первого уровня и для
+ * поисковиков, и для навигации скринридером.
  */
 export default async function HomePage(props: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await props.params
   setRequestLocale(locale)
 
-  const [homepage, t] = await Promise.all([getHomepage(locale), getTranslations('HomePage')])
+  const [homepage, settings, t] = await Promise.all([
+    getHomepage(locale),
+    getSettings(locale),
+    getTranslations('HomePage'),
+  ])
   const hitsRow = homepage.hitsRow
 
   return (
     <>
-      <Hero locale={locale} />
+      <h1 className="sr-only">
+        {[settings.siteName || 'MON FLACON', settings.tagline].filter(Boolean).join(' — ')}
+      </h1>
+      <HeroCarousel locale={locale} />
       <CategoryRibbon locale={locale} />
       <ProductRow
         locale={locale}
@@ -32,7 +42,6 @@ export default async function HomePage(props: { params: Promise<{ locale: Locale
         limit={homepage.newRow?.limit ?? 4}
         priority
       />
-      <Editorial locale={locale} />
       <BrandStrip locale={locale} />
       {hitsRow?.enabled && (
         <ProductRow
