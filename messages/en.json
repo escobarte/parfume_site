@@ -37,12 +37,7 @@
   "Footer": {
     "contacts": "Contacts",
     "addressOnMap": "Open the address on the map",
-    "trackOrder": "Track order",
-    "exchangeTitle": "Exchange & returns",
-    "exchangeText": "Returns or exchanges — within 14 days of receipt, if the bottle is unopened and the packaging is intact.",
-    "exchangeLink": "Learn more",
-    "dataProtectionTitle": "Data protection",
-    "dataProtectionText": "Your data (name, phone, email) is used only to process your order and contact you — never shared with third parties."
+    "trackOrder": "Track order"
   },
   "AboutPage": {
     "contactsHeading": "Contacts",

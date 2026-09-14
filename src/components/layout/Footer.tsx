@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server'
 import { BrandMark } from '@/components/brand/BrandMark'
-import { mailHref, mapHref, messengerLinks, telHref } from '@/lib/contacts'
+import { mapHref, messengerLinks, telHref } from '@/lib/contacts'
 import { Link } from '@/i18n/navigation'
 import type { Locale } from '@/i18n/routing'
 import { getNavigation, getSettings } from '@/lib/content/globals'
@@ -128,72 +128,16 @@ export async function Footer({ locale }: { locale: Locale }) {
           </div>
         </div>
 
-        {/* Инфоблок «Обмен и возврат / Защита данных / Контакты» (фаза 11.1,
-            задача 4) — перенесён сюда, тот же Footer.tsx, второй футер-
-            компонент не заводился. «Обмен» переиспользует условие 14 дней
-            уже опубликованное на /returns (Pages), не дублирует его как
-            отдельный источник правды — просто короткая версия + ссылка.
-            «Контакты» — те же settings.contacts, что и колонка выше, но
-            компактно (телефон/email), другая колонка их не показывала. */}
-        <div className="border-line-on-dark-soft grid grid-cols-1 gap-6 border-b py-7 sm:grid-cols-3">
-          <div>
-            <div className="text-cream text-eyebrow tracking-display mb-2 uppercase">
-              {t('exchangeTitle')}
-            </div>
-            <p className="text-ink-on-dark-muted text-eyebrow leading-body">{t('exchangeText')}</p>
-            <Link
-              href="/returns"
-              className="text-ink-on-dark-muted hover:text-cream text-eyebrow mt-1 inline-block underline underline-offset-4 transition-colors"
-            >
-              {t('exchangeLink')}
-            </Link>
-          </div>
-
-          <div>
-            <div className="text-cream text-eyebrow tracking-display mb-2 uppercase">
-              {t('dataProtectionTitle')}
-            </div>
-            {/* ЧЕРНОВИК (фаза 11.1, задача 4): стандартный текст о защите
-                персональных данных, юридически НЕ проверен и не согласован
-                с владельцем/клиентом — заменить перед реальным запуском.
-                См. docs/CHANGELOG.md, запись этой сессии. */}
-            <p className="text-ink-on-dark-muted text-eyebrow leading-body">
-              {t('dataProtectionText')}
-            </p>
-          </div>
-
-          <div>
-            <div className="text-cream text-eyebrow tracking-display mb-2 uppercase">
-              {t('contacts')}
-            </div>
-            {contacts?.phone && (
-              <a
-                href={telHref(contacts.phone)}
-                className="text-ink-on-dark-muted hover:text-cream text-eyebrow block py-0.5 transition-colors"
-              >
-                {contacts.phone}
-              </a>
-            )}
-            {contacts?.email && (
-              <a
-                href={mailHref(contacts.email)}
-                className="text-ink-on-dark-muted hover:text-cream text-eyebrow block py-0.5 transition-colors"
-              >
-                {contacts.email}
-              </a>
-            )}
-          </div>
-        </div>
-
+        {/* 2026-09-14: инфоблок «Обмен и возврат / Защита данных / Контакты»
+            (фаза 11.1, задача 4) и статичная подпись «MDL» у переключателя
+            языка удалены по решению владельца. «MDL» была просто текстом —
+            валюта на сайте одна, переключения не было. */}
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <p className="text-ink-on-dark-faint text-eyebrow">
             © {new Date().getFullYear()} {settings.siteName ?? 'MON FLACON'} ·{' '}
             {settings.tagline ?? 'Perfumes for everyone'}
           </p>
-          <div className="text-ink-on-dark-faint text-eyebrow flex items-center gap-4">
-            <LocaleSwitcher />
-            <span className="tracking-label">MDL</span>
-          </div>
+          <LocaleSwitcher />
         </div>
       </div>
     </footer>

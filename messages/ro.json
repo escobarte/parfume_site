@@ -37,12 +37,7 @@
   "Footer": {
     "contacts": "Contacte",
     "addressOnMap": "Deschide adresa pe hartă",
-    "trackOrder": "Verifică comanda",
-    "exchangeTitle": "Schimb și retur",
-    "exchangeText": "Retur sau schimb — în 14 zile de la primire, dacă flaconul nu a fost desigilat și ambalajul este intact.",
-    "exchangeLink": "Detalii",
-    "dataProtectionTitle": "Protecția datelor",
-    "dataProtectionText": "Datele dvs. (nume, telefon, email) sunt folosite doar pentru procesarea comenzii și pentru a lua legătura cu dvs. — nu sunt transmise terților."
+    "trackOrder": "Verifică comanda"
   },
   "AboutPage": {
     "contactsHeading": "Contacte",
