@@ -206,19 +206,30 @@ const promoRest = (method, path, body) =>
     ...(body ? { body: JSON.stringify(body) } : {}),
   })
 
-const promoCheck = (code) =>
+// Телефон, на который выдан персональный код. Сверка кода идёт именно по
+// нему, а НЕ по телефону доставки в заявке — это разные значения с 2026-09-11
+// (владелец вправе оформить заказ на чужой номер, скидку это не ломает).
+const PROMO_PHONE = '+37360000001'
+
+const promoCheck = (code, phone = PROMO_PHONE) =>
   fetch(`${BASE}/api/promo-code-check`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ code, phone }),
   })
 
 // Код TEST10PROMO — 10%, для основного сценария; создан через REST (staff),
 // как и создал бы его владелец из /admin.
+// codeType задан ЯВНО: с 2026-09-11 дефолт — `public`, а публичный код
+// многоразовый и требует `expiresAt`. Сценарий ниже проверяет
+// одноразовость, то есть поведение именно персонального кода.
 const promoCreate = await promoRest('POST', '/promo-codes', {
   code: 'test10promo',
   percent: 10,
   isActive: true,
+  codeType: 'personal',
+  email: 'check-orders@local.test',
+  phone: PROMO_PHONE,
 })
 const promoDoc = (await promoCreate.json()).doc
 check(
@@ -256,6 +267,7 @@ check('временный gift-item для теста промокода соз�
 const promoOrderRes = await post(
   validOrder({
     promoCode: 'test10promo',
+    promoPhone: PROMO_PHONE,
     items: [
       ...validOrder().items,
       {
@@ -309,7 +321,9 @@ check(
 const promoUsedCheck = await promoCheck('test10promo')
 check('код после применения — used при повторной проверке', promoUsedCheck.status === 404)
 
-const promoReuseOrder = await post(validOrder({ promoCode: 'test10promo' }))
+const promoReuseOrder = await post(
+  validOrder({ promoCode: 'test10promo', promoPhone: PROMO_PHONE }),
+)
 const promoReuseBody = await promoReuseOrder.json()
 check(
   'повторное применение того же кода отклонено при оформлении',
@@ -320,7 +334,17 @@ check(
 )
 
 // Неактивный и просроченный код — отдельные коды, чтобы не путать с одноразовостью.
-await promoRest('POST', '/promo-codes', { code: 'test-inactive', percent: 5, isActive: false })
+await promoRest('POST', '/promo-codes', {
+  code: 'test-inactive',
+  percent: 5,
+  isActive: false,
+  codeType: 'personal',
+  // Персональному коду email и телефон обязательны по схеме — снятая
+  // галочка «активен» проверяется раньше них, но сохранить его без них
+  // нельзя вовсе.
+  email: 'check-orders-inactive@local.test',
+  phone: '+37360000002',
+})
 const promoInactiveCheck = await promoCheck('test-inactive')
 const promoInactiveBody = await promoInactiveCheck.json()
 check(

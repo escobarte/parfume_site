@@ -28,8 +28,24 @@ export type CartItem = {
   // виден в `price`, поле остаётся пустым.
   volume?: string
   price: number
+  /**
+   * Цена до скидки на момент последней синхронизации. Нужна, чтобы корзина
+   * показывала зачёркнутую цену и могла применить правило «больший процент
+   * выигрывает» (см. `priceLine` в lib/pricing.ts). Отсутствует у позиций,
+   * положенных в корзину до 2026-09-12, — читается как «скидки нет».
+   */
+  oldPrice?: number | null
   image?: string | null
   qty: number
+}
+
+/** Свежие данные позиции, приходящие с сервера при открытии корзины. */
+export type CartItemSync = {
+  key: string
+  price: number
+  oldPrice: number | null
+  /** Товар/вариант пропал или отключён — позиция больше не заказуема. */
+  gone?: boolean
 }
 
 type CartState = {
@@ -37,6 +53,12 @@ type CartState = {
   add: (item: Omit<CartItem, 'key' | 'qty'>, qty?: number) => void
   remove: (key: string) => void
   setQty: (key: string, qty: number) => void
+  /**
+   * Подтягивает актуальные цены с сервера. Возвращает ключи позиций, у
+   * которых цена ИЛИ уценка реально изменились, — вызывающий показывает по
+   * ним пометку «цена обновилась». Пропавшие товары удаляются из корзины.
+   */
+  sync: (updates: CartItemSync[]) => string[]
   clear: () => void
 }
 
@@ -66,6 +88,27 @@ export const useCart = create<CartState>()(
             item.key === key ? { ...item, qty: Math.max(1, qty) } : item,
           ),
         })),
+      sync: (updates) => {
+        const changed: string[] = []
+        set((state) => ({
+          items: state.items.flatMap((item) => {
+            const fresh = updates.find((candidate) => candidate.key === item.key)
+            // Позиции нет в ответе — сервер её не проверял (например, ответ
+            // частичный): оставляем как есть, молча ничего не выдумываем.
+            if (!fresh) return [item]
+            if (fresh.gone) {
+              changed.push(item.key)
+              return []
+            }
+            const oldPriceBefore = item.oldPrice ?? null
+            if (fresh.price !== item.price || fresh.oldPrice !== oldPriceBefore) {
+              changed.push(item.key)
+            }
+            return [{ ...item, price: fresh.price, oldPrice: fresh.oldPrice }]
+          }),
+        }))
+        return changed
+      },
       clear: () => set({ items: [] }),
     }),
     { name: 'mf-cart' },

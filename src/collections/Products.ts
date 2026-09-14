@@ -79,7 +79,11 @@ export const Products: CollectionConfig = {
         return { ...data, ...denormalizeVariants(variants) }
       },
     ],
-    afterChange: [() => revalidateCatalog()],
+    // Массовые операции (кампании скидок, src/lib/campaigns/run.ts) ставят
+    // флаг в context и сбрасывают кэш ОДИН раз в конце всей операции: иначе
+    // кампания на сотню товаров дёргала бы revalidate сотню раз подряд.
+    // Обычное сохранение товара флага не ставит и работает как раньше.
+    afterChange: [({ context }) => (context?.skipCatalogRevalidate ? undefined : revalidateCatalog())],
     afterDelete: [() => revalidateCatalog()],
   },
   fields: [

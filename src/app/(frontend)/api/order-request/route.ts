@@ -6,7 +6,7 @@ import { claimPromoCode, resolvePromoCode } from '@/lib/orders/promo'
 import { checkRateLimit, clientIp } from '@/lib/orders/rateLimit'
 import { orderRequestSchema, type OrderRequest } from '@/lib/orders/schema'
 import { getPayloadClient } from '@/lib/payload'
-import { promoDiscountAmount } from '@/lib/pricing'
+import { priceLine } from '@/lib/pricing'
 
 /**
  * Приём заявки. Путь намеренно НЕ `/api/orders`: там живёт REST-эндпоинт
@@ -46,26 +46,10 @@ export async function POST(request: Request) {
 
   // Цены и названия берём из БД, а не из тела запроса: клиент может прислать
   // что угодно, а в заявке должен лежать честный снапшот каталога.
-  const { items, discountableSubtotal } = await buildItems(payload, data)
-  if (!items.length) {
-    return NextResponse.json({ ok: false, error: 'items_unavailable' }, { status: 400 })
-  }
-
-  const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0)
-
-  // Промокод (фаза 11.2, задача 7) — переоценивается заново здесь, клиентский
-  // percent из /api/promo-code-check не принимается вообще (только сам код).
-  // Невалидный/протухший между проверкой и оформлением код — не тихо
-  // игнорируется, а отклоняет заявку явной ошибкой (не молчать, по заданию).
+  // Промокод резолвится ДО сборки позиций: его процент нужен, чтобы
+  // посчитать каждую позицию по правилу «выигрывает больший процент».
   let promo: Awaited<ReturnType<typeof resolvePromoCode>> | null = null
-  let discount = 0
   if (data.promoCode) {
-    // Сверяется телефон, которым код подтвердили в КОРЗИНЕ, а не телефон
-    // доставки из формы: код выдан на конкретный номер, а заказ человек
-    // вправе оформить на другой (телефон получателя, рабочий и т.п.) —
-    // блокировать такую заявку незачем (решение владельца 2026-09-11).
-    // Защита не слабеет: значение всё равно сверяется с тем, что лежит в БД
-    // у кода, так что подставить произвольный номер бесполезно.
     promo = await resolvePromoCode(payload, data.promoCode, data.promoPhone)
     if (!promo.ok) {
       return NextResponse.json(
@@ -73,10 +57,24 @@ export async function POST(request: Request) {
         { status: 400 },
       )
     }
-    discount = promoDiscountAmount(discountableSubtotal, promo.percent)
   }
 
-  const total = subtotal - discount
+  const { items, promoSaving, promoWonAnywhere } = await buildItems(
+    payload,
+    data,
+    promo?.ok ? promo.percent : 0,
+  )
+  if (!items.length) {
+    return NextResponse.json({ ok: false, error: 'items_unavailable' }, { status: 400 })
+  }
+
+  const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0)
+
+  // `subtotal` уже со всеми скидками: каждая позиция посчитана по правилу
+  // «выигрывает больший процент» внутри buildItems. Отдельного вычитания на
+  // уровне заказа больше нет — до 2026-09-12 здесь был один агрегат на всю
+  // заявку, теперь скидка попозиционная.
+  const total = subtotal
 
   const order = (await payload.create({
     collection: 'orders',
@@ -97,8 +95,12 @@ export async function POST(request: Request) {
       comment: data.comment,
       items,
       total,
+      // `promoDiscountPercent` — НОМИНАЛ кода, а не эффективная скидка:
+      // эффективная теперь у каждой позиции своя. `promoDiscountAmount` —
+      // фактическая выгода именно от кода (сколько клиент заплатил бы без
+      // него минус сколько платит), по позициям, где код выиграл.
       ...(promo?.ok
-        ? { promoCode: promo.code, promoDiscountPercent: promo.percent, promoDiscountAmount: discount }
+        ? { promoCode: promo.code, promoDiscountPercent: promo.percent, promoDiscountAmount: promoSaving }
         : {}),
     },
   })) as Order
@@ -107,7 +109,14 @@ export async function POST(request: Request) {
   // (не в момент проверки) — см. комментарий в src/lib/orders/promo.ts.
   // И только персональный: публичный код многоразовый, пометка убила бы его
   // после первой же заявки (типы кодов — 2026-09-11).
-  if (promo?.ok && promo.codeType === 'personal') {
+  // Одноразовый код сгорает ТОЛЬКО если реально дал выгоду хотя бы на одной
+  // позиции (решение владельца 2026-09-12). Пограничный случай «в корзине
+  // часть позиций выиграл код, часть — своя скидка» трактуется в пользу
+  // клиента-и-здравого смысла: выгода была, код списывается — иначе один
+  // код можно было бы бесконечно применять, добирая в каждый заказ по одному
+  // сильно уценённому товару. Если же код не выиграл НИГДЕ, он остаётся
+  // неиспользованным и применим позже.
+  if (promo?.ok && promo.codeType === 'personal' && promoWonAnywhere) {
     const claimed = await claimPromoCode(payload, promo.id, order.id)
     if (!claimed) {
       // Крайне маловероятная гонка (два одновременных оформления одним кодом)
@@ -136,11 +145,22 @@ export async function POST(request: Request) {
 
 type PayloadClient = Awaited<ReturnType<typeof getPayloadClient>>
 
-async function buildItems(payload: PayloadClient, data: OrderRequest) {
+/**
+ * Сборка позиций заявки с пересчётом цен по данным БД.
+ *
+ * С 2026-09-12 здесь же применяется правило совмещения скидок: на КАЖДОЙ
+ * позиции выигрывает больший процент — собственная уценка товара или
+ * промокод (`priceLine`). Раньше промокод вычитался одним агрегатом из всей
+ * суммы, теперь у каждой позиции свой исход, и `lineTotal` уже со скидкой.
+ *
+ * Возвращает заодно две величины, которые нужны вызывающему: фактическую
+ * выгоду от кода (`promoSaving`) и признак «код выиграл хоть где-то»
+ * (`promoWonAnywhere`) — от второго зависит, сгорает ли одноразовый код.
+ */
+async function buildItems(payload: PayloadClient, data: OrderRequest, promoPercent: number) {
   const items: NonNullable<Order['items']> = []
-  // Скидка по промокоду не действует на подарочные сертификаты/Gift box
-  // (фаза 11.2, задача 7) — считаем базу скидки отдельно, не по всем items.
-  let discountableSubtotal = 0
+  let promoSaving = 0
+  let promoWonAnywhere = false
 
   for (const requested of data.items) {
     if (requested.kind === 'gift') {
@@ -164,6 +184,8 @@ async function buildItems(payload: PayloadClient, data: OrderRequest) {
       }
 
       const qty = requested.qty
+      // Промокод на подарочные сертификаты/Gift box не действует
+      // (фаза 11.2, задача 7) — правило к ним просто не применяется.
       items.push({
         title: giftItem.title,
         brandTitle: '',
@@ -191,18 +213,33 @@ async function buildItems(payload: PayloadClient, data: OrderRequest) {
     const brand = typeof product.brand === 'object' && product.brand ? product.brand.title : ''
     const qty = requested.qty
 
+    const pricing = priceLine(variant.price, variant.oldPrice, promoPercent)
+    if (pricing.source === 'promo') {
+      promoWonAnywhere = true
+      // Выгода именно от кода: разница с тем, что клиент заплатил бы без него.
+      promoSaving += (variant.price - pricing.unitPrice) * qty
+    }
+
     items.push({
       product: product.id,
       title: product.title,
       brandTitle: brand,
       sku: variant.sku,
       volume: variant.volume,
-      price: variant.price,
+      price: pricing.unitPrice,
       qty,
-      lineTotal: variant.price * qty,
+      lineTotal: pricing.unitPrice * qty,
+      // Снапшот скидки этой позиции — чтобы заявка помнила, что применилось,
+      // даже если каталог потом изменится.
+      ...(pricing.finalPercent > 0
+        ? {
+            basePrice: pricing.base,
+            discountPercent: pricing.finalPercent,
+            discountSource: pricing.source,
+          }
+        : {}),
     })
-    discountableSubtotal += variant.price * qty
   }
 
-  return { items, discountableSubtotal }
+  return { items, promoSaving, promoWonAnywhere }
 }

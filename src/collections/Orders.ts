@@ -305,7 +305,7 @@ export const Orders: CollectionConfig = {
               name: 'price',
               type: 'number',
               required: true,
-              admin: { width: '25%', description: 'MDL' },
+              admin: { width: '25%', description: 'Цена за штуку со скидкой, MDL.' },
             },
             { name: 'qty', type: 'number', required: true, min: 1, admin: { width: '25%' } },
             {
@@ -313,6 +313,42 @@ export const Orders: CollectionConfig = {
               type: 'number',
               required: true,
               admin: { width: '25%', readOnly: true },
+            },
+          ],
+        },
+        {
+          // Скидка стала ПОПОЗИЦИОННОЙ (2026-09-12): у разных товаров своя
+          // уценка, и промокод может выигрывать у одних позиций и проигрывать
+          // другим. Одним числом на заявку это больше не описывается, поэтому
+          // снапшот скидки хранится в самой позиции.
+          type: 'row',
+          fields: [
+            {
+              name: 'basePrice',
+              type: 'number',
+              admin: {
+                width: '33%',
+                readOnly: true,
+                description: 'Цена до скидки (зачёркнутая), MDL. Пусто — скидки не было.',
+              },
+            },
+            {
+              name: 'discountPercent',
+              type: 'number',
+              admin: { width: '33%', readOnly: true, description: 'Применённая скидка, %.' },
+            },
+            {
+              name: 'discountSource',
+              type: 'select',
+              options: [
+                { label: 'Скидка товара', value: 'product' },
+                { label: 'Промокод', value: 'promo' },
+              ],
+              admin: {
+                width: '33%',
+                readOnly: true,
+                description: 'Что победило на этой позиции — своя уценка или промокод.',
+              },
             },
           ],
         },

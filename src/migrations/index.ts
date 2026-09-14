@@ -21,6 +21,8 @@ import * as migration_20260906_142023_new_volume_model from './20260906_142023_n
 import * as migration_20260908_060926_phase_variant_image_country from './20260908_060926_phase_variant_image_country';
 import * as migration_20260911_085054_brands_title_description_not_localized from './20260911_085054_brands_title_description_not_localized';
 import * as migration_20260911_104827_promo_code_types_and_popup_settings from './20260911_104827_promo_code_types_and_popup_settings';
+import * as migration_20260912_120009_order_item_line_discounts from './20260912_120009_order_item_line_discounts';
+import * as migration_20260912_130301_discount_campaigns from './20260912_130301_discount_campaigns';
 
 export const migrations = [
   {
@@ -136,6 +138,16 @@ export const migrations = [
   {
     up: migration_20260911_104827_promo_code_types_and_popup_settings.up,
     down: migration_20260911_104827_promo_code_types_and_popup_settings.down,
-    name: '20260911_104827_promo_code_types_and_popup_settings'
+    name: '20260911_104827_promo_code_types_and_popup_settings',
+  },
+  {
+    up: migration_20260912_120009_order_item_line_discounts.up,
+    down: migration_20260912_120009_order_item_line_discounts.down,
+    name: '20260912_120009_order_item_line_discounts',
+  },
+  {
+    up: migration_20260912_130301_discount_campaigns.up,
+    down: migration_20260912_130301_discount_campaigns.down,
+    name: '20260912_130301_discount_campaigns'
   },
 ];

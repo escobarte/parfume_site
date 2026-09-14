@@ -121,7 +121,18 @@ test.describe.serial('попап «первая скидка»', () => {
       timeout: 15000,
     })
     // И скидка реально попала в итог корзины, а не только в подпись.
-    await expect(page.getByText(new RegExp(`Reducere \\(${code}`))).toBeVisible()
+    //
+    // Подпись — ключ `promoSaving` («Reducere după codul {code}»), а не
+    // прежний `promoDiscount` («Reducere ({code}, −{percent}%)»): с
+    // 2026-09-12 процент из неё убран намеренно — он попозиционный, одного
+    // числа на заказ больше нет. Спек ходит по `/ro`, поэтому сверяется
+    // румынская строка; ru/en несут тот же смысл.
+    const savingRow = page.getByText(`Reducere după codul ${code}`)
+    await expect(savingRow).toBeVisible()
+    // Сумма выгоды лежит соседним узлом в той же строке. Цепляемся за
+    // родителя подписи, а не за классы оформления (GOTCHAS.md — селекторы
+    // по смыслу): проверяем, что выгода не нулевая и со знаком минуса.
+    await expect(savingRow.locator('..')).toContainText(/−\s?[1-9]\d*\s?MDL/)
   })
 
   test('показывается один раз на браузер', async ({ page }) => {

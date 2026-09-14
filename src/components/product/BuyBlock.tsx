@@ -53,6 +53,12 @@ export function BuyBlock({ product }: { product: ProductView }) {
       sku: variant.sku,
       volume: variant.volume,
       price: variant.price,
+      // Кладётся по тому же правилу, что и зачёркнутая цена ниже (`percent
+      // !== null`): «уценка есть только если oldPrice реально выше price».
+      // Без этого корзина до ответа `/api/cart-revalidate` не показывала бы
+      // зачёркнутую цену и считала бы промокод от уже уценённой price —
+      // то есть по старому правилу, отменённому 2026-09-12.
+      oldPrice: percent !== null ? variant.oldPrice : null,
       image,
     })
     trackEvent('add_to_cart', {

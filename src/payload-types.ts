@@ -76,6 +76,7 @@ export interface Config {
     media: Media;
     orders: Order;
     'promo-codes': PromoCode;
+    'discount-campaigns': DiscountCampaign;
     users: User;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -93,6 +94,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
     'promo-codes': PromoCodesSelect<false> | PromoCodesSelect<true>;
+    'discount-campaigns': DiscountCampaignsSelect<false> | DiscountCampaignsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -575,11 +577,23 @@ export interface Order {
         sku: string;
         volume?: ('3ml' | '5ml' | '10ml' | 'Travel Size' | 'Full Size') | null;
         /**
-         * MDL
+         * Цена за штуку со скидкой, MDL.
          */
         price: number;
         qty: number;
         lineTotal: number;
+        /**
+         * Цена до скидки (зачёркнутая), MDL. Пусто — скидки не было.
+         */
+        basePrice?: number | null;
+        /**
+         * Применённая скидка, %.
+         */
+        discountPercent?: number | null;
+        /**
+         * Что победило на этой позиции — своя уценка или промокод.
+         */
+        discountSource?: ('product' | 'promo') | null;
         id?: string | null;
       }[]
     | null;
@@ -646,6 +660,105 @@ export interface PromoCode {
    * Заявка, в которой код был применён — для трейсинга.
    */
   usedInOrder?: (number | null) | Order;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Массовая уценка по отбору. Даты в карточке — заметка для себя, автозапуска и автоотката нет: кампания стартует и останавливается только кнопками.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "discount-campaigns".
+ */
+export interface DiscountCampaign {
+  id: number;
+  /**
+   * Например: «Чёрная пятница 2026».
+   */
+  name: string;
+  /**
+   * Скидка кампании, % от ТЕКУЩЕЙ цены варианта.
+   */
+  percent: number;
+  /**
+   * Меняется только кнопками «Запустить» / «Остановить».
+   */
+  status: 'draft' | 'active' | 'finished';
+  /**
+   * Объединение трёх списков: товар попадает в кампанию, если подходит ХОТЯ БЫ ПОД ОДИН критерий. Кампания применяется ко всем активным вариантам отобранного товара сразу.
+   */
+  selectionRule?: {
+    /**
+     * Все товары этих брендов.
+     */
+    brands?: (number | Brand)[] | null;
+    /**
+     * Все товары этих категорий.
+     */
+    categories?: (number | Category)[] | null;
+    /**
+     * Отдельные товары, добавленные вручную.
+     */
+    manualProducts?: (number | Product)[] | null;
+  };
+  /**
+   * Ни на что не влияет — кампания стартует только кнопкой.
+   */
+  startDateNote?: string | null;
+  /**
+   * Ни на что не влияет — кампания останавливается только кнопкой.
+   */
+  endDateNote?: string | null;
+  /**
+   * Заполняется при старте — длина журнала.
+   */
+  affectedVariantsCount?: number | null;
+  affectedProductsCount?: number | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  /**
+   * Что именно и с какими ценами изменила кампания при старте. Источник правды для отката — руками не редактируется.
+   */
+  journal?:
+    | {
+        sku: string;
+        product?: (number | null) | Product;
+        /**
+         * Цена до старта, MDL.
+         */
+        priceBefore: number;
+        /**
+         * Зачёркнутая до старта. Пусто — её не было.
+         */
+        oldPriceBefore?: number | null;
+        /**
+         * Цена, выставленная кампанией, MDL.
+         */
+        priceSet: number;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Варианты, которые откатить не удалось: цену поменяли извне, пока кампания шла. Кампания их НЕ трогала — решайте вручную.
+   */
+  conflicts?:
+    | {
+        sku: string;
+        reason: 'price_changed' | 'variant_missing' | 'blocked_by_consistency';
+        /**
+         * Что стоит сейчас, MDL.
+         */
+        priceNow?: number | null;
+        /**
+         * Что выставила кампания, MDL.
+         */
+        priceSet?: number | null;
+        /**
+         * Цена до кампании — то, к чему откат вернул бы вариант.
+         */
+        priceBefore?: number | null;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -738,6 +851,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'promo-codes';
         value: number | PromoCode;
+      } | null)
+    | ({
+        relationTo: 'discount-campaigns';
+        value: number | DiscountCampaign;
       } | null)
     | ({
         relationTo: 'users';
@@ -1026,6 +1143,9 @@ export interface OrdersSelect<T extends boolean = true> {
         price?: T;
         qty?: T;
         lineTotal?: T;
+        basePrice?: T;
+        discountPercent?: T;
+        discountSource?: T;
         id?: T;
       };
   total?: T;
@@ -1051,6 +1171,50 @@ export interface PromoCodesSelect<T extends boolean = true> {
   phone?: T;
   customerName?: T;
   usedInOrder?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "discount-campaigns_select".
+ */
+export interface DiscountCampaignsSelect<T extends boolean = true> {
+  name?: T;
+  percent?: T;
+  status?: T;
+  selectionRule?:
+    | T
+    | {
+        brands?: T;
+        categories?: T;
+        manualProducts?: T;
+      };
+  startDateNote?: T;
+  endDateNote?: T;
+  affectedVariantsCount?: T;
+  affectedProductsCount?: T;
+  startedAt?: T;
+  finishedAt?: T;
+  journal?:
+    | T
+    | {
+        sku?: T;
+        product?: T;
+        priceBefore?: T;
+        oldPriceBefore?: T;
+        priceSet?: T;
+        id?: T;
+      };
+  conflicts?:
+    | T
+    | {
+        sku?: T;
+        reason?: T;
+        priceNow?: T;
+        priceSet?: T;
+        priceBefore?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }

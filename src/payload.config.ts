@@ -10,6 +10,7 @@ import sharp from 'sharp'
 
 import { Brands } from './collections/Brands'
 import { Categories } from './collections/Categories'
+import { DiscountCampaigns } from './collections/DiscountCampaigns'
 import { GiftItems } from './collections/GiftItems'
 import { Media } from './collections/Media'
 import { Notes } from './collections/Notes'
@@ -22,6 +23,7 @@ import { Homepage } from './globals/Homepage'
 import { Navigation } from './globals/Navigation'
 import { PromoPopupSettings } from './globals/PromoPopupSettings'
 import { Settings } from './globals/Settings'
+import { adminCampaignEndpoints } from './endpoints/adminCampaigns'
 import { adminCatalogEndpoints } from './endpoints/adminCatalog'
 import { adminMediaEndpoints } from './endpoints/adminMedia'
 import { adminNotesEndpoints } from './endpoints/adminNotes'
@@ -93,11 +95,28 @@ export default buildConfig({
     supportedLanguages: { en, ro, ru },
     fallbackLanguage: 'ru',
   },
-  collections: [Products, Brands, Categories, Notes, GiftItems, Pages, Media, Orders, PromoCodes, Users],
+  collections: [
+    Products,
+    Brands,
+    Categories,
+    Notes,
+    GiftItems,
+    Pages,
+    Media,
+    Orders,
+    PromoCodes,
+    DiscountCampaigns,
+    Users,
+  ],
   globals: [Homepage, Settings, Navigation, PromoPopupSettings],
   // Импорт каталога, загрузка фото архивом и сброс кэша витрины из /admin —
   // вне пространства коллекций (не /api/<slug>, см. docs/GOTCHAS.md «Роуты и API»).
-  endpoints: [...adminCatalogEndpoints, ...adminMediaEndpoints, ...adminNotesEndpoints],
+  endpoints: [
+    ...adminCatalogEndpoints,
+    ...adminMediaEndpoints,
+    ...adminNotesEndpoints,
+    ...adminCampaignEndpoints,
+  ],
   editor: lexicalEditor(),
   localization: {
     locales: ['ro', 'ru', 'en'],
