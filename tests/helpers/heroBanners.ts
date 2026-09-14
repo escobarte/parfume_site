@@ -3,25 +3,32 @@ import type { APIRequestContext } from '@playwright/test'
 /**
  * Баннеры главной через REST админа — для e2e карусели.
  *
- * Строка описывается сразу по всем локалям (`image`/`alt` — карты
+ * Строка описывается сразу по всем локалям (картинки и `alt` — карты
  * `{ ro, ru, en }`), как её отдаёт `?locale=all`. Запись идёт по локалям
  * подряд, и тут две ловушки:
  * - строки массива пересоздаются на каждой записи, если не передать их id,
  *   и стирают значения предыдущей локали (docs/GOTCHAS.md, «Локализованные
  *   поля внутри массивов») — поэтому id снимаются после первой записи;
- * - новая строка без картинки в локали первой записи не пройдёт валидацию
- *   («картинка хотя бы на одном языке» проверяется по уже сохранённому
- *   документу) — поэтому первая запись ставит любую доступную картинку
- *   временно, а последняя возвращает ro её настоящее значение.
+ * - новая строка без десктопной картинки в локали первой записи не пройдёт
+ *   валидацию («картинка хотя бы на одном языке» проверяется по уже
+ *   сохранённому документу) — поэтому первая запись ставит любую доступную
+ *   десктопную временно, а последняя возвращает ro её настоящее значение.
+ *
+ * Все три слота (`image`, `imageTablet`, `imageMobile`) читаются и пишутся:
+ * иначе возврат баннеров после теста молча стёр бы планшетные и мобильные.
  */
 
 const LOCALES = ['ro', 'ru', 'en'] as const
 type Locale = (typeof LOCALES)[number]
 type PerLocale<T> = Partial<Record<Locale, T | null>>
 
+const SLOTS = ['image', 'imageTablet', 'imageMobile'] as const
+
 export type BannerInput = {
   enabled?: boolean
   image: PerLocale<number>
+  imageTablet?: PerLocale<number>
+  imageMobile?: PerLocale<number>
   alt?: PerLocale<string>
   linkMode?: 'system' | 'page'
   link?: string | null
@@ -57,10 +64,15 @@ export async function readBanners(
     .then((response) => response.json())
 
   return (homepage.heroBanners ?? []).map((row: Record<string, unknown>) => {
-    const image = (row.image ?? {}) as Record<string, unknown>
+    const slots = Object.fromEntries(
+      SLOTS.map((slot) => {
+        const byLocale = (row[slot] ?? {}) as Record<string, unknown>
+        return [slot, Object.fromEntries(LOCALES.map((locale) => [locale, idOf(byLocale[locale])]))]
+      }),
+    ) as Pick<BannerInput, (typeof SLOTS)[number]>
     return {
       enabled: row.enabled as boolean,
-      image: Object.fromEntries(LOCALES.map((locale) => [locale, idOf(image[locale])])),
+      ...slots,
       alt: (row.alt ?? {}) as PerLocale<string>,
       linkMode: (row.linkMode as 'system' | 'page') ?? 'system',
       link: (row.link as string) ?? null,
@@ -98,23 +110,25 @@ export async function writeBanners(
     linkOverride: banner.linkOverride ?? null,
   })
 
+  const localized = (banner: BannerInput, locale: Locale) => ({
+    image: banner.image[locale] ?? null,
+    imageTablet: banner.imageTablet?.[locale] ?? null,
+    imageMobile: banner.imageMobile?.[locale] ?? null,
+    alt: banner.alt?.[locale] ?? null,
+  })
+
   const first = await post(
     'ro',
     banners.map((banner) => ({
       ...shared(banner),
+      ...localized(banner, 'ro'),
       image: banner.image.ro ?? anyImage(banner),
-      alt: banner.alt?.ro ?? null,
     })),
   )
   const ids: string[] = (first.result?.heroBanners ?? []).map((row: { id: string }) => row.id)
 
   const rowsFor = (locale: Locale) =>
-    banners.map((banner, index) => ({
-      id: ids[index],
-      ...shared(banner),
-      image: banner.image[locale] ?? null,
-      alt: banner.alt?.[locale] ?? null,
-    }))
+    banners.map((banner, index) => ({ id: ids[index], ...shared(banner), ...localized(banner, locale) }))
 
   await post('ru', rowsFor('ru'))
   await post('en', rowsFor('en'))

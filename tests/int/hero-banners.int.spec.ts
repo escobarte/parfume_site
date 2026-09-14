@@ -108,3 +108,51 @@ describe('resolveHeroBanners — ссылка', () => {
     expect(resolveHeroBanners([{ id: 'b', image }], 'ro')[0]?.href).toBeNull()
   })
 })
+
+describe('resolveHeroBanners — планшет и мобильный', () => {
+  it('старый баннер только с десктопной картинкой: слоты пусты, баннер на месте', () => {
+    const [banner] = resolveHeroBanners([{ id: 'a', image: { ro: media(1) } }], 'en')
+    expect(banner?.image.url).toBe('/api/media/file/banner-1.png')
+    expect(banner?.imageTablet).toBeNull()
+    expect(banner?.imageMobile).toBeNull()
+  })
+
+  it('у каждого слота свой фолбэк по локалям — та же логика, что у десктопной', () => {
+    const rows = [
+      {
+        id: 'a',
+        image: { ro: media(1) },
+        imageTablet: { ro: null, ru: media(2), en: null },
+        imageMobile: { ro: null, ru: null, en: media(3) },
+      },
+    ]
+    const [banner] = resolveHeroBanners(rows, 'ro')
+    expect(banner?.imageTablet?.url).toBe('/api/media/file/banner-2.png')
+    expect(banner?.imageMobile?.url).toBe('/api/media/file/banner-3.png')
+  })
+
+  it('своя мобильная локали важнее мобильной другого языка', () => {
+    const rows = [{ id: 'a', image: { ro: media(1) }, imageMobile: { ro: media(3), ru: media(4) } }]
+    expect(resolveHeroBanners(rows, 'ru')[0]?.imageMobile?.url).toBe('/api/media/file/banner-4.png')
+    expect(resolveHeroBanners(rows, 'en')[0]?.imageMobile?.url).toBe('/api/media/file/banner-3.png')
+  })
+
+  it('неразвёрнутый id в слоте — слот пуст, баннер не выпадает', () => {
+    const rows = [{ id: 'a', image: { ro: media(1) }, imageTablet: { ro: 9 }, imageMobile: { ro: 10 } }]
+    const [banner] = resolveHeroBanners(rows, 'ro')
+    expect(banner?.imageTablet).toBeNull()
+    expect(banner?.imageMobile).toBeNull()
+  })
+
+  it('без мобильной и планшетной на всех языках — только десктопная, баннер без неё выпадает', () => {
+    const onlyMobile = [{ id: 'a', image: { ro: null }, imageMobile: { ro: media(3) } }]
+    expect(resolveHeroBanners(onlyMobile, 'ro')).toEqual([])
+  })
+
+  it('файл без размеров в мобильном слоте получает мобильную пропорцию, а не десктопную', () => {
+    const rows = [
+      { id: 'a', image: { ro: media(1) }, imageMobile: { ro: media(3, { width: null, height: null }) } },
+    ]
+    expect(resolveHeroBanners(rows, 'ro')[0]?.imageMobile).toMatchObject({ width: 750, height: 1000 })
+  })
+})

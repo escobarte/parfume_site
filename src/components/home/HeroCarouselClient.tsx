@@ -110,7 +110,13 @@ export function HeroCarouselClient({
               aria-hidden={!isActive}
               inert={!isActive}
               data-active={isActive}
-              className={`col-start-1 row-start-1 transition-opacity duration-700 motion-reduce:transition-none ${
+              // `self-center`: высоту секции задаёт самый высокий слайд. Если на
+              // этой ширине у одного баннера своя мобильная (высокая), а у
+              // другого — фолбэк на широкую десктопную, короткий слайд встаёт по
+              // центру с navy-полями сверху и снизу, а не прилипает к верху с
+              // пустотой под ним. Подстраивать высоту под активный слайд нельзя —
+              // контент ниже прыгал бы на каждой смене.
+              className={`col-start-1 row-start-1 self-center transition-opacity duration-700 motion-reduce:transition-none ${
                 isActive ? 'opacity-100' : 'pointer-events-none opacity-0'
               }`}
             >

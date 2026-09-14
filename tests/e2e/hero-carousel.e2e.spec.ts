@@ -129,6 +129,84 @@ test.describe.serial('Главная: карусель баннеров', () => 
     await expect(page.locator(CAROUSEL)).toHaveCount(0)
   })
 
+  test('картинки под ширину экрана: скачивается только нужная, пустые слоты — десктопная', async ({
+    browser,
+    page,
+    request,
+  }) => {
+    // Одиннадцать отдельных контекстов браузера (по одному на ширину, чтобы
+    // список скачанных файлов был чистым) — в стандартные 30 с не укладываются.
+    test.setTimeout(120_000)
+
+    /** Открыть /ro на ширине и вернуть выбранную браузером картинку и все запрошенные e2e-файлы. */
+    const shownAt = async (width: number) => {
+      const context = await browser.newContext({ viewport: { width, height: 900 } })
+      await context.addInitScript(() => localStorage.setItem('mf-promo-popup-seen', '1'))
+      const tab = await context.newPage()
+      const requested: string[] = []
+      tab.on('request', (req) => {
+        if (req.url().includes('e2e-hero')) requested.push(decodeURIComponent(req.url()))
+      })
+      await gotoAndWaitForFooter(tab, '/ro')
+      const img = tab.locator('main picture img').first()
+      await expect(img).toHaveJSProperty('complete', true)
+      const current = await img.evaluate((node: HTMLImageElement) => decodeURIComponent(node.currentSrc))
+      await context.close()
+      return { current, requested }
+    }
+
+    await writeBanners(request, baseURL, token, [
+      {
+        image: { ro: media[0].id },
+        imageTablet: { ro: media[1].id },
+        imageMobile: { ro: media[2].id },
+      },
+    ])
+    // Прогрев кэша витрины: дальше каждую ширину открываем ровно один раз,
+    // чтобы список запросов не смешался со старой закэшированной разметкой.
+    await eventually(page, '/ro', async () => {
+      await expect(page.locator('main picture source')).toHaveCount(2)
+    })
+
+    for (const [width, expected] of [
+      [1280, media[0]],
+      [1024, media[0]],
+      [1023, media[1]],
+      [768, media[1]],
+      [767, media[2]],
+      [390, media[2]],
+    ] as const) {
+      const { current, requested } = await shownAt(width)
+      expect(current, `${width}px`).toContain(expected.filename)
+      for (const other of media.filter((item) => item !== expected)) {
+        expect(
+          requested.some((url) => url.includes(other.filename)),
+          `${width}px не должен скачивать ${other.filename}`,
+        ).toBe(false)
+      }
+    }
+
+    // Старый баннер — только десктопная: она на всех ширинах, <source> не нужны.
+    await writeBanners(request, baseURL, token, [{ image: { ro: media[0].id } }])
+    await eventually(page, '/ro', async () => {
+      await expect(page.locator('main picture source')).toHaveCount(0)
+      await expect(bannerImage(page, media[0].filename)).toBeVisible()
+    })
+    for (const width of [1280, 768, 390]) {
+      expect((await shownAt(width)).current, `${width}px`).toContain(media[0].filename)
+    }
+
+    // Только мобильная: планшет и десктоп делят одну десктопную — один <source>.
+    await writeBanners(request, baseURL, token, [
+      { image: { ro: media[0].id }, imageMobile: { en: media[2].id } },
+    ])
+    await eventually(page, '/ro', async () => {
+      await expect(page.locator('main picture source')).toHaveCount(1)
+    })
+    expect((await shownAt(768)).current).toContain(media[0].filename)
+    expect((await shownAt(390)).current, 'мобильная с другого языка').toContain(media[2].filename)
+  })
+
   test('карусель: индикаторы, переход по клику, клик по баннеру, автопрокрутка и пауза', async ({
     page,
     request,
