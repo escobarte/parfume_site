@@ -1,8 +1,9 @@
 'use client'
 
-import { Menu, Search, X } from 'lucide-react'
+import { Menu, Phone, Search, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
+import { telHref } from '@/lib/contacts'
 import { useScrolled } from '@/lib/useScrolled'
 import { Link, usePathname } from '@/i18n/navigation'
 import { MiniCart } from '@/components/cart/MiniCart'
@@ -18,7 +19,7 @@ export type NavLink = { label: string; href: string }
  * navy, нижняя граница 1px cream 25%, при скролле сжимается и оставляет
  * только знак. На <768 — знак + бургер + корзина, остальное в выезжающем меню.
  */
-export function HeaderShell({ links }: { links: NavLink[] }) {
+export function HeaderShell({ links, phone }: { links: NavLink[]; phone: string | null }) {
   const t = useTranslations('Nav')
   const tCatalogNav = useTranslations('CatalogNav')
   const pathname = usePathname()
@@ -91,7 +92,31 @@ export function HeaderShell({ links }: { links: NavLink[] }) {
               <Search className="size-[17px]" strokeWidth={1.6} />
             )}
           </button>
+          {/* Телефон — только широкий десктоп (xl+): на md/lg номер выдавливает
+              «Despre noi» на две строки, под мобильную шапку (бургер) разметки нет —
+              решение за владельцем (см. GOTCHAS.md). Иконка — акцент cream,
+              как подчёркивание активной локали. */}
+          {phone && (
+            <a
+              href={telHref(phone)}
+              className="text-cream hover:text-ink-on-dark-muted text-label hidden items-center gap-1.5 whitespace-nowrap transition-colors xl:flex"
+            >
+              <Phone className="text-cream size-[15px]" strokeWidth={1.6} aria-hidden="true" />
+              {phone}
+            </a>
+          )}
           <LocaleSwitcher className="hidden sm:flex" />
+          {/* <1280 — только иконка-трубка у корзины: номер текстом не влезает
+              (см. GOTCHAS.md), ссылка та же, что у десктопной версии. */}
+          {phone && (
+            <a
+              href={telHref(phone)}
+              aria-label={`${t('call')}: ${phone}`}
+              className="hover:text-ink-on-dark-muted transition-colors xl:hidden"
+            >
+              <Phone className="text-cream size-[17px]" strokeWidth={1.6} aria-hidden="true" />
+            </a>
+          )}
           <MiniCart />
         </div>
       </div>

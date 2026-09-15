@@ -28,6 +28,7 @@
     "cart": "Корзина",
     "search": "Поиск",
     "menu": "Меню",
+    "call": "Позвонить",
     "breadcrumbs": "Навигация"
   },
   "BrandsPage": {
@@ -123,7 +124,7 @@
     "mobileHeading": "Каталог",
     "forHer": "Для Нее",
     "forHim": "Для Него",
-    "bodyCare": "Уход за Телом",
+    "bodyCare": "Body Care",
     "kids": "Детям",
     "giftCertificates": "Gift Card",
     "giftBox": "Gift Box",

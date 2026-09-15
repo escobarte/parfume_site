@@ -111,7 +111,7 @@ export async function Footer({ locale }: { locale: Locale }) {
               </p>
             )}
             {contacts?.workingHours && (
-              <p className="text-ink-on-dark-faint text-eyebrow py-1">{contacts.workingHours}</p>
+              <p className="text-ink-on-dark-muted text-link py-1">{contacts.workingHours}</p>
             )}
             {/* «Отследить заказ» — системная ссылка, а не редакторский контент
                 CMS, поэтому и подпись из messages/*.json, и место — в этой,

@@ -1,5 +1,5 @@
 import type { Locale } from '@/i18n/routing'
-import { getNavigation } from '@/lib/content/globals'
+import { getNavigation, getSettings } from '@/lib/content/globals'
 import { resolveInternalLink } from '@/lib/links'
 import { HeaderShell, type NavLink } from './HeaderShell'
 
@@ -12,7 +12,7 @@ import { HeaderShell, type NavLink } from './HeaderShell'
  * query-парамом каталога (`flags=isNew`).
  */
 export async function Header({ locale }: { locale: Locale }) {
-  const navigation = await getNavigation(locale)
+  const [navigation, settings] = await Promise.all([getNavigation(locale), getSettings(locale)])
 
   const links: NavLink[] = (navigation.header ?? [])
     .map((item) => ({
@@ -26,5 +26,7 @@ export async function Header({ locale }: { locale: Locale }) {
     }))
     .filter((item): item is NavLink => Boolean(item.label && item.href))
 
-  return <HeaderShell links={links} />
+  // Телефон — тот же `settings.contacts.phone`, что в футере: один источник,
+  // номер меняется в админке, а не в коде.
+  return <HeaderShell links={links} phone={settings.contacts?.phone ?? null} />
 }

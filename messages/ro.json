@@ -28,6 +28,7 @@
     "cart": "Coș",
     "search": "Căutare",
     "menu": "Meniu",
+    "call": "Sunați-ne",
     "breadcrumbs": "Navigare"
   },
   "BrandsPage": {
@@ -123,7 +124,7 @@
     "mobileHeading": "Catalog",
     "forHer": "Pentru Ea",
     "forHim": "Pentru El",
-    "bodyCare": "Îngrijire Corporală",
+    "bodyCare": "Body Care",
     "kids": "Copii",
     "giftCertificates": "Gift Card",
     "giftBox": "Gift Box",
@@ -213,7 +214,7 @@
     "messengerCall": "Apel",
     "comment": "Comentariu",
     "commentPlaceholder": "Opțional: întrebare sau dorință",
-    "submit": "Trimite cererea",
+    "submit": "Trimite comanda",
     "sending": "Se trimite…",
     "errorName": "Introduceți numele",
     "errorPhone": "Număr de telefon incorect",
