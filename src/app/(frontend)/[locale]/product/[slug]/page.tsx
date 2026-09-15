@@ -90,7 +90,11 @@ function Pyramid({
       <h2 className="text-ink text-section tracking-display font-light uppercase">
         {labels.title}
       </h2>
-      <div className="border-line mt-4 grid grid-cols-3 gap-6 border-t pt-6">
+      {/* До 400px три колонки по ~80px: иконка 36px + подпись в строку не влезают,
+          «Sandalwood» распирал страницу на 6–20px. Там иконка встаёт над подписью,
+          отступ колонок меньше; `break-words` — страховка для ещё более длинных нот.
+          От 400px раскладка прежняя. */}
+      <div className="border-line mt-4 grid grid-cols-3 gap-6 border-t pt-6 max-[399px]:gap-3">
         {columns.map((column) => (
           <div key={column.label}>
             <h3 className="text-ink-muted text-eyebrow tracking-label mb-3 uppercase">
@@ -98,7 +102,10 @@ function Pyramid({
             </h3>
             <ul className="flex flex-col gap-3">
               {column.items.map((note) => (
-                <li key={note.slug} className="flex items-center gap-2.5">
+                <li
+                  key={note.slug}
+                  className="flex items-center gap-2.5 max-[399px]:flex-col max-[399px]:items-start max-[399px]:gap-1.5"
+                >
                   <span className="bg-surface-warm flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full">
                     {note.image ? (
                       <Image
@@ -112,7 +119,9 @@ function Pyramid({
                       <BottleGlyph className="text-navy h-5 w-auto" />
                     )}
                   </span>
-                  <span className="text-ink text-body-sm">{note.title}</span>
+                  <span className="text-ink text-body-sm max-w-full min-w-0 break-words">
+                    {note.title}
+                  </span>
                 </li>
               ))}
             </ul>

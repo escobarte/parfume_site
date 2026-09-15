@@ -35,7 +35,8 @@ function toView(doc: GiftItem): GiftItemView {
     type: doc.type,
     description: doc.description ?? null,
     image: image
-      ? { url: image.sizes?.card?.url ?? image.url ?? '', alt: image.alt ?? doc.title }
+      ? // `full` без кропа, не `card` 600×600 с центр-кропом — см. `toCard` в catalog/cards.ts.
+        { url: image.sizes?.full?.url ?? image.url ?? '', alt: image.alt ?? doc.title }
       : null,
     variants: (doc.variants ?? [])
       .filter((variant) => variant.isActive !== false)

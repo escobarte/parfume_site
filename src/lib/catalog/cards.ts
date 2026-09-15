@@ -51,11 +51,13 @@ export function toCard(doc: Product): ProductCardData {
     displayPrice: maxPriceVariant ? maxPriceVariant.price : (doc.maxPrice ?? null),
     oldPrice: maxPriceVariant ? (maxPriceVariant.oldPrice ?? null) : null,
     discountPercent: percent,
-    image: cover?.sizes?.card?.url
-      ? { url: cover.sizes.card.url, alt: cover.alt ?? doc.title }
-      : cover?.url
-        ? { url: cover.url, alt: cover.alt ?? doc.title }
-        : null,
+    // `full` (1200px по ширине, без кропа), а не `card` (600×600 с центр-кропом):
+    // широкое/высокое фото иначе режется по краям ещё на бэкенде, и `object-contain`
+    // в карточке уже нечего вписывать. Тот же выбор, что у галереи (`product.ts`);
+    // вес не растёт — next/image всё равно ужимает под слот карточки.
+    image: cover?.sizes?.full?.url || cover?.url
+      ? { url: (cover.sizes?.full?.url || cover.url) as string, alt: cover.alt ?? doc.title }
+      : null,
     inStock: Boolean(doc.inStock),
     flags,
   }

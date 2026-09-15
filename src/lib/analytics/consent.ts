@@ -12,14 +12,32 @@ export type Consent = 'granted' | 'denied'
 const KEY = 'mf-consent'
 const EVENT = 'mf-consent-changed'
 
+/**
+ * Выбор, сделанный при недоступном localStorage (Firefox с запретом cookie,
+ * часть встроенных браузеров) — даже само обращение `window.localStorage`
+ * там бросает `SecurityError`. Без try/catch это исключение летело из
+ * `getSnapshot` баннера и `GoogleAnalytics` прямо в рендер и роняло витрину.
+ * Теперь: не удалось прочитать — согласие «не дано» (баннер показывается,
+ * GA4 не грузится); выбор по кнопке держится в памяти до перезагрузки.
+ */
+let memoryConsent: Consent | null = null
+
 export function getConsent(): Consent | null {
   if (typeof window === 'undefined') return null
-  const value = window.localStorage.getItem(KEY)
-  return value === 'granted' || value === 'denied' ? value : null
+  try {
+    const value = window.localStorage.getItem(KEY)
+    return value === 'granted' || value === 'denied' ? value : null
+  } catch {
+    return memoryConsent
+  }
 }
 
 export function setConsent(value: Consent): void {
-  window.localStorage.setItem(KEY, value)
+  try {
+    window.localStorage.setItem(KEY, value)
+  } catch {
+    memoryConsent = value
+  }
   window.dispatchEvent(new CustomEvent(EVENT, { detail: value }))
 }
 
