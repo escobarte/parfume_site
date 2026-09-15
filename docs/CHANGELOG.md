@@ -6,7 +6,25 @@
 >
 > Архивы: `docs/archive/CHANGELOG-2026-08-phases-1-4.5.md` (фазы 1 → 4.5 + расширение плана).
 
-## [2026-09-15з] Закрытые разделы каталога For Her/For Him/Kids + Lip balm + сортировка подарков
+## [2026-09-15и] Хвост ПРОМПТ 14: kids в CSV-импорте, is_new/is_hit оставлены, Sale снят из check-promo, Kids — все категории
+
+- Сделано:
+  1. **`kids` в CSV-импорте.** `GENDER_VALUES` += `kids` (`src/lib/import/schema.ts:44`), описание колонки в `docs/import-guide.md`. Регистр строгий, как у остальных значений: `Kids`/`KIDS` — ошибка формата, файл не импортируется. БД, тип, админка, фасет, переводы уже поддерживали `kids` — не трогались.
+  2. **`is_new` / `is_hit` оставлены намеренно, про запас** — решение владельца отменяет пункт ПРОМПТ 14 об их удалении. Схема, импорт, шаблон, гайд не менялись.
+  3. **Фильтр «Sale» снят из проверок.** Из `scripts/check-promo.mjs` удалены 3 проверки фасеты «Sale» (ровно одна / сужает выдачу / уходит в URL); сортировка «по скидке» осталась. `FilterPanel.tsx` не менялся. `docs/PLAN.md` §4.5.3 и Приложение A («Акции») — фильтровая часть помечена закрытой решением владельца.
+  4. **Раздел Kids — все категории.** `sections.ts`: scope `{ gender: 'kids' }` без `productCategory` — детский парфюм, уход и бальзам. Комментарии `sections.ts` / `kids/page.tsx`, `catalog-sections.e2e.spec.ts` (ожидание Kids = все `gender=kids`; проверка «разделы не пересекаются» пропускает Kids), описание `product_category` в `import-guide.md`, запись в GOTCHAS о взаимоисключающих разделах.
+- Проверка:
+  - dry-run CSV через `/api/catalog-import`: строка `kids` — ✔; `Kids` — ✘ «gender: допустимо female / male / unisex / kids», файл не выполнен; `kids ` (с пробелом) — **✔ проходит**: `toTable()` срезает пробелы у всех ячеек до валидации (`csv.ts:95`) — так было и до правки, поведение не менялось, гайд написан по факту.
+  - `catalog-sections.e2e.spec.ts` 5/5 при временно размеченном `kids` бальзаме «Test Lip Balm Rose» (`lipBalm`): товар виден и в `/ro/catalog/kids`, и в `/ro/catalog/lip-balm`; после прогона пол возвращён в `female`.
+  - `check-promo.mjs` — **21/27** (было 21/30): три снятые проверки ушли, остальные 6 падений — прежние по промо-баннеру (STATE п.32), новых нет.
+  - `import.int.spec.ts` 67/67; `tsc --noEmit` ✔; `lint` ✔.
+- Файлы: `src/lib/import/schema.ts`, `src/lib/catalog/sections.ts`, `src/app/(frontend)/[locale]/catalog/kids/page.tsx`, `scripts/check-promo.mjs`, `tests/e2e/catalog-sections.e2e.spec.ts`, `docs/import-guide.md`, `docs/PLAN.md`, `docs/GOTCHAS.md`.
+- Зависимости: нет.
+- Ждёт владельца:
+  - **`docs/STATE.md` не правился** — по CLAUDE.md (запрет 5) файл только на чтение; готовые правки переданы в отчёте сессии: закрыть ПРОМПТ 14 / is_new-is_hit, п.41 (kids в импорте), п.32 и шапочный п.C (Sale), описание Kids в п.6 шапки, новый пункт про миграцию на проде.
+  - Перед реальным массовым импортом проверить на проде, что применена миграция `20260905_084956_phase11_1_gender_kids_product_category` (`kids` в enum БД) — на dev применена, на проде не проверялась.
+- Заметки:
+  - **Пересечение разделов теперь возможно:** детский уход/бальзам одновременно в Kids и Body Care / Lip balm. Разобрано: sitemap перечисляет только пути разделов (не товары), canonical товара один (`/product/<slug>`), счётчики фасетов считаются внутри scope страницы, у пунктов меню счётчиков нет, JSON-LD списков у разделов нет — ничего не задваивается. Единственное, что опиралось на взаимоисключаемость, — e2e-проверка «разделы не пересекаются» (поправлена). Особенность: в Kids фасета «Кому» скрыта, а фильтра по типу товара нет — отделить детский парфюм от ухода внутри раздела нельзя.
 
 - Сделано:
   1. **Закрытые разделы.** «For Her / For Him / Kids» — больше не `/catalog?gender=…`, а маршруты `/catalog/for-her`, `/catalog/for-him`, `/catalog/kids` со своим scope (как Body Care). Конфиг разделов — `src/lib/catalog/sections.ts` (путь + scope + `hideGenderFacet`), страницы — тонкие обёртки над общим `CatalogSectionPage.tsx`; `/catalog/body-care` переведён на тот же компонент. В `CatalogScope` добавлен `gender`. На пол-разделах фасета «Кому» и его чипов нет, `gender` из URL отбрасывается до запроса (`?gender=male` на for-her ничего не меняет и не даёт noindex). SORT/FILTERS видны: условие `hideToolbar` из `CatalogView.tsx` удалено целиком. Подсветка пункта меню — только по ключу страницы (`CatalogNavColumn`/`CatalogShell` больше не принимают `gender`).

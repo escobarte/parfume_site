@@ -240,53 +240,11 @@ check(
 )
 
 // ═══════════════════════════════════════════════════════════════════════
-// 2. Фасета «Sale» не задвоена + фильтр «со скидкой» + сортировка «по скидке»
+// 2. Сортировка «по скидке»
 // ═══════════════════════════════════════════════════════════════════════
-await goto('/ro/catalog')
-const totalAll = await page.locator('article a[href*="/product/"]').count()
-
-// С фазы 9.1 фасеты живут не в боковой колонке, а в дровере: сначала кнопка
-// «Filtre», потом уже чекбоксы внутри диалога. Клик до конца гидрации в dev
-// теряется (см. docs/GOTCHAS.md), поэтому жмём, пока диалог не откроется.
-const filtersDialog = page.getByRole('dialog')
-for (let attempt = 0; attempt < 5; attempt += 1) {
-  if (await filtersDialog.isVisible().catch(() => false)) break
-  await page
-    .getByRole('button', { name: /^filtre/i })
-    .click()
-    .catch(() => {})
-  await page.waitForTimeout(500)
-}
-const discountRow = filtersDialog.locator('label').filter({ hasText: /^Sale/ })
-check(
-  'ручной тег «Sale» удалён — фасета «Sale» ровно одна (авто-hasDiscount, без задвоения)',
-  (await discountRow.count()) === 1,
-  `найдено фасет с меткой «Sale»: ${await discountRow.count()}`,
-)
-// Дальнейшие три проверки кликают по самой фасете. Если её в дровере нет,
-// без этой развилки скрипт падал бы на таймауте локатора и не доходил до
-// блока промо-баннера ниже — то есть одна красная проверка гасила бы ещё
-// десяток. Проверки НЕ смягчаются: при отсутствии фасеты они честно ✘.
-if ((await discountRow.count()) === 0) {
-  check('фильтр «со скидкой» сужает выдачу и счётчик совпадает', false, 'фасеты «Sale» нет в дровере')
-  check('состояние фильтра ушло в URL', false, 'фасеты «Sale» нет в дровере')
-} else {
-  const counterText = await discountRow.first().innerText()
-  await discountRow.first().locator('input').check()
-  await page.waitForFunction(
-    (n) => document.querySelectorAll('article a[href*="/product/"]').length !== n,
-    totalAll,
-    { timeout: 8000 },
-  )
-  const filtered = await page.locator('article a[href*="/product/"]').count()
-  check(
-    'фильтр «со скидкой» сужает выдачу и счётчик совпадает',
-    filtered > 0 && filtered < totalAll && counterText.includes(String(filtered)),
-    `${totalAll} → ${filtered}, счётчик «${counterText}»`,
-  )
-  check('состояние фильтра ушло в URL', page.url().includes('flags=hasDiscount'))
-}
-
+// Фасеты «Sale» в панели фильтров нет и не будет — решение владельца
+// 2026-09-15 (PLAN.md §4.5.3). Три проверки фасеты (ровно одна / сужает
+// выдачу / уходит в URL) сняты; скидочные товары ищутся сортировкой ниже.
 await goto('/ro/catalog?sort=discount')
 const titlesByDiscount = await page.locator('article h3').allInnerTexts()
 check(

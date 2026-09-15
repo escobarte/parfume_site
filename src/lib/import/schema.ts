@@ -41,7 +41,7 @@ const pipeList = z.preprocess(
   z.array(z.string()).optional(),
 )
 
-export const GENDER_VALUES = ['female', 'male', 'unisex'] as const
+export const GENDER_VALUES = ['female', 'male', 'unisex', 'kids'] as const
 
 // Объём — «пермиссивная» строка на уровне схемы (промпт «новая модель
 // объёма»): строгая сверка со списком из 5 значений происходит ПОЗЖЕ, в

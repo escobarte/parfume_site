@@ -13,7 +13,8 @@ const ro = JSON.parse(readFileSync('messages/ro.json', 'utf8'))
 const SECTIONS = {
   forHer: { path: '/ro/catalog/for-her', match: (p: Product) => p.gender === 'female' && p.productCategory === 'perfume' },
   forHim: { path: '/ro/catalog/for-him', match: (p: Product) => p.gender === 'male' && p.productCategory === 'perfume' },
-  kids: { path: '/ro/catalog/kids', match: (p: Product) => p.gender === 'kids' && p.productCategory === 'perfume' },
+  // Kids — все товары с gender=kids любой категории (решение владельца 2026-09-15).
+  kids: { path: '/ro/catalog/kids', match: (p: Product) => p.gender === 'kids' },
   bodyCare: { path: '/ro/catalog/body-care', match: (p: Product) => p.productCategory === 'bodyCare' },
   lipBalm: { path: '/ro/catalog/lip-balm', match: (p: Product) => p.productCategory === 'lipBalm' },
 } as const
@@ -36,7 +37,7 @@ const openFilters = async (page: Page) => {
 }
 
 test.describe('Каталог: закрытые разделы левого меню', () => {
-  test('состав каждого раздела совпадает с gender/productCategory, разделы не пересекаются', async ({
+  test('состав каждого раздела совпадает с gender/productCategory, разделы кроме Kids не пересекаются', async ({
     page,
     request,
   }) => {
@@ -50,6 +51,8 @@ test.describe('Каталог: закрытые разделы левого ме
       const actual = (await cardTitles(page)).sort()
       expect(actual, key).toEqual(expected)
 
+      // Детский уход/бальзам по правилу виден и в Kids, и в Body Care / Lip balm.
+      if (key === 'kids') continue
       for (const title of actual) {
         expect(seen.get(title), `«${title}» уже есть в разделе ${seen.get(title)}`).toBeUndefined()
         seen.set(title, key)
