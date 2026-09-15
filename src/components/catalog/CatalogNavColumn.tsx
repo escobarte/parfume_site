@@ -12,23 +12,17 @@ import { CATALOG_NAV_ITEMS, type CatalogNavKey } from '@/lib/catalog/navSections
  * `CATALOG_NAV_ITEMS`.
  */
 export async function CatalogNavColumn({
-  gender = [],
   activeKey,
 }: {
-  // Подсветка «Для неё/него/Детям» по активному фасету «Кому» — только
-  // страницы каталога передают это (у gift-items/brands/about такого фасета
-  // нет, они подсвечиваются через явный activeKey).
-  gender?: string[]
+  // Подсветка — только по явному ключу страницы. Раньше «Для неё/него/Детям»
+  // подсвечивались по фасету `gender` общего каталога; с 2026-09-15 это
+  // закрытые разделы со своим маршрутом, `/catalog?gender=…` пункт меню
+  // больше не подсвечивает.
   activeKey?: CatalogNavKey
 }) {
   const t = await getTranslations('CatalogNav')
 
-  const isActive = (key: CatalogNavKey) => {
-    if (key === 'forHer') return gender.includes('female')
-    if (key === 'forHim') return gender.includes('male')
-    if (key === 'kids') return gender.includes('kids')
-    return key === activeKey
-  }
+  const isActive = (key: CatalogNavKey) => key === activeKey
 
   return (
     <nav aria-label={t('title')} className="hidden shrink-0 lg:block lg:w-56">

@@ -162,7 +162,7 @@ export interface Product {
   /**
    * Раздел каталога (не «Кому») — влияет на левую навигацию.
    */
-  productCategory: 'perfume' | 'bodyCare';
+  productCategory: 'perfume' | 'bodyCare' | 'lipBalm';
   /**
    * Страна-производитель — фасет каталога.
    */

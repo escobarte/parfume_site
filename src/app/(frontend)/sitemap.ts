@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { routing } from '@/i18n/routing'
+import { CATALOG_SECTIONS } from '@/lib/catalog/sections'
 import { staticParamsOrEmpty } from '@/lib/catalog/staticParams'
 import { getPayloadClient } from '@/lib/payload'
 import { SITE_URL } from '@/lib/seo/config'
@@ -74,6 +75,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = [
     ...entriesFor(''),
     ...entriesFor('/catalog'),
+    // Закрытые разделы левого меню (for-her … lip-balm) — самостоятельные
+    // канонические страницы с 2026-09-15, раньше были фильтром `?gender=`.
+    ...Object.values(CATALOG_SECTIONS).flatMap((section) => entriesFor(section.path)),
     ...entriesFor('/brands'),
   ]
 

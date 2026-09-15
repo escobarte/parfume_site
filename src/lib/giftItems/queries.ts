@@ -1,6 +1,7 @@
 import { unstable_cache } from 'next/cache'
 import { CACHE_TTL } from '@/lib/cache'
 import type { Locale } from '@/i18n/routing'
+import type { GiftSortOption } from '@/lib/catalog/searchParams'
 import type { GiftItem, Media } from '@/payload-types'
 import { getPayloadClient } from '@/lib/payload'
 import { GIFT_TAG } from '@/lib/revalidate'
@@ -49,8 +50,17 @@ function toView(doc: GiftItem): GiftItemView {
  * — тот же принцип кэша, что у каталога товаров (`getProductCards`), но
  * отдельный тег (`GIFT_TAG`): правка обычного товара не должна сбрасывать
  * кэш этого списка и наоборот.
+ *
+ * Сортировка по цене — по денормализованному `minPrice` (считает хук
+ * коллекции), как `priceAsc/priceDesc` у каталога товаров.
  */
-export const getGiftItems = (type: GiftItemType, locale: Locale) =>
+const GIFT_SORT: Record<GiftSortOption, string> = {
+  titleAsc: 'title',
+  priceAsc: 'minPrice',
+  priceDesc: '-minPrice',
+}
+
+export const getGiftItems = (type: GiftItemType, locale: Locale, sort: GiftSortOption = 'titleAsc') =>
   unstable_cache(
     async (): Promise<GiftItemView[]> => {
       const payload = await getPayloadClient()
@@ -59,11 +69,11 @@ export const getGiftItems = (type: GiftItemType, locale: Locale) =>
         locale,
         depth: 1,
         limit: 100,
-        sort: 'title',
+        sort: GIFT_SORT[sort],
         where: { type: { equals: type } },
       })
       return docs.map(toView)
     },
-    ['gift-items', type, locale],
+    ['gift-items', type, locale, sort],
     { tags: [GIFT_TAG], revalidate: CACHE_TTL },
   )()

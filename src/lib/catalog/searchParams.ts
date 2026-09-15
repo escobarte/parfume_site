@@ -55,6 +55,23 @@ export type CatalogQuery = {
 
 export const loadCatalogParams = createLoader(catalogSearchParams)
 
+/**
+ * Сортировка подарочных разделов (Gift Card / Gift Box, 2026-09-15) — тот же
+ * ключ `sort`, что у каталога (клиент пишет его через общий `SortSelect`),
+ * но только подмножество значений, фильтров там нет осознанно. Дефолт
+ * `titleAsc` — прежний порядок выдачи до появления сортировки.
+ */
+export const GIFT_SORT_OPTIONS = [
+  'titleAsc',
+  'priceAsc',
+  'priceDesc',
+] as const satisfies readonly SortOption[]
+export type GiftSortOption = (typeof GIFT_SORT_OPTIONS)[number]
+
+export const loadGiftSortParams = createLoader({
+  sort: parseAsStringLiteral(GIFT_SORT_OPTIONS).withDefault('titleAsc'),
+})
+
 /** Сколько фильтров реально выбрано — для бейджа на мобильной кнопке. */
 export function countActiveFilters(query: CatalogQuery): number {
   return (

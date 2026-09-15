@@ -6,6 +6,32 @@
 >
 > Архивы: `docs/archive/CHANGELOG-2026-08-phases-1-4.5.md` (фазы 1 → 4.5 + расширение плана).
 
+## [2026-09-15з] Закрытые разделы каталога For Her/For Him/Kids + Lip balm + сортировка подарков
+
+- Сделано:
+  1. **Закрытые разделы.** «For Her / For Him / Kids» — больше не `/catalog?gender=…`, а маршруты `/catalog/for-her`, `/catalog/for-him`, `/catalog/kids` со своим scope (как Body Care). Конфиг разделов — `src/lib/catalog/sections.ts` (путь + scope + `hideGenderFacet`), страницы — тонкие обёртки над общим `CatalogSectionPage.tsx`; `/catalog/body-care` переведён на тот же компонент. В `CatalogScope` добавлен `gender`. На пол-разделах фасета «Кому» и его чипов нет, `gender` из URL отбрасывается до запроса (`?gender=male` на for-her ничего не меняет и не даёт noindex). SORT/FILTERS видны: условие `hideToolbar` из `CatalogView.tsx` удалено целиком. Подсветка пункта меню — только по ключу страницы (`CatalogNavColumn`/`CatalogShell` больше не принимают `gender`).
+  2. **Без задвоения с Body Care.** Пол-разделы берут только `productCategory = perfume` → женский уход за телом виден только в Body Care, бальзам — только в Lip balm. Разделы взаимоисключающие.
+  3. **unisex** — не тронут: только фасетом «Кому» в общем `/catalog`. `/catalog?gender=female` остаётся рабочим фильтром общего каталога (редиректа на раздел нет).
+  4. **Lip balm.** `productCategory` += `lipBalm` («Бальзам для губ» в админке), миграция `20260915_140321_lip_balm_product_category` (`ALTER TYPE … ADD VALUE`; в `down()` дописан перевод строк `lipBalm` → `perfume` перед сменой типа — сгенерированный откат падал бы на таких товарах). Роут `/catalog/lip-balm`, пункт меню между Body Care и Gift Card, `CatalogNav.lipBalm`: RO «Balsam de buze» / RU «Бальзам для губ» / EN «Lip balm».
+  5. **Сортировка Gift Card / Gift Box.** `SortSelect` получил `options`; для подарков `GIFT_SORT_OPTIONS` = по названию (дефолт — прежний порядок) / цена ↑ / цена ↓ по денормализованному `minPrice`; ключ `sort` тот же, лоадер `loadGiftSortParams`, `getGiftItems(type, locale, sort)`. Селект показывается при ≥2 позициях. Фильтров нет.
+  6. **CSV-импорт.** Отдельного маппинга не понадобилось: `canonicalProductCategory` строится из `PRODUCT_CATEGORIES`, поэтому `lipbalm`/` LipBalm ` → `lipBalm` автоматически. Обновлены подсказки `docs/import-guide.md`, `scripts/import.ts` (USAGE), комментарий `schema.ts`; в `import.int.spec.ts` +2 проверки.
+  - Заодно: пять разделов добавлены в `sitemap.ts` (раньше не было даже body-care).
+- Проверка:
+  - Миграция вверх → CSV-импорт строки `lipbalm` (✔ «Категория товара: проставлена у 1», REST `lipBalm`) → вниз (товар стал `perfume`, откат не упал) → вверх → повторный импорт (снова `lipBalm`). `generate:types`: `'perfume' | 'bodyCare' | 'lipBalm'`.
+  - Скриншоты семи разделов до/после `docs/screenshots/section-{forHer,forHim,kids,bodyCare,lipBalm,giftCard,giftBox}-{before,after}.png`. **До:** «Test Body Lotion Her» в For Her И Body Care, на пол-разделах нет тулбара, lip-balm — 404, у подарков нет сортировки. **После:** пересечений нет, у всех пяти товарных разделов тулбар и своя подсветка меню, у подарков сортировка без фильтров.
+  - Новый `tests/e2e/catalog-sections.e2e.spec.ts` (5/5): состав каждого раздела = ожидание из REST по `gender`/`productCategory` + попарно не пересекаются; for-her — нет фасета «Кому», сортировка оставляет в разделе; `?gender=` игнорируется; тулбар на Body Care/Lip balm; сортировка подарков по цене = порядок `minPrice` из REST.
+  - `catalog-filters` + `smoke` e2e — 13/13; `check-catalog.mjs` 25/25 (первый прогон 22/25 — старый кэш `/ro/catalog` сразу после импорта, повтор чистый); `import.int.spec.ts` 67/67; tsc / lint / build ✔.
+- Файлы: новые — `src/lib/catalog/sections.ts`, `src/components/catalog/CatalogSectionPage.tsx`, `src/app/(frontend)/[locale]/catalog/{for-her,for-him,kids,lip-balm}/page.tsx`, миграция `20260915_140321_lip_balm_product_category.{ts,json}`, `tests/e2e/catalog-sections.e2e.spec.ts`; изменены — `catalog/body-care/page.tsx`, `CatalogView.tsx`, `CatalogShell.tsx`, `CatalogNavColumn.tsx`, `ActiveFilters.tsx`, `SortSelect.tsx`, `navSections.ts`, `queries.ts`, `searchParams.ts`, `productCategories.ts`, `giftItems/queries.ts`, `GiftItemsView.tsx`, `gift-certificates/page.tsx`, `gift-box/page.tsx`, `sitemap.ts`, `payload-types.ts`, `messages/{ro,ru,en}.json`, `import.int.spec.ts`, `docs/import-guide.md`, `scripts/import.ts`, `src/lib/import/schema.ts`, `docs/GOTCHAS.md`.
+- Зависимости: нет.
+- Ждёт владельца:
+  - 👁 **Body Care тоже получил тулбар** (SORT/FILTERS) — в промпте это явно сказано для For Her/Him/Kids и Lip balm; оставить Body Care единственным разделом без сортировки было бы непоследовательно (`hideToolbar` удалён целиком). Если нужно иначе — одна строка.
+  - 👁 **В Body Care и Lip balm фасет «Кому» остался** (раздел определяет тип, а не пол — «без фильтра по себе»). Если пол там не нужен — `hideGenderFacet: true` в `sections.ts`.
+  - Перевод `CatalogNav.lipBalm` дан владельцем — не машинный.
+- Заметки:
+  - **CSV-импорт не принимает `gender = kids`** (`GENDER_VALUES` в `src/lib/import/schema.ts` — только female/male/unisex; `kids` добавлен в Products в фазе 11.1, импорт не догнали). Детские товары сейчас заводятся только в админке. Не чинилось — вне задачи.
+  - Тестовые данные в локальной БД (оставлены как образцы разделов): товары «Test Body Lotion Her» (female, bodyCare), «Test Lip Balm Rose» (female, lipBalm); подарки «A Certificat Mare» 1000 / «B Certificat Mic» 300 (сертификаты), «Box Aurora» 900 / «Box Brise» 400 (Gift box).
+  - Старые внешние ссылки `/catalog?gender=female` продолжают работать как фильтр общего каталога, но уже не «раздел».
+
 ## [2026-09-15ж] Фон контентных зон → #F8F2EA (ПРОМПТ Е)
 
 - Сделано: `--color-surface` в `src/styles/tokens.css`: `#ffffff` → `#f8f2ea`. Больше ничего не менялось — фон `body` (`--background`), `bg-surface` секций/дроверов/поповеров идут через этот токен. Navy-зоны (шапка, лента брендов, футер) — отдельный токен `--color-navy`, не затронуты. История: `#ffefde` в `[2026-09-15]` → откат на `#ffffff` в `[2026-09-15в]` → теперь `#f8f2ea`.

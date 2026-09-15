@@ -12,17 +12,15 @@ import { CatalogNavColumn } from './CatalogNavColumn'
  */
 export function CatalogShell({
   activeKey,
-  gender,
   children,
 }: {
   activeKey?: CatalogNavKey
-  gender?: string[]
   children: ReactNode
 }) {
   return (
     <div className="mx-auto max-w-[1440px] px-5 py-10 md:px-8 md:py-12">
       <div className="lg:flex lg:items-start lg:gap-8">
-        <CatalogNavColumn gender={gender} activeKey={activeKey} />
+        <CatalogNavColumn activeKey={activeKey} />
         <div className="min-w-0 flex-1">{children}</div>
       </div>
     </div>

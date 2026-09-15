@@ -23,24 +23,16 @@ import { SortSelect } from './SortSelect'
  * её при открытии фильтров.
  *
  * `showCategoryNav` — видимость левого меню (`CatalogShell`), включена на
- * `/catalog`, `/catalog/[category]` и `/catalog/body-care` (страница бренда
- * рендерит тот же `CatalogView`, но меню не просит).
+ * `/catalog`, `/catalog/[category]` и закрытых разделах меню
+ * (`CatalogSectionPage`: for-her / for-him / kids / body-care / lip-balm);
+ * страница бренда рендерит тот же `CatalogView`, но меню не просит.
  *
- * Тулбар (заголовок, счётчик, «Фильтры», чипы, сортировка) скрывается
- * отдельным условием — `hideToolbar` ниже (ПРОМПТ 13, задача 1) — только
- * на «чистых» посадочных состояниях четырёх товарных пунктов левого меню
- * (Для неё/Для него/Детям/Уход за телом), НЕ на всём `showCategoryNav`:
- * `/catalog` без параметров (переход по «CATALOG» в шапке) и
- * `/catalog/[category]` (произвольные категории CMS, не связаны с левым
- * меню) обязаны сохранить полноценную фильтрацию — иначе с сайта пропадает
- * единственный способ отфильтровать/отсортировать общую выдачу. Пункты
- * «Для неё/него/Детям» технически используют тот же URL
- * (`/catalog?gender=…`), что и обычный фасет «Кому» в дровере — различить
- * «пришёл по ссылке меню» от «включил фасет сам» нечем в принципе, поэтому
- * тулбар скрывается только пока `gender` — единственный активный фильтр
- * (ровно то состояние, в которое ведёт пункт меню); стоит добавить любой
- * другой фильтр (бренд, цена, страна, флаг) — тулбар возвращается, и
- * пользователь снова может фильтровать/сбрасывать как обычно.
+ * Тулбар (заголовок, счётчик, «Фильтры», чипы, сортировка) виден везде
+ * (2026-09-15). Раньше он прятался на пунктах меню «Для неё/него/Детям/Уход
+ * за телом» (`hideToolbar`), пока те были фильтром `?gender=` общего
+ * каталога; теперь это закрытые разделы со своим scope, и фильтры внутри
+ * раздела из него не выводят. `hideGenderFacet` — раздел сам задаёт пол:
+ * фасета «Кому» и его чипов нет (`gender` из URL страница уже отбросила).
  */
 export async function CatalogView({
   locale,
@@ -50,6 +42,7 @@ export async function CatalogView({
   subtitle,
   showCategoryNav = false,
   activeNavKey,
+  hideGenderFacet = false,
 }: {
   locale: Locale
   query: CatalogQuery
@@ -60,6 +53,7 @@ export async function CatalogView({
   // каталога/категорий, не на страницах бренда (те тоже рендерят CatalogView).
   showCategoryNav?: boolean
   activeNavKey?: CatalogNavKey
+  hideGenderFacet?: boolean
 }) {
   const [t, tGender, tCountry, tFlags, brands] = await Promise.all([
     getTranslations('Catalog'),
@@ -74,7 +68,7 @@ export async function CatalogView({
     getFacetSource(locale, scope),
   ])
 
-  const facets = computeFacets(facetRows, query, {
+  const computed = computeFacets(facetRows, query, {
     brands,
     gender: {
       female: tGender('female'),
@@ -93,15 +87,9 @@ export async function CatalogView({
       hasDiscount: tFlags('hasDiscount'),
     },
   })
+  const facets = hideGenderFacet ? { ...computed, gender: [] } : computed
 
   const activeCount = countActiveFilters(query)
-
-  const isSingleGenderLanding =
-    query.gender.length === 1 &&
-    (['female', 'male', 'kids'] as string[]).includes(query.gender[0]) &&
-    activeCount === query.gender.length
-  const hideToolbar =
-    showCategoryNav && (activeNavKey === 'bodyCare' || isSingleGenderLanding)
 
   const grid = (
     <div>
@@ -126,9 +114,7 @@ export async function CatalogView({
     </div>
   )
 
-  const content = hideToolbar ? (
-    grid
-  ) : (
+  const content = (
     <>
       <div className="border-line flex flex-wrap items-baseline justify-between gap-3 border-b pb-5">
         <div>
@@ -144,7 +130,7 @@ export async function CatalogView({
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3 max-lg:w-full">
             <FiltersDrawer facets={facets} activeCount={activeCount} />
-            <ActiveFilters facets={facets} />
+            <ActiveFilters facets={facets} hideGender={hideGenderFacet} />
           </div>
           <SortSelect />
         </div>
@@ -156,7 +142,7 @@ export async function CatalogView({
 
   if (showCategoryNav) {
     return (
-      <CatalogShell activeKey={activeNavKey} gender={query.gender}>
+      <CatalogShell activeKey={activeNavKey}>
         {content}
       </CatalogShell>
     )

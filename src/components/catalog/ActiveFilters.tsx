@@ -7,7 +7,14 @@ import type { FlagOption } from '@/lib/catalog/searchParams'
 import { useCatalogQuery } from './useCatalogQuery'
 
 /** Выбранные значения строкой чипов — видно, что именно сузило выдачу. */
-export function ActiveFilters({ facets }: { facets: Facets }) {
+export function ActiveFilters({
+  facets,
+  /** Закрытый раздел сам задаёт пол (`sections.ts`) — чип «Кому» не показываем. */
+  hideGender = false,
+}: {
+  facets: Facets
+  hideGender?: boolean
+}) {
   const t = useTranslations('Catalog.filters')
   const { query, setQuery, toggleInList, resetAll } = useCatalogQuery()
 
@@ -20,7 +27,7 @@ export function ActiveFilters({ facets }: { facets: Facets }) {
       label: label(facets.brand, slug),
       clear: () => toggleInList('brand', slug),
     })),
-    ...query.gender.map((value) => ({
+    ...(hideGender ? [] : query.gender).map((value) => ({
       key: `gender-${value}`,
       label: label(facets.gender, value),
       clear: () => toggleInList('gender', value),

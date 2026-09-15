@@ -161,6 +161,8 @@ describe('скалярные поля товара (country_of_origin / product_
   it('канон принимается без учёта регистра и краевых пробелов', () => {
     expect(canonicalProductCategory(' BODYCARE ')).toBe('bodyCare')
     expect(canonicalProductCategory('bodycare')).toBe('bodyCare')
+    expect(canonicalProductCategory(' LipBalm ')).toBe('lipBalm')
+    expect(canonicalProductCategory('lipbalm')).toBe('lipBalm')
     expect(canonicalProductCategory('Perfume')).toBe('perfume')
     // Русская подпись из админки — не канон, как и у объёма со страной.
     expect(canonicalProductCategory('Уход за телом')).toBeUndefined()

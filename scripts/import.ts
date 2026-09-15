@@ -28,7 +28,7 @@ description_ru/description_en — тогда все три локали пишу
 Ещё четыре необязательные колонки форматов A/B:
   country_of_origin — страна товара: uae | europe | usa (берётся из первой
                       строки handle; пустая ячейка ничего не меняет)
-  product_category  — раздел каталога: perfume | bodyCare (те же правила, что
+  product_category  — раздел каталога: perfume | bodyCare | lipBalm (те же правила, что
                       у country_of_origin; не путать с колонкой categories —
                       та про таксономию)
   brand_logo        — логотип бренда, одно имя файла из медиатеки (пишется
