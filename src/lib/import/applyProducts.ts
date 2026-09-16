@@ -32,8 +32,18 @@ type VariantInput = {
    * товаров сразу.
    */
   oldPrice?: number | null
-  stock: number
-  isActive: boolean
+  /**
+   * Остаток. Ключ ОТСУТСТВУЕТ, если колонки нет в файле или ячейка пуста —
+   * то же правило и по той же причине, что у `oldPrice` выше: варианты
+   * склеиваются по sku через spread (mergeVariants), поэтому `stock: 0`
+   * в объекте обнулял бы реальный склад. До 2026-09-18 так и было: заход
+   * «дописать описания» файлом без колонки `stock` молча обнулял остатки.
+   * Значение по умолчанию (0) проставляется только НОВОМУ варианту — в
+   * `mergeVariants`, где видно, что варианта с таким sku ещё нет.
+   */
+  stock?: number
+  /** Показывать ли вариант. Та же логика отсутствующего ключа, что у `stock`. */
+  isActive?: boolean
   /**
    * Имя файла из медиатеки. `undefined` — ячейка пуста, и это значит «не
    * трогать»: варианты склеиваются по sku через spread (mergeVariants), и
@@ -141,8 +151,9 @@ export function groupFormatA(rows: ValidatedRow<FormatARow>[]): GroupResult {
       // Сверка именно с `undefined`, а не проверка на истинность: 0 — валидное
       // число после разбора ячейки, и `old_price ? …` пропустил бы его.
       ...(old_price !== undefined ? { oldPrice: old_price } : {}),
-      stock: stock ?? 0,
-      isActive: is_active ?? true,
+      // Пустая ячейка/отсутствующая колонка — «не трогать», как у old_price.
+      ...(stock !== undefined ? { stock } : {}),
+      ...(is_active !== undefined ? { isActive: is_active } : {}),
       ...(variant_image ? { image: variant_image } : {}),
     }
     grouped.get(base.handle)!.variants.push(variant)
@@ -182,8 +193,9 @@ export function groupFormatB(rows: ValidatedRow<FormatBRow>[]): GroupResult {
         price: variant.price,
         // Отсутствующий в JSON oldPrice не кладём — см. VariantInput.oldPrice.
         ...(variant.oldPrice !== undefined ? { oldPrice: variant.oldPrice } : {}),
-        stock: variant.stock ?? 0,
-        isActive: variant.isActive ?? true,
+        // Отсутствующие в JSON stock/isActive не кладём — см. VariantInput.stock.
+        ...(variant.stock !== undefined ? { stock: variant.stock } : {}),
+        ...(variant.isActive !== undefined ? { isActive: variant.isActive } : {}),
         // Пустое/отсутствующее image не кладём — см. VariantInput.image.
         ...(variant.image?.trim() ? { image: variant.image.trim() } : {}),
       })
@@ -294,7 +306,15 @@ export function mergeVariants(existing: Product['variants'], incoming: VariantPa
       merged[index] = { ...merged[index], ...variant } as NonNullable<Product['variants']>[number]
       updated += 1
     } else {
-      merged.push(variant as NonNullable<Product['variants']>[number])
+      // НОВЫЙ вариант: здесь и только здесь проставляются значения по
+      // умолчанию для не заданных в файле остатка и активности. У уже
+      // существующего варианта (ветка выше) их отсутствие означает «оставить
+      // как в базе», поэтому подставлять дефолты там нельзя.
+      merged.push({
+        stock: 0,
+        isActive: true,
+        ...variant,
+      } as NonNullable<Product['variants']>[number])
       created += 1
     }
   }

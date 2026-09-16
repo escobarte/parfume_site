@@ -482,6 +482,106 @@ describe('old_price: пустая ячейка не обнуляет уценк�
   })
 })
 
+describe('stock / is_active: пустая ячейка не обнуляет склад и не включает вариант', () => {
+  /**
+   * Регрессия 2026-09-18, найдена разведкой поэтапного импорта. `stock ?? 0`
+   * и `is_active ?? true` попадали в объект варианта безусловно, и spread в
+   * `mergeVariants` затирал ими сохранённые значения: любой повторный заход
+   * форматом A/B без этих колонок (например «дописать описания») обнулял
+   * остаток и снова включал выключенный вариант.
+   *
+   * Правило то же, что у `old_price`/`variant_image`: нет значения — нет
+   * ключа. Дефолты (0 / включён) остаются только для НОВОГО варианта и
+   * проставляются в `mergeVariants`.
+   */
+  const groupA = (csv: string) => {
+    const table = toTable(csv)
+    const { rows, errors } = validateRows<never>('products-a', table.records)
+    expect(errors).toHaveLength(0)
+    return groupFormatA(rows)
+  }
+
+  const HEAD = 'handle,title,brand,volume,sku,price'
+
+  it('колонок stock/is_active нет вовсе — ключи не попадают в вариант', () => {
+    const { inputs } = groupA([HEAD, 'A,Название,b,5ml,A-5,200'].join('\n'))
+    expect('stock' in inputs[0].variants[0]).toBe(false)
+    expect('isActive' in inputs[0].variants[0]).toBe(false)
+  })
+
+  it('колонки есть, но ячейки пустые — ключи тоже не попадают', () => {
+    const { inputs } = groupA(
+      [`${HEAD},stock,is_active`, 'A,Название,b,5ml,A-5,200,,'].join('\n'),
+    )
+    expect('stock' in inputs[0].variants[0]).toBe(false)
+    expect('isActive' in inputs[0].variants[0]).toBe(false)
+  })
+
+  it('заполненные ячейки кладутся как раньше', () => {
+    const { inputs } = groupA(
+      [`${HEAD},stock,is_active`, 'A,Название,b,5ml,A-5,200,12,0'].join('\n'),
+    )
+    expect(inputs[0].variants[0].stock).toBe(12)
+    expect(inputs[0].variants[0].isActive).toBe(false)
+  })
+
+  it('явный 0 в stock не теряется: проверка на undefined, а не на истинность', () => {
+    const { inputs } = groupA([`${HEAD},stock`, 'A,Название,b,5ml,A-5,200,0'].join('\n'))
+    expect(inputs[0].variants[0].stock).toBe(0)
+  })
+
+  it('формат B ведёт себя так же — форматы не расходятся', () => {
+    const table = toTable(
+      [
+        'handle,title,brand,variants',
+        'A,Название,b,"[{""volume"":""5ml"",""sku"":""A-5"",""price"":200}]"',
+        'B,Другое,b,"[{""volume"":""5ml"",""sku"":""B-5"",""price"":200,""stock"":9,""isActive"":false}]"',
+      ].join('\n'),
+    )
+    const { rows, errors } = validateRows<never>('products-b', table.records)
+    expect(errors).toHaveLength(0)
+    const { inputs } = groupFormatB(rows)
+    expect('stock' in inputs[0].variants[0]).toBe(false)
+    expect('isActive' in inputs[0].variants[0]).toBe(false)
+    expect(inputs[1].variants[0].stock).toBe(9)
+    expect(inputs[1].variants[0].isActive).toBe(false)
+  })
+
+  it('ПЕРЕЗАЛИВКА: остаток и выключенный вариант остаются на месте', () => {
+    const existing = [{ volume: '5ml', sku: 'A-5', price: 200, stock: 7, isActive: false }]
+    const { inputs } = groupA([HEAD, 'A,Название,b,5ml,A-5,180'].join('\n'))
+
+    const { merged, updated } = mergeVariants(existing as never, inputs[0].variants as never)
+    expect(updated).toBe(1)
+    expect(merged[0].price).toBe(180)
+    expect(merged[0].stock).toBe(7)
+    expect(merged[0].isActive).toBe(false)
+  })
+
+  it('ПЕРЕЗАЛИВКА с непустыми ячейками всё так же перезаписывает', () => {
+    const existing = [{ volume: '5ml', sku: 'A-5', price: 200, stock: 7, isActive: false }]
+    const { inputs } = groupA(
+      [`${HEAD},stock,is_active`, 'A,Название,b,5ml,A-5,180,2,1'].join('\n'),
+    )
+    const { merged } = mergeVariants(existing as never, inputs[0].variants as never)
+    expect(merged[0].stock).toBe(2)
+    expect(merged[0].isActive).toBe(true)
+  })
+
+  it('НОВЫЙ вариант без колонок получает дефолты 0 / включён', () => {
+    const existing = [{ volume: '5ml', sku: 'A-5', price: 200, stock: 7, isActive: true }]
+    const { inputs } = groupA([HEAD, 'A,Название,b,10ml,A-10,300'].join('\n'))
+
+    const { merged, created } = mergeVariants(existing as never, inputs[0].variants as never)
+    expect(created).toBe(1)
+    const added = merged.find((variant) => variant.sku === 'A-10')
+    expect(added?.stock).toBe(0)
+    expect(added?.isActive).toBe(true)
+    // Соседний вариант не задет.
+    expect(merged.find((variant) => variant.sku === 'A-5')?.stock).toBe(7)
+  })
+})
+
 describe('отказ валидации доезжает до отчёта импорта читаемым', () => {
   /**
    * Регрессия 2026-09-12. Отчёт печатал только `error.message` Payload —
