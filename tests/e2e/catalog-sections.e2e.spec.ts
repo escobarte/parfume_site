@@ -37,6 +37,12 @@ const openFilters = async (page: Page) => {
 }
 
 test.describe('Каталог: закрытые разделы левого меню', () => {
+  // Попап «первая скидка» всплывает через 2 с на любой странице витрины и
+  // перехватывает клики подложкой (см. GOTCHAS.md) — спека не про него.
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('mf-promo-popup-seen', '1'))
+  })
+
   test('состав каждого раздела совпадает с gender/productCategory, разделы кроме Kids не пересекаются', async ({
     page,
     request,
@@ -75,8 +81,13 @@ test.describe('Каталог: закрытые разделы левого ме
     // Дровер не закрываем через Escape: через 2 с поверх может открыться попап
     // промокода — второй role="dialog" (см. GOTCHAS.md). Чистый заход надёжнее.
     await gotoAndWaitForFooter(page, '/ro/catalog/for-her')
-    await page.getByRole('combobox', { name: ro.Catalog.sort.label }).selectOption('priceDesc')
-    await expect(page).toHaveURL(/\/ro\/catalog\/for-her\?.*sort=priceDesc/)
+    // Выбор в селекте до конца гидрации теряется (см. GOTCHAS.md), а под
+    // нагрузкой полного прогона это ловится регулярно. Поэтому повторяем само
+    // действие, а не просто ждём адрес дольше: ожидание не вернёт потерянный клик.
+    await expect(async () => {
+      await page.getByRole('combobox', { name: ro.Catalog.sort.label }).selectOption('priceDesc')
+      await expect(page).toHaveURL(/\/ro\/catalog\/for-her\?.*sort=priceDesc/, { timeout: 3000 })
+    }).toPass({ timeout: 30000 })
   })
 
   test('?gender= на пол-разделе игнорируется — выдача та же, что без параметра', async ({ page }) => {
@@ -113,8 +124,11 @@ test.describe('Каталог: закрытые разделы левого ме
         const expected = [...items]
           .sort((a, b) => (sort === 'priceAsc' ? a.minPrice - b.minPrice : b.minPrice - a.minPrice))
           .map((item) => item.title)
-        await page.getByRole('combobox', { name: ro.Catalog.sort.label }).selectOption(sort)
-        await expect(page).toHaveURL(new RegExp(`sort=${sort}`))
+        // Тот же приём, что выше: повтор выбора, а не более длинное ожидание.
+        await expect(async () => {
+          await page.getByRole('combobox', { name: ro.Catalog.sort.label }).selectOption(sort)
+          await expect(page).toHaveURL(new RegExp(`sort=${sort}`), { timeout: 3000 })
+        }).toPass({ timeout: 30000 })
         await expect.poll(() => cardTitles(page)).toEqual(expected)
       }
     }

@@ -37,7 +37,9 @@ export default async function ThankYouPage(props: {
       <LeadEvent orderNumber={orderNumber} items={order?.items ?? undefined} total={order?.total} />
 
       <p className="text-ink-on-dark-subtle text-eyebrow tracking-eyebrow uppercase">
-        A scent for every story.
+        {/* Фирменная EN-фраза (BRAND.md §7) — без точки в конце по правке
+            владельца 16.09; в мокапах и ui-kit фраза осталась с точкой. */}
+        A scent for every story
       </p>
       <h1 className="text-cream text-hero-mobile tracking-display leading-tight sm:text-hero mt-6 font-light uppercase">
         {t('title')}

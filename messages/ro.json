@@ -81,7 +81,6 @@
     "emptyHint": "Încercați să eliminați câteva filtre.",
     "sort": {
       "label": "Sortare",
-      "new": "Noutăți",
       "priceAsc": "Preț crescător",
       "priceDesc": "Preț descrescător",
       "titleAsc": "După nume",
@@ -122,15 +121,16 @@
   "CatalogNav": {
     "title": "Navigare catalog",
     "mobileHeading": "Catalog",
-    "forHer": "Pentru Ea",
-    "forHim": "Pentru El",
-    "bodyCare": "Body Care",
+    "allProducts": "Toate produsele",
+    "forHer": "Pentru ea",
+    "forHim": "Pentru el",
+    "bodyCare": "Body care",
     "lipBalm": "Balsam de buze",
     "kids": "Copii",
     "giftCertificates": "Gift Card",
     "giftBox": "Gift Box",
     "brands": "Branduri",
-    "about": "Despre Noi"
+    "about": "Despre noi"
   },
   "GiftItem": {
     "amount": "Valoare",
@@ -177,9 +177,6 @@
     "remove": "Șterge",
     "total": "Total",
     "checkout": "Lăsați o cerere",
-    "miniTitle": "În coș",
-    "viewCart": "Deschide coșul",
-    "more": "și încă {count}",
     "toastAdded": "Adăugat în coș",
     "promoPlaceholder": "Cod promoțional",
     "promoApply": "Aplică",
@@ -240,7 +237,7 @@
   },
   "ThankYou": {
     "title": "Mulțumim!",
-    "text": "Cererea este la noi. Vă sunăm sau vă scriem în curând.",
+    "text": "Cererea este la noi Vă sunăm sau vă scriem în curând",
     "orderNumber": "Numărul cererii",
     "toCatalog": "Înapoi în catalog",
     "itemsHeading": "Comanda dumneavoastră",

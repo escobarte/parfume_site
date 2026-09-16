@@ -61,7 +61,6 @@ function filterWhere(query: CatalogQuery, ids: { brands: Map<string, number | st
 }
 
 const SORT: Record<CatalogQuery['sort'], string> = {
-  new: '-createdAt',
   priceAsc: 'minPrice',
   priceDesc: '-minPrice',
   titleAsc: 'title',

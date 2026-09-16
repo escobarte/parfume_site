@@ -361,21 +361,21 @@ async function seedGlobals(
       header: ['Catalog', 'Branduri', 'Noutăți', 'Despre noi'],
       columns: [
         ['Catalog', 'Noutăți', 'Branduri', 'Ea', 'El'],
-        ['Cumpărătorilor', 'Livrare', 'Plată', 'Retur', 'Contacte'],
+        ['Cumpărătorilor', 'Livrare', 'Plată', 'Politica de retur și schimb'],
       ],
     },
     ru: {
       header: ['Каталог', 'Бренды', 'Новинки', 'О нас'],
       columns: [
         ['Каталог', 'Новинки', 'Бренды', 'Она', 'Он'],
-        ['Покупателям', 'Доставка', 'Оплата', 'Возврат', 'Контакты'],
+        ['Покупателям', 'Доставка', 'Оплата', 'Политика обмена и возврата'],
       ],
     },
     en: {
       header: ['Catalog', 'Brands', 'New', 'About'],
       columns: [
         ['Catalog', 'New', 'Brands', 'For her', 'For him'],
-        ['For customers', 'Delivery', 'Payment', 'Returns', 'Contacts'],
+        ['For customers', 'Delivery', 'Payment', 'Return and refund policy'],
       ],
     },
   }
@@ -393,9 +393,12 @@ async function seedGlobals(
     { mode: 'system', target: 'catalogNew' },
     { mode: 'page', pageSlug: 'about' },
   ]
+  // Пункт «Контакты» убран из колонки покупателя по правке владельца 16.09
+  // (страница `/contacts` остаётся доступной по прямой ссылке), «Возврат»
+  // переехал в конец списка и переименован в политику возврата и обмена.
   const columnHrefs = [
     ['/catalog?flags=isNew', '/brands', '/catalog/femei', '/catalog/barbati'],
-    ['/delivery', '/payment', '/returns', '/contacts'],
+    ['/delivery', '/payment', '/returns'],
   ]
 
   // Локализованные поля внутри массивов: писать локали подряд нельзя — Payload

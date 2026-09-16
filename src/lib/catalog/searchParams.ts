@@ -11,7 +11,11 @@ import {
  * переслать и открыть в новой вкладке — фильтры, сортировка и «показать ещё»
  * восстановятся один в один. Парсеры общие для сервера и клиента.
  */
-export const SORT_OPTIONS = ['new', 'priceAsc', 'priceDesc', 'titleAsc', 'discount'] as const
+// Сортировки «Новинки» (`new`, `-createdAt`) больше нет — снята по правке
+// владельца 16.09 вместе с подписью в messages; дефолт каталога — «по названию».
+// Значение `?sort=new` из старых ссылок молча падает в дефолт (parseAsStringLiteral).
+// Новинки остаются отдельным фасетом/ссылкой шапки (`flags=isNew`), это не она.
+export const SORT_OPTIONS = ['priceAsc', 'priceDesc', 'titleAsc', 'discount'] as const
 export type SortOption = (typeof SORT_OPTIONS)[number]
 
 // 'hasDiscount' — денормализованное поле products (фаза 4.5), а не ручной
@@ -36,7 +40,7 @@ export const catalogSearchParams = {
   flags: parseAsArrayOf(parseAsStringLiteral(FLAG_OPTIONS)).withDefault([]),
   priceMin: parseAsInteger,
   priceMax: parseAsInteger,
-  sort: parseAsStringLiteral(SORT_OPTIONS).withDefault('new'),
+  sort: parseAsStringLiteral(SORT_OPTIONS).withDefault('titleAsc'),
   page: parseAsInteger.withDefault(1),
   q: parseAsString.withDefault(''),
 }

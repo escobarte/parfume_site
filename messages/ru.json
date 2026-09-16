@@ -81,7 +81,6 @@
     "emptyHint": "Попробуйте снять часть фильтров.",
     "sort": {
       "label": "Сортировка",
-      "new": "Новинки",
       "priceAsc": "Сначала дешевле",
       "priceDesc": "Сначала дороже",
       "titleAsc": "По названию",
@@ -122,15 +121,16 @@
   "CatalogNav": {
     "title": "Навигация по каталогу",
     "mobileHeading": "Каталог",
-    "forHer": "Для Нее",
-    "forHim": "Для Него",
-    "bodyCare": "Body Care",
+    "allProducts": "Все товары",
+    "forHer": "Для нее",
+    "forHim": "Для него",
+    "bodyCare": "Body care",
     "lipBalm": "Бальзам для губ",
     "kids": "Детям",
     "giftCertificates": "Gift Card",
     "giftBox": "Gift Box",
     "brands": "Бренды",
-    "about": "О Нас"
+    "about": "О нас"
   },
   "GiftItem": {
     "amount": "Номинал",
@@ -177,9 +177,6 @@
     "remove": "Удалить",
     "total": "Итого",
     "checkout": "Оставить заявку",
-    "miniTitle": "В корзине",
-    "viewCart": "Перейти в корзину",
-    "more": "и ещё {count}",
     "toastAdded": "Добавлено в корзину",
     "promoPlaceholder": "Промокод",
     "promoApply": "Применить",
@@ -240,7 +237,7 @@
   },
   "ThankYou": {
     "title": "Спасибо!",
-    "text": "Заявка у нас. Скоро позвоним или напишем.",
+    "text": "Заявка у нас Скоро позвоним или напишем",
     "orderNumber": "Номер заявки",
     "toCatalog": "Вернуться в каталог",
     "itemsHeading": "Состав заказа",

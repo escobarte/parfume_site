@@ -20,7 +20,9 @@ test('заявка из корзины сохраняется в БД и вед�
   await page.getByPlaceholder(/confirmarea comenzii/i).fill('playwright@example.com')
   await page.getByPlaceholder(/întrebare sau dorință/i).fill('E2E заявка, фаза 8')
 
-  await page.getByRole('button', { name: /trimite cererea/i }).click()
+  // Подпись кнопки — `OrderForm.submit` (RO с 15.09 «Trimite comanda», см. CHANGELOG
+  // [2026-09-15]); спека тянула старый текст «Trimite cererea» и падала по таймауту.
+  await page.getByRole('button', { name: /trimite comanda/i }).click()
   await page.waitForURL(/\/thank-you\?order=/, { timeout: 20000 })
 
   const orderNumber = new URL(page.url()).searchParams.get('order')

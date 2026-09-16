@@ -81,7 +81,6 @@
     "emptyHint": "Try removing some filters.",
     "sort": {
       "label": "Sort",
-      "new": "New arrivals",
       "priceAsc": "Price: low to high",
       "priceDesc": "Price: high to low",
       "titleAsc": "By name",
@@ -122,15 +121,16 @@
   "CatalogNav": {
     "title": "Catalog navigation",
     "mobileHeading": "Catalog",
-    "forHer": "For Her",
-    "forHim": "For Him",
-    "bodyCare": "Body Care",
+    "allProducts": "All products",
+    "forHer": "For her",
+    "forHim": "For him",
+    "bodyCare": "Body care",
     "lipBalm": "Lip balm",
     "kids": "Kids",
     "giftCertificates": "Gift Card",
     "giftBox": "Gift Box",
     "brands": "Brands",
-    "about": "About Us"
+    "about": "About us"
   },
   "GiftItem": {
     "amount": "Denomination",
@@ -177,9 +177,6 @@
     "remove": "Remove",
     "total": "Total",
     "checkout": "Place a request",
-    "miniTitle": "In cart",
-    "viewCart": "Go to cart",
-    "more": "and {count} more",
     "toastAdded": "Added to cart",
     "promoPlaceholder": "Promo code",
     "promoApply": "Apply",
@@ -240,7 +237,7 @@
   },
   "ThankYou": {
     "title": "Thank you!",
-    "text": "We have your request. We will call or write shortly.",
+    "text": "We have your request We will call or write shortly",
     "orderNumber": "Request number",
     "toCatalog": "Back to the catalog",
     "itemsHeading": "Your order",

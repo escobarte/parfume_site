@@ -202,9 +202,10 @@ for (let attempt = 0; attempt < 5 && !addedToCart; attempt += 1) {
     .then(() => true)
     .catch(() => false)
 }
-// Счётчик живёт на кнопке мини-корзины в шапке (раньше это была ссылка).
+// Счётчик живёт на иконке корзины в шапке. С 17.09 это снова ссылка на /cart:
+// выпадающая мини-корзина убрана, промежуточного попапа нет.
 const badge = await page
-  .locator('header button[aria-label="Coș"] span')
+  .locator('header a[aria-label="Coș"] span')
   .first()
   .innerText()
   .catch(() => '')

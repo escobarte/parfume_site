@@ -6,9 +6,8 @@ import { useCatalogQuery } from './useCatalogQuery'
 
 /**
  * `options` — подмножество сортировок для раздела (подарочные разделы —
- * `GIFT_SORT_OPTIONS`). Значение из URL, которого нет в списке (в т.ч. общий
- * дефолт каталога `new`), показывается как первая опция — ровно так его
- * трактует сервер раздела.
+ * `GIFT_SORT_OPTIONS`). Значение из URL, которого нет в списке, показывается
+ * как первая опция — ровно так его трактует сервер раздела.
  */
 export function SortSelect({ options = SORT_OPTIONS }: { options?: readonly SortOption[] }) {
   const t = useTranslations('Catalog.sort')
