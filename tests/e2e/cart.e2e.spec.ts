@@ -1,6 +1,18 @@
 import { test, expect } from '@playwright/test'
 import { addToCartWithRetry, gotoAndWaitForFooter } from '../helpers/cart'
 
+/*
+ * Попап «первая скидка» открывается через 2 с на ЛЮБОЙ странице витрины и
+ * перехватывает клики, а его поле телефона — такой же `input[type="tel"]`,
+ * как в форме заказа (общий `PhoneInput` с 2026-09-19). В полном прогоне,
+ * где страницы компилируются дольше, спек успевал дождаться попапа и падал
+ * то на перехваченном клике, то на неоднозначном локаторе. Этот спек не про
+ * попап — помечаем его показанным ещё до загрузки (docs/GOTCHAS.md).
+ */
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('mf-promo-popup-seen', '1'))
+})
+
 test('корзина: количество, итог и состояние переживают перезагрузку', async ({ page }) => {
   await gotoAndWaitForFooter(page, '/ro/product/maison-orphee-signature-wood')
   expect(await addToCartWithRetry(page, 'MO-SW-05')).toBe(true)

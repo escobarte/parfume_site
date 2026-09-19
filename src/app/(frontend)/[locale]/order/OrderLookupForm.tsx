@@ -3,7 +3,8 @@
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { useRouter } from '@/i18n/navigation'
-import { digitsOf, PHONE_PREFIX, PhoneInput } from '@/components/cart/PhoneInput'
+import { PhoneInput } from '@/components/forms/PhoneInput'
+import { PHONE_PREFIX, toLocalPhoneDigits } from '@/lib/orders/phone'
 
 /** Форма запасного пути статуса заказа: номер заявки + телефон вместе (фаза 4.7.2). */
 export function OrderLookupForm() {
@@ -19,7 +20,7 @@ export function OrderLookupForm() {
     event.preventDefault()
     if (sending) return
 
-    if (!orderNumber.trim() || digitsOf(phone).length !== 8) {
+    if (!orderNumber.trim() || toLocalPhoneDigits(phone).length !== 8) {
       setError(t('errorGeneric'))
       return
     }
@@ -32,7 +33,7 @@ export function OrderLookupForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderNumber: orderNumber.trim(),
-          phone: `${PHONE_PREFIX}${digitsOf(phone)}`,
+          phone: `${PHONE_PREFIX}${toLocalPhoneDigits(phone)}`,
         }),
       })
       const data = (await response.json()) as { ok: boolean; token?: string; error?: string }

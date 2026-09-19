@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { checkRateLimit, clientIp } from '@/lib/orders/rateLimit'
 import { resolvePromoCode } from '@/lib/orders/promo'
 import { getPayloadClient } from '@/lib/payload'
 
@@ -10,6 +9,25 @@ import { getPayloadClient } from '@/lib/payload'
  * текущей корзине (без подарочных товаров) — это превью, не источник
  * истины. Авторитетная переоценка — ещё раз, в `order-request/route.ts`
  * при реальном оформлении (тот же resolvePromoCode).
+ *
+ * **Лимита запросов здесь НЕТ — снят 2026-09-19, решение владельца.** Раньше
+ * стоял тот же счётчик, что у формы заявки (scope `promo-code`, 5 запросов с
+ * IP за 10 минут), и он ломал ровно тот сценарий, ради которого существует:
+ * проверка идёт в ДВА шага (код, затем подтверждение телефона), поэтому две-
+ * три попытки клиента выедали окно, и с шестого запроса эндпойнт отвечал 429
+ * `rate_limit` ВМЕСТО настоящей причины. Человек с уже использованным кодом
+ * видел «слишком много попыток» и не понимал, что код просто потрачен.
+ *
+ * Снятие безопасно по устройству ручки: она ничего не пишет в базу, ничего не
+ * расходует и не гасит код (код гасится только успешным заказом), а отвечает
+ * лишь «годен / не годен и почему». Лимиты соседних ручек НЕ тронуты и живут
+ * в своих scope: `/api/promo-popup` (выдача кода — там лимит защищает чужой
+ * почтовый ящик от рассылки), `/api/order-request` и `/api/order-status`.
+ *
+ * Чем сдержан перебор без лимита — см. `docs/GOTCHAS.md`: энтропия кода
+ * (`WELCOME-` + 6 символов из 31-буквенного алфавита, ~887 млн вариантов),
+ * обязательный второй шаг с телефоном у персонального кода и то, что скидка
+ * всё равно переоценивается при оформлении конкретной заявки.
  */
 const bodySchema = z.object({
   code: z.string().trim().min(1).max(50),
@@ -21,17 +39,6 @@ const bodySchema = z.object({
 })
 
 export async function POST(request: Request) {
-  const ip = clientIp(request)
-  // Отдельный счётчик от формы заявки и поиска статуса — свой scope, чтобы
-  // подбор кода перебором не топил и не был потоплен другими лимитами.
-  const limit = checkRateLimit(ip, 'promo-code')
-  if (!limit.allowed) {
-    return NextResponse.json(
-      { ok: false, error: 'rate_limit' },
-      { status: 429, headers: { 'Retry-After': String(limit.retryAfter) } },
-    )
-  }
-
   let body: unknown
   try {
     body = await request.json()

@@ -38,16 +38,9 @@ export const getHomepage = (locale: Locale) =>
     { tags: [HOMEPAGE_TAG], revalidate: CACHE_TTL },
   )()
 
-/**
- * Настройки попапа «первая скидка». Тот же тег кэша, что у остальных
- * глобалов — правка в /admin сбрасывает витрину общим хуком.
+/*
+ * Настройки попапа «первая скидка» живут отдельно —
+ * `src/lib/content/promoPopup.ts`: они читаются с `locale: 'all'` ради своего
+ * фолбэка локалей и сразу резолвятся в готовый контент, поэтому обычному
+ * `findGlobal({ locale })` здесь места нет.
  */
-export const getPromoPopupSettings = (locale: Locale) =>
-  unstable_cache(
-    async () => {
-      const payload = await getPayloadClient()
-      return payload.findGlobal({ slug: 'promo-popup-settings', locale, depth: 0 })
-    },
-    ['promo-popup-settings', locale],
-    { tags: [GLOBALS_TAG], revalidate: CACHE_TTL },
-  )()

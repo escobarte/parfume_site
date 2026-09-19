@@ -188,7 +188,6 @@
     "promoSaving": "Promo code {code} discount",
     "promoNoBenefit": "Your items already have a bigger discount than code {code}, so it was not applied. The code stays yours.",
     "promoConfirmPhoneTitle": "Confirm the number the code was issued to",
-    "promoPhonePlaceholder": "+373 60 123 456",
     "promoConfirm": "Confirm",
     "promoConfirming": "Checking…",
     "promoChange": "Change",
@@ -198,8 +197,8 @@
     "promoError_inactive": "Code inactive",
     "promoError_used": "Code already used",
     "promoError_expired": "Code has expired",
-    "promoError_rate_limit": "Too many attempts, try again later",
-    "promoError_generic": "Could not check the code, try again"
+    "promoError_generic": "Could not check the code, try again",
+    "promoPhoneLabel": "Phone the code was issued to"
   },
   "OrderForm": {
     "title": "Your details",
@@ -252,14 +251,15 @@
     "close": "Close"
   },
   "PromoPopup": {
-    "title": "Get your first discount",
-    "subtitle": "on your first order at Mon Flacon",
+    "title": "Welcome to Mon Flacon",
+    "subtitle": "Your scent starts here.",
+    "description": "Discover something that feels like you and enjoy {percent} off your first order.",
+    "buttonLabel": "Unlock my {percent}",
     "namePlaceholder": "Your name",
     "emailPlaceholder": "Your email",
     "phonePlaceholder": "Your phone",
-    "submit": "Get promo code",
     "submitting": "Sending…",
-    "footer": "The promo code will be sent to the email you provide.",
+    "footer": "Your personal promo code will be sent to your email.",
     "close": "Close",
     "successTitle": "Your promo code",
     "successHint": "Enter it in the cart at checkout.",

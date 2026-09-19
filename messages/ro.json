@@ -188,7 +188,6 @@
     "promoSaving": "Reducere după codul {code}",
     "promoNoBenefit": "Produsele dvs. au deja o reducere mai mare decât codul {code}, de aceea el nu a fost aplicat. Codul rămâne al dvs.",
     "promoConfirmPhoneTitle": "Confirmați numărul pe care a fost emis codul",
-    "promoPhonePlaceholder": "+373 60 123 456",
     "promoConfirm": "Confirmă",
     "promoConfirming": "Verificăm…",
     "promoChange": "Schimbă",
@@ -198,8 +197,8 @@
     "promoError_inactive": "Cod inactiv",
     "promoError_used": "Codul a fost deja folosit",
     "promoError_expired": "Codul a expirat",
-    "promoError_rate_limit": "Prea multe încercări, reveniți mai târziu",
-    "promoError_generic": "Nu am putut verifica codul, încercați din nou"
+    "promoError_generic": "Nu am putut verifica codul, încercați din nou",
+    "promoPhoneLabel": "Telefonul pe care a fost emis codul"
   },
   "OrderForm": {
     "title": "Datele dumneavoastră",
@@ -252,14 +251,15 @@
     "close": "Închide"
   },
   "PromoPopup": {
-    "title": "Primiți prima dvs. reducere",
-    "subtitle": "la prima comandă în Mon Flacon",
+    "title": "Bun venit la Mon Flacon",
+    "subtitle": "Parfumul dvs. începe aici.",
+    "description": "Descoperiți ceva care vă seamănă și beneficiați de {percent} reducere la prima comandă.",
+    "buttonLabel": "Obțineți {percent}",
     "namePlaceholder": "Numele dvs.",
     "emailPlaceholder": "Email-ul dvs.",
     "phonePlaceholder": "Telefonul dvs.",
-    "submit": "Obțineți codul promoțional",
     "submitting": "Se trimite…",
-    "footer": "Codul promoțional va veni pe email-ul indicat.",
+    "footer": "Codul promoțional personal va veni pe email-ul indicat.",
     "close": "Închide",
     "successTitle": "Codul dvs. promoțional",
     "successHint": "Introduceți-l în coș la plasarea comenzii.",

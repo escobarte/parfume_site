@@ -188,7 +188,6 @@
     "promoSaving": "Скидка по промокоду {code}",
     "promoNoBenefit": "Ваши товары уже со скидкой — она выгоднее промокода {code}, поэтому он не применён. Код остаётся у вас.",
     "promoConfirmPhoneTitle": "Подтвердите номер, на который выдан код",
-    "promoPhonePlaceholder": "+373 60 123 456",
     "promoConfirm": "Подтвердить",
     "promoConfirming": "Проверяем…",
     "promoChange": "Изменить",
@@ -198,8 +197,8 @@
     "promoError_inactive": "Код неактивен",
     "promoError_used": "Код уже использован",
     "promoError_expired": "Срок действия кода истёк",
-    "promoError_rate_limit": "Слишком много попыток, попробуйте позже",
-    "promoError_generic": "Не удалось проверить код, попробуйте ещё раз"
+    "promoError_generic": "Не удалось проверить код, попробуйте ещё раз",
+    "promoPhoneLabel": "Телефон, на который выдан код"
   },
   "OrderForm": {
     "title": "Ваши данные",
@@ -252,14 +251,15 @@
     "close": "Закрыть"
   },
   "PromoPopup": {
-    "title": "Получите свою первую скидку",
-    "subtitle": "на первый заказ в Mon Flacon",
+    "title": "Добро пожаловать в Mon Flacon",
+    "subtitle": "Ваш аромат начинается здесь.",
+    "description": "Найдите то, что похоже на вас, и получите скидку {percent} на первый заказ.",
+    "buttonLabel": "Получить {percent}",
     "namePlaceholder": "Ваше имя",
     "emailPlaceholder": "Ваш email",
     "phonePlaceholder": "Ваш телефон",
-    "submit": "Получить промокод",
     "submitting": "Отправляем…",
-    "footer": "Промокод придёт на указанный email.",
+    "footer": "Персональный промокод придёт на указанный email.",
     "close": "Закрыть",
     "successTitle": "Ваш промокод",
     "successHint": "Введите его в корзине при оформлении заказа.",

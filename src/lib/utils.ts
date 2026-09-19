@@ -32,6 +32,8 @@ const colors = [
   'ink-on-dark-muted',
   'ink-on-dark-subtle',
   'ink-on-dark-faint',
+  'accent-warm',
+  'overlay-popup',
   'line',
   'line-on-dark',
   'line-on-dark-soft',

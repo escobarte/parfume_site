@@ -1,6 +1,7 @@
 import { unstable_cache } from 'next/cache'
-import { routing, type Locale } from '@/i18n/routing'
+import { type Locale } from '@/i18n/routing'
 import { CACHE_TTL } from '@/lib/cache'
+import { localeOrder, pickLocalized } from '@/lib/content/localized'
 import { resolveInternalLink } from '@/lib/links'
 import { getPayloadClient } from '@/lib/payload'
 import { HOMEPAGE_TAG } from '@/lib/revalidate'
@@ -34,30 +35,13 @@ const FALLBACK_SIZE = {
 
 type Slot = keyof typeof FALLBACK_SIZE
 
-/** Порядок поиска значения: текущая локаль → дефолтная → остальные по конфигу. */
-export const localeOrder = (locale: string): string[] => [
-  ...new Set([locale, routing.defaultLocale, ...routing.locales]),
-]
-
-const isLocaleMap = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) &&
-  typeof value === 'object' &&
-  Object.keys(value as object).length > 0 &&
-  Object.keys(value as object).every((key) => (routing.locales as readonly string[]).includes(key))
-
 /**
- * Значение localized-поля из документа, прочитанного с `locale: 'all'`
- * (`{ ro, ru, en }`): первая непустая локаль в заданном порядке. Нелокальное
- * значение (строка, объект документа) возвращается как есть.
+ * Реэкспорт общего резолвера локалей (`src/lib/content/localized.ts`): логика
+ * выделена из этого файла 2026-09-19, чтобы её же использовал попап «первая
+ * скидка». Поведение баннеров не изменилось — функции переехали как есть,
+ * реэкспорт сохраняет существующие импорты (в т.ч. `hero-banners.int.spec.ts`).
  */
-export function pickLocalized<T>(value: unknown, order: string[]): T | null {
-  if (!isLocaleMap(value)) return (value ?? null) as T | null
-  for (const locale of order) {
-    const candidate = value[locale]
-    if (candidate !== null && candidate !== undefined && candidate !== '') return candidate as T
-  }
-  return null
-}
+export { localeOrder, pickLocalized }
 
 type MediaLike = { url?: string | null; width?: number | null; height?: number | null; alt?: unknown }
 

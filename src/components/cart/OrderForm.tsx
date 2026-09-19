@@ -15,7 +15,8 @@ import {
   type PaymentMethod,
 } from '@/lib/orders/schema'
 import { usePromo } from '@/lib/orders/promoStore'
-import { digitsOf, PHONE_PREFIX, PhoneInput } from './PhoneInput'
+import { PhoneInput } from '@/components/forms/PhoneInput'
+import { PHONE_PREFIX, toLocalPhoneDigits } from '@/lib/orders/phone'
 
 type Errors = Partial<Record<'name' | 'phone' | 'email' | 'address' | 'form', string>>
 
@@ -32,6 +33,8 @@ type Errors = Partial<Record<'name' | 'phone' | 'email' | 'address' | 'form', st
  */
 export function OrderForm() {
   const t = useTranslations('OrderForm')
+  /** Тексты причин отказа по промокоду живут в namespace корзины — один набор на оба экрана. */
+  const tCart = useTranslations('Cart')
   const locale = useLocale() as Locale
   const router = useRouter()
   const items = useCart((state) => state.items)
@@ -53,13 +56,29 @@ export function OrderForm() {
   const [errors, setErrors] = useState<Errors>({})
   const [sending, setSending] = useState(false)
 
+  /**
+   * Причина отказа по промокоду — теми же словами, что в корзине
+   * (`Cart.promoError_*`), а не общей фразой «код больше не действует».
+   * Сервер присылает `promoError` из того же `resolvePromoCode`, который
+   * проверял код в корзине, — иначе человек видел бы на оформлении другую
+   * формулировку, чем секундой раньше в поле промокода.
+   *
+   * `phone_required`/`phone_mismatch` до этой ветки не доходят (код без
+   * подтверждённого номера в корзину не применяется), но на всякий случай
+   * попадают в общий текст, а не в пустоту.
+   */
+  const promoReason = (reason?: string) => {
+    const known = ['not_found', 'inactive', 'used', 'expired', 'phone_mismatch']
+    return known.includes(reason ?? '') ? tCart(`promoError_${reason}`) : t('errorPromoInvalid')
+  }
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (sending) return
 
     const next: Errors = {}
     if (name.trim().length < 2) next.name = t('errorName')
-    if (digitsOf(phone).length !== 8) next.phone = t('errorPhone')
+    if (toLocalPhoneDigits(phone).length !== 8) next.phone = t('errorPhone')
     if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       next.email = t('errorEmail')
     }
@@ -74,7 +93,7 @@ export function OrderForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
-          phone: `${PHONE_PREFIX}${digitsOf(phone)}`,
+          phone: `${PHONE_PREFIX}${toLocalPhoneDigits(phone)}`,
           email: email.trim() || undefined,
           messenger,
           checkoutMode,
@@ -105,6 +124,8 @@ export function OrderForm() {
         ok: boolean
         orderNumber?: string
         error?: string
+        /** Причина отказа по промокоду — тот же набор, что в корзине. */
+        promoError?: string
         fields?: string[]
       }
 
@@ -127,7 +148,7 @@ export function OrderForm() {
             data.error === 'rate_limit'
               ? t('errorRate')
               : data.error === 'promo_invalid'
-                ? t('errorPromoInvalid')
+                ? promoReason(data.promoError)
                 : t('errorGeneric'),
           ...fieldError,
         })

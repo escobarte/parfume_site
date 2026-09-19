@@ -23,6 +23,8 @@
   --color-ink-on-dark-muted: var(--color-ink-on-dark-muted);
   --color-ink-on-dark-subtle: var(--color-ink-on-dark-subtle);
   --color-ink-on-dark-faint: var(--color-ink-on-dark-faint);
+  --color-accent-warm: var(--color-accent-warm);
+  --color-overlay-popup: var(--color-overlay-popup);
   --color-line: var(--color-line);
   --color-line-on-dark: var(--color-line-on-dark);
   --color-line-on-dark-soft: var(--color-line-on-dark-soft);

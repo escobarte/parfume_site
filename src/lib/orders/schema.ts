@@ -1,22 +1,14 @@
 import { z } from 'zod'
 import { PRODUCT_VOLUMES } from '@/lib/catalog/volumes'
+import { normalizePhone, PHONE_PATTERN } from './phone'
 
-/**
- * Молдавский номер: +373 и восемь цифр. На вход принимаем как есть — с
- * пробелами и скобками, — но нормализуем до +373XXXXXXXX.
+/*
+ * Разбор и канон телефона переехали в `src/lib/orders/phone.ts` (2026-09-19):
+ * те же правила нужны и полю ввода в браузере, и серверу, а тащить в
+ * клиентский компонент всю эту схему с zod незачем. Реэкспорт сохраняет
+ * существующие импорты `from '@/lib/orders/schema'`.
  */
-export const PHONE_PATTERN = /^\+373\d{8}$/
-
-export const normalizePhone = (value: string) => {
-  // Ведущие нули снимаются ДО проверки кода страны: «060 123 456» — обычная
-  // местная запись (0 — национальный префикс, в международном формате его
-  // не бывает), а «00373…» — международный префикс набора. Без этого шага
-  // оба варианта превращались в +373060123456 / +37300373… и не проходили
-  // PHONE_PATTERN, хотя человек ввёл корректный номер.
-  const digits = value.replace(/[^\d]/g, '').replace(/^0+/, '')
-  const local = digits.startsWith('373') ? digits.slice(3) : digits
-  return `+373${local}`
-}
+export { normalizePhone, PHONE_PATTERN } from './phone'
 
 export const MESSENGERS = ['telegram', 'viber', 'whatsapp', 'call'] as const
 

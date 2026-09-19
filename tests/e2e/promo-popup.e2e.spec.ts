@@ -20,6 +20,11 @@ const uniqueEmail = () => `pw-popup-${Date.now()}@example.com`
  * тест», а следствие лимита: у `/api/promo-popup` 5 запросов на IP за 10
  * минут (`ORDERS_RATE_LIMIT`), и отдельная выдача под каждый спек съедала бы
  * окно — прогон падал бы на 429 вместо своей темы. Отсюда же `describe.serial`.
+ *
+ * **Лимит остался только у выдачи кода.** С 2026-09-19 у
+ * `/api/promo-code-check` лимита нет вовсе, поэтому проверять код в корзине
+ * можно сколько угодно раз — ветка «номер не совпал» ниже добавлена именно
+ * поэтому, раньше второй вызов делал спек нестабильным.
  */
 let issuedCode: string | null = null
 let issuedPercent: number | null = null
@@ -53,11 +58,17 @@ test.describe.serial('попап «первая скидка»', () => {
     const popup = page.locator(POPUP)
     await popup.locator('input[name="name"]').fill('Playwright Tester')
     await popup.locator('input[name="email"]').fill(email)
-    await popup.locator('input[name="phone"]').fill('+37360000000')
+    // Поле телефона — общий PhoneInput: плашка +373 отдельно, вводятся
+    // восемь цифр номера (вставка полного номера с кодом страны им не
+    // распознаётся — см. docs/CHANGELOG.md [2026-09-19б]).
+    await popup.locator('input[name="phone"]').fill('60000000')
     await popup.locator('button[type="submit"]').click()
 
-    // Код показан прямо в попапе.
-    const codeNode = popup.locator('p.text-display')
+    // Код показан прямо в попапе — в правой колонке новой раскладки.
+    // Селектор по СМЫСЛУ (формат кода), а не по классу оформления: после
+    // редизайна `text-display` носит и подзаголовок попапа, и цеплялся он
+    // (GOTCHAS.md — селекторы должны отличать элемент по смыслу).
+    const codeNode = popup.getByText(/^WELCOME-/)
     await expect(codeNode).toBeVisible({ timeout: 15000 })
     const code = (await codeNode.innerText()).trim()
     expect(code).toMatch(/^WELCOME-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$/)
@@ -97,23 +108,31 @@ test.describe.serial('попап «первая скидка»', () => {
     await page.getByRole('button', { name: 'Aplică' }).click()
 
     // Персональный код требует подтверждения телефона (2026-09-11): код
-    // сразу не применяется, сначала разворачивается второй шаг.
-    //
-    // Здесь проверяется ТОЛЬКО удачный путь — ровно один запрос к
-    // `/api/promo-code-check`. Ветка «номер не совпал» сюда не добавлена
-    // намеренно: у эндпойнта лимит 5 запросов на IP за 10 минут, и второй
-    // вызов делал бы спек нестабильным. Несовпадение покрыто int-тестами
-    // (`tests/int/promo.int.spec.ts`) и снятым скриншотом состояния.
-    const phoneField = page.getByPlaceholder('+373 60 123 456')
+    // сразу не применяется, сначала разворачивается второй шаг. Поле там —
+    // тот же общий `PhoneInput`, что в форме заказа (2026-09-19), поэтому
+    // цепляться за плейсхолдер «60 123 456» нельзя: на странице корзины их
+    // теперь два (шаг промокода и телефон доставки). Признак по смыслу —
+    // собственная подпись поля.
+    const phoneField = page.getByLabel('Telefonul pe care a fost emis codul')
     const gotStep2 = await phoneField
       .waitFor({ state: 'visible', timeout: 15000 })
       .then(() => true)
       .catch(() => false)
-    test.skip(!gotStep2, 'второй шаг не появился — вероятно исчерпан лимит /api/promo-code-check')
+    expect(gotStep2, 'второй шаг подтверждения телефона не появился').toBe(true)
     await expect(page.getByText(code)).toBeVisible()
 
-    // Номер тот же, что вводился в попапе при получении кода.
-    await phoneField.fill('+37360000000')
+    // Сначала — заведомо ЧУЖОЙ номер: ответ должен быть про несовпадение, а
+    // не про лимит. Эта ветка стала возможна только после снятия лимита с
+    // `/api/promo-code-check`; раньше второй запрос грозил 429.
+    await phoneField.fill('60999999')
+    await page.getByRole('button', { name: 'Confirmă' }).click()
+    await expect(
+      page.getByText('Acest cod a fost emis pe alt număr. Verificați telefonul.'),
+    ).toBeVisible({ timeout: 15000 })
+
+    // Номер тот же, что вводился в попапе при получении кода. Поле после
+    // неудачной попытки остаётся заполняемым, код шага 2 не сброшен.
+    await phoneField.fill('60000000')
     await page.getByRole('button', { name: 'Confirmă' }).click()
 
     // Применённый код и процент показываются вместо формы ввода.
@@ -139,7 +158,9 @@ test.describe.serial('попап «первая скидка»', () => {
     await gotoAndWaitForFooter(page, '/ro')
     await popupShownOrSkip(page)
 
-    await page.locator(POPUP).getByRole('button').first().click()
+    // Именно крестик по его имени, а не «первая кнопка»: подложка-дубль
+    // помечена aria-hidden и в дерево доступности не попадает (GOTCHAS.md).
+    await page.locator(POPUP).getByRole('button', { name: 'Închide' }).click()
     await expect(page.locator(POPUP)).toBeHidden()
 
     // Отметка о показе переживает переход и перезагрузку.

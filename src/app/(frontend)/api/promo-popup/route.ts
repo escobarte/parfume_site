@@ -6,7 +6,7 @@ import {
   generatePersonalCode,
   normalizePromoEmail,
 } from '@/lib/orders/promo'
-import { normalizePhone } from '@/lib/orders/schema'
+import { normalizePhone, PHONE_PATTERN } from '@/lib/orders/schema'
 import { checkRateLimit, clientIp } from '@/lib/orders/rateLimit'
 import { getPayloadClient } from '@/lib/payload'
 import { routing } from '@/i18n/routing'
@@ -69,6 +69,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: 'validation', fields: ['phone'] }, { status: 400 })
   }
 
+  /*
+   * Формат номера — тоже на сервере, а не только маской в браузере (найдено
+   * проверкой 2026-09-19: раньше сюда проходило любое непустое значение, и
+   * «abcdef» сохранялся как `+373`, после чего сверка в корзине сходилась с
+   * таким же мусором). Правило то же, что у формы заявки: `normalizePhone` +
+   * `PHONE_PATTERN`. Пустой номер при выключенном `requirePhone` проверку
+   * пропускает — его просто нет; заполненный обязан быть настоящим.
+   */
+  const phone = parsed.data.phone ? normalizePhone(parsed.data.phone) : ''
+  if (phone && !PHONE_PATTERN.test(phone)) {
+    return NextResponse.json({ ok: false, error: 'validation', fields: ['phone'] }, { status: 400 })
+  }
+
   const email = normalizePromoEmail(parsed.data.email)
 
   // Письмо шлётся только при выдаче НОВОГО кода. Повторная отправка формы
@@ -106,7 +119,7 @@ export async function POST(request: Request) {
       email,
       // Храним в каноничном виде (+373XXXXXXXX): сверка в корзине не должна
       // зависеть от того, как человек набрал номер, получая код.
-      phone: parsed.data.phone ? normalizePhone(parsed.data.phone) : undefined,
+      phone: phone || undefined,
       customerName: parsed.data.name,
     },
   })

@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { PhoneInput } from '@/components/forms/PhoneInput'
+import { PHONE_PREFIX, toLocalPhoneDigits } from '@/lib/orders/phone'
 import { usePromo } from '@/lib/orders/promoStore'
 
 type PromoErrorCode =
@@ -10,7 +12,6 @@ type PromoErrorCode =
   | 'used'
   | 'expired'
   | 'phone_mismatch'
-  | 'rate_limit'
   | 'generic'
 
 type CheckResponse =
@@ -34,11 +35,19 @@ type CheckResponse =
  * правило «кому нужна сверка» жило бы в двух местах.
  *
  * Несовпадение номера повторную попытку не блокирует: человек мог опечататься,
- * поле остаётся заполняемым, код из шага 2 не сбрасывается.
+ * поле остаётся заполняемым, код из шага 2 не сбрасывается. С 2026-09-19 у
+ * `/api/promo-code-check` нет лимита запросов (решение владельца: проверка
+ * кода ничего не расходует и не пишет в базу), поэтому причина `rate_limit`
+ * здесь недостижима и из набора убрана — раньше она перекрывала настоящую
+ * причину и человек видел «слишком много попыток» вместо «код уже использован».
+ *
+ * Телефон на шаге 2 — тот же общий компонент `PhoneInput`, что в форме заказа:
+ * плашка `+373` и восемь цифр номера, на сервер уходит `+373XXXXXXXX`.
  */
 export function PromoCodeInput() {
   const t = useTranslations('Cart')
   const [value, setValue] = useState('')
+  /** Только цифры номера (без +373) — формат общего PhoneInput. */
   const [phone, setPhone] = useState('')
   /** Код, ожидающий подтверждения телефона (экран 2). */
   const [pendingCode, setPendingCode] = useState<string | null>(null)
@@ -125,7 +134,9 @@ export function PromoCodeInput() {
       <form
         onSubmit={(event) => {
           event.preventDefault()
-          if (phone.trim()) void check(pendingCode, phone.trim())
+          // Восемь цифр — та же проверка, что в форме заказа: неполный номер
+          // не имеет смысла отправлять на сверку.
+          if (toLocalPhoneDigits(phone).length === 8) void check(pendingCode, `${PHONE_PREFIX}${toLocalPhoneDigits(phone)}`)
         }}
         className="border-navy flex flex-col gap-2.5 rounded-sm border p-3"
       >
@@ -146,19 +157,17 @@ export function PromoCodeInput() {
         <p className="text-ink-muted text-body-sm">{t('promoConfirmPhoneTitle')}</p>
 
         <div className="flex gap-2">
-          <input
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            placeholder={t('promoPhonePlaceholder')}
-            aria-invalid={error === 'phone_mismatch' || undefined}
-            className={fieldClass(error === 'phone_mismatch')}
-          />
+          <div className="min-w-0 flex-1">
+            <PhoneInput
+              value={phone}
+              onChange={setPhone}
+              invalid={error === 'phone_mismatch'}
+              label={t('promoPhoneLabel')}
+            />
+          </div>
           <button
             type="submit"
-            disabled={checking || !phone.trim()}
+            disabled={checking || toLocalPhoneDigits(phone).length !== 8}
             className="bg-navy text-cream text-label tracking-display hover:bg-navy/90 shrink-0 cursor-pointer rounded-sm px-4 py-2.5 uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-40"
           >
             {checking ? t('promoConfirming') : t('promoConfirm')}
