@@ -180,3 +180,37 @@ export async function findPersonalCodeByEmail(payload: Payload, rawEmail: string
   })
   return docs[0] ?? null
 }
+
+/**
+ * Телефон, на который выдан промокод заявки — для печатной версии (PDF).
+ *
+ * В самой заявке этого номера нет: `promoPhone` приходит только в теле
+ * запроса и служит сверке (см. `src/lib/orders/schema.ts`). Хранить его
+ * отдельным полем заявки значило бы менять схему и накатывать миграцию
+ * ради одной печатной строки, поэтому он берётся из записи кода — того
+ * самого документа, с которым сверка и проходила, так что значения совпадают
+ * с точностью до формата записи.
+ *
+ * Молча возвращает `null` на любой осечке: печать заявки не должна падать
+ * из-за того, что код удалили из справочника после оформления.
+ */
+export async function resolveOrderPromoPhone(
+  payload: Payload,
+  order: { promoCode?: string | null },
+): Promise<string | null> {
+  const code = normalizePromoCode(order.promoCode ?? '')
+  if (!code) return null
+
+  try {
+    const { docs } = await payload.find({
+      collection: 'promo-codes',
+      where: { code: { equals: code } },
+      limit: 1,
+      depth: 0,
+    })
+    const phone = docs[0]?.phone
+    return phone && String(phone).trim() ? String(phone).trim() : null
+  } catch {
+    return null
+  }
+}

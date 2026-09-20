@@ -3,6 +3,8 @@ import crypto from 'node:crypto'
 import { adminOnly, isStaff, staffOnly } from '@/access/roles'
 import { PRODUCT_VOLUMES } from '@/lib/catalog/volumes'
 import { buildOrdersCsvBulk } from '@/lib/orders/csv'
+import { buildOrderPdf, orderPdfFilename } from '@/lib/orders/pdf'
+import { resolveOrderPromoPhone } from '@/lib/orders/promo'
 import type { Order } from '@/payload-types'
 
 // Подписи — хардкод-русский, как весь остальной admin UI (CLAUDE.md).
@@ -48,6 +50,7 @@ export const Orders: CollectionConfig = {
     defaultColumns: [
       'orderNumber',
       'csvDownload',
+      'pdfDownload',
       'createdAt',
       'customer.name',
       'customer.phone',
@@ -102,6 +105,41 @@ export const Orders: CollectionConfig = {
           headers: {
             'Content-Type': 'text/csv; charset=utf-8',
             'Content-Disposition': 'attachment; filename="orders.csv"',
+          },
+        })
+      },
+    },
+    {
+      // Печатная версия заявки. В отличие от CSV её нельзя положить в поле
+      // документа (бинарник, и пересобирать его при каждом сохранении заявки
+      // незачем) — файл собирается на лету по запросу.
+      //
+      // Доступ — ровно как у CSV: обе роли персонала, остальным отказ.
+      // Анониму отвечаем 401 (не авторизован), залогиненному без роли — 403.
+      path: '/:id/pdf',
+      method: 'get',
+      handler: async (req) => {
+        if (!req.user) return new Response('Unauthorized', { status: 401 })
+        if (!isStaff(req.user)) return new Response('Forbidden', { status: 403 })
+
+        const id = req.routeParams?.id
+        if (typeof id !== 'string' && typeof id !== 'number') {
+          return new Response('Bad Request', { status: 400 })
+        }
+
+        const order = (await req.payload
+          .findByID({ collection: 'orders', id, depth: 0 })
+          .catch(() => null)) as Order | null
+        if (!order) return new Response('Not Found', { status: 404 })
+
+        const promoPhone = await resolveOrderPromoPhone(req.payload, order)
+        const pdf = await buildOrderPdf(order, { promoPhone })
+
+        return new Response(Buffer.from(pdf), {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="${orderPdfFilename(order)}"`,
+            'Content-Length': String(pdf.length),
           },
         })
       },
@@ -165,6 +203,17 @@ export const Orders: CollectionConfig = {
       label: 'CSV',
       admin: {
         components: { Cell: '@/components/admin/OrderCsvCell#OrderCsvCell' },
+      },
+    },
+    {
+      // Кнопка PDF рядом с кнопкой CSV — печатная версия той же заявки.
+      // В отличие от CSV файл не лежит в строке списка, поэтому ячейка
+      // ходит за ним в эндпойнт `/api/orders/:id/pdf` (см. endpoints выше).
+      name: 'pdfDownload',
+      type: 'ui',
+      label: 'PDF',
+      admin: {
+        components: { Cell: '@/components/admin/OrderPdfCell#OrderPdfCell' },
       },
     },
     {
@@ -402,6 +451,19 @@ export const Orders: CollectionConfig = {
         description: 'CSV заявки для Excel (UTF-8 с BOM, разделитель «;»).',
         components: {
           Field: '@/components/admin/OrderCsvField#OrderCsvField',
+        },
+      },
+    },
+    {
+      // Печатная версия заявки — собирается эндпойнтом по запросу, в
+      // документе не хранится, поэтому это `ui`-поле, а не textarea с
+      // содержимым (как exportCsv выше). Имя отличается от колонки списка
+      // (`pdfDownload`): имена полей в коллекции уникальны.
+      name: 'exportPdf',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '@/components/admin/OrderPdfField#OrderPdfField',
         },
       },
     },

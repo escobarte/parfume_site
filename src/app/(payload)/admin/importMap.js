@@ -24,7 +24,9 @@ import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0
 import { InStockCell as InStockCell_29df0bd8828d6bdf8838d6e7dd8e6387 } from '@/components/admin/InStockCell'
 import { OrderStatusCell as OrderStatusCell_a62e47b57797e0bb7a9458ad5341f335 } from '@/components/admin/OrderStatusCell'
 import { OrderCsvCell as OrderCsvCell_e28494c9b9c6e689db6427e4e3307e66 } from '@/components/admin/OrderCsvCell'
+import { OrderPdfCell as OrderPdfCell_3b405cf6b2b76e9d9e9e110d0babc855 } from '@/components/admin/OrderPdfCell'
 import { OrderCsvField as OrderCsvField_5c20d67acbc090c31251851b7badb16d } from '@/components/admin/OrderCsvField'
+import { OrderPdfField as OrderPdfField_aae49acb17259ed068f77681ceb9ab32 } from '@/components/admin/OrderPdfField'
 import { OrdersBulkCsv as OrdersBulkCsv_7ad9e903c706a6be51a308e2fc658f7c } from '@/components/admin/OrdersBulkCsv'
 import { CampaignActions as CampaignActions_b2edea7fc65d020da48e5e44c69c9c6f } from '@/components/admin/CampaignActions'
 import { BrandIcon as BrandIcon_d9087a380941d12f95aff168665b00b4 } from '@/components/admin/BrandIcon'
@@ -66,7 +68,9 @@ export const importMap = {
   "@/components/admin/InStockCell#InStockCell": InStockCell_29df0bd8828d6bdf8838d6e7dd8e6387,
   "@/components/admin/OrderStatusCell#OrderStatusCell": OrderStatusCell_a62e47b57797e0bb7a9458ad5341f335,
   "@/components/admin/OrderCsvCell#OrderCsvCell": OrderCsvCell_e28494c9b9c6e689db6427e4e3307e66,
+  "@/components/admin/OrderPdfCell#OrderPdfCell": OrderPdfCell_3b405cf6b2b76e9d9e9e110d0babc855,
   "@/components/admin/OrderCsvField#OrderCsvField": OrderCsvField_5c20d67acbc090c31251851b7badb16d,
+  "@/components/admin/OrderPdfField#OrderPdfField": OrderPdfField_aae49acb17259ed068f77681ceb9ab32,
   "@/components/admin/OrdersBulkCsv#OrdersBulkCsv": OrdersBulkCsv_7ad9e903c706a6be51a308e2fc658f7c,
   "@/components/admin/CampaignActions#CampaignActions": CampaignActions_b2edea7fc65d020da48e5e44c69c9c6f,
   "@/components/admin/BrandIcon#BrandIcon": BrandIcon_d9087a380941d12f95aff168665b00b4,

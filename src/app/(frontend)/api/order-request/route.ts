@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import type { Order } from '@/payload-types'
 import { buildOrderCsv } from '@/lib/orders/csv'
 import { logNotifyReport, notifyOrder } from '@/lib/orders/notify'
-import { claimPromoCode, resolvePromoCode } from '@/lib/orders/promo'
+import { buildOrderPdf } from '@/lib/orders/pdf'
+import { claimPromoCode, resolveOrderPromoPhone, resolvePromoCode } from '@/lib/orders/promo'
 import { checkRateLimit, clientIp } from '@/lib/orders/rateLimit'
 import { orderRequestSchema, type OrderRequest } from '@/lib/orders/schema'
 import { getPayloadClient } from '@/lib/payload'
@@ -14,7 +15,7 @@ import { priceLine } from '@/lib/pricing'
  * перестала бы читать заявки (проверено: GET /api/orders отдавал 405).
  *
  * Логика: валидация → снапшот позиций по данным БД → заказ в Payload →
- * CSV → уведомления. Заявка считается принятой, как только она в базе;
+ * CSV → печатный PDF → уведомления. Заявка считается принятой, как только она в базе;
  * проблемы с Telegram или почтой в ответ клиенту не протекают.
  */
 export async function POST(request: Request) {
@@ -133,7 +134,20 @@ export async function POST(request: Request) {
     data: { exportCsv: csv },
   })
 
-  const report = await notifyOrder(order, csv)
+  // Печатная версия заявки — вторым вложением к письму менеджеру. Падение
+  // генерации (нет шрифтов, сломанный документ) не должно ронять ни заявку,
+  // ни письмо: логируем и отправляем без PDF.
+  let pdf: Uint8Array | null = null
+  try {
+    const promoPhone = await resolveOrderPromoPhone(payload, order)
+    pdf = await buildOrderPdf(order, { promoPhone })
+  } catch (error) {
+    payload.logger.error(
+      `[order ${order.orderNumber}] pdf failed: ${error instanceof Error ? error.message : error}`,
+    )
+  }
+
+  const report = await notifyOrder(order, csv, pdf)
   logNotifyReport(payload.logger, order, report)
 
   return NextResponse.json({

@@ -31,6 +31,19 @@ const nextConfig: NextConfig = {
       .map((origin) => origin.trim())
       .filter(Boolean) ?? []),
   ],
+  /**
+   * Шрифты печатного PDF заявки (src/lib/orders/fonts/*.ttf) читаются в
+   * рантайме обычным fs — трассировка Next такие файлы сама не видит и в
+   * standalone-сборку не кладёт. Без этой строки PDF падает в проде с
+   * «Шрифты Inter для PDF не найдены», хотя в dev всё работает.
+   *
+   * Ключи — маршруты, где PDF собирается: приём заявки (письмо менеджеру) и
+   * catch-all Payload (эндпойнт скачивания из админки).
+   */
+  outputFileTracingIncludes: {
+    '/api/order-request': ['./src/lib/orders/fonts/**'],
+    '/api/[...slug]': ['./src/lib/orders/fonts/**'],
+  },
   images: {
     localPatterns: [
       {

@@ -4,22 +4,14 @@ import en from '../../../messages/en.json'
 import ro from '../../../messages/ro.json'
 import ru from '../../../messages/ru.json'
 import { orderCsvFilename } from './csv'
+import { orderPdfFilename } from './pdf'
+// Подписи способов получения и оплаты — общий источник с печатным PDF
+// (src/lib/orders/summary.ts), чтобы письмо и вложение не разъехались.
+import { DELIVERY_METHOD_LABEL, PAYMENT_METHOD_LABEL } from './summary'
 import type { NotifyResult } from './telegram'
 
 const isPlaceholder = (value: string | undefined) =>
   !value || value.startsWith('CHANGEME') || value.trim() === ''
-
-// Фаза 11.2, задача 5 — значения src/collections/Orders.ts::DELIVERY_METHOD_OPTIONS.
-const DELIVERY_METHOD_LABEL: Record<string, string> = {
-  pickup: 'Самовывоз',
-  delivery: 'Доставка',
-}
-
-// Фаза 11.2, задача 6 — значения src/collections/Orders.ts::PAYMENT_METHOD_OPTIONS.
-const PAYMENT_METHOD_LABEL: Record<string, string> = {
-  cash: 'Наличными',
-  card: 'Картой (курьеру)',
-}
 
 const CUSTOMER_EMAIL_MESSAGES = { ro, ru, en }
 
@@ -29,7 +21,7 @@ const statusUrl = (order: Order) => {
   return `${base}/${locale}/order/${order.statusToken ?? ''}`
 }
 
-function buildHtml(order: Order): string {
+function buildHtml(order: Order, hasPdf: boolean): string {
   const rows = (order.items ?? [])
     .map(
       (item) => `
@@ -73,7 +65,13 @@ function buildHtml(order: Order): string {
         ? `<p style="font-size:15px;color:#B3453C"><b>⚠️ БЕЗ ЗВОНКА — НЕ ЗВОНИТЬ</b></p>`
         : ''
     }
-    <p style="font-size:12px;color:#4A5A6B">Файл заявки — во вложении (CSV, открывается в Excel).</p>
+    <p style="font-size:12px;color:#4A5A6B">
+      ${
+        hasPdf
+          ? 'Файлы заявки — во вложении: CSV (открывается в Excel) и PDF (печатная версия).'
+          : 'Файл заявки — во вложении (CSV, открывается в Excel).'
+      }
+    </p>
   </div>`
 }
 
@@ -113,13 +111,21 @@ function buildCustomerHtml(order: Order): string {
 }
 
 /**
- * Письмо менеджеру через Resend с CSV во вложении.
+ * Письмо менеджеру через Resend с CSV и печатным PDF во вложениях.
  *
  * Ключа пока нет (CHANGEME_RESEND) — код полный и рабочий, но без ключа
  * он не падает, а возвращает пропуск: заявка от этого не теряется.
  * Отправляем обычным fetch к REST API, чтобы не тянуть SDK ради одного вызова.
+ *
+ * `pdf` необязателен намеренно: если генерация печатной версии упала,
+ * письмо уходит с одним лишь CSV, а ошибка остаётся в логе — терять заявку
+ * из-за оформления вложения нельзя (см. api/order-request/route.ts).
  */
-export async function sendEmail(order: Order, csv: string): Promise<NotifyResult> {
+export async function sendEmail(
+  order: Order,
+  csv: string,
+  pdf?: Uint8Array | null,
+): Promise<NotifyResult> {
   const apiKey = process.env.RESEND_API_KEY
   const to = process.env.ORDER_EMAIL_TO
   const from = process.env.ORDER_EMAIL_FROM ?? 'MON FLACON <onboarding@resend.dev>'
@@ -140,12 +146,20 @@ export async function sendEmail(order: Order, csv: string): Promise<NotifyResult
         subject: `Новая заявка ${order.orderNumber ?? ''} — ${order.total} MDL${
           order.checkoutMode === 'noCall' ? ' — БЕЗ ЗВОНКА' : ''
         }`,
-        html: buildHtml(order),
+        html: buildHtml(order, Boolean(pdf && pdf.length)),
         attachments: [
           {
             filename: orderCsvFilename(order),
             content: Buffer.from(csv, 'utf8').toString('base64'),
           },
+          ...(pdf && pdf.length
+            ? [
+                {
+                  filename: orderPdfFilename(order),
+                  content: Buffer.from(pdf).toString('base64'),
+                },
+              ]
+            : []),
         ],
       }),
     })

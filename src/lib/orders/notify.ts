@@ -17,7 +17,11 @@ export type NotifyReport = {
  * заявку — она уже в базе. `ORDERS_DRY_RUN=1` глушит все внешние отправки,
  * но CSV всё равно генерится и сохраняется: именно так и тестируем.
  */
-export async function notifyOrder(order: Order, csv: string): Promise<NotifyReport> {
+export async function notifyOrder(
+  order: Order,
+  csv: string,
+  pdf?: Uint8Array | null,
+): Promise<NotifyReport> {
   if (isDryRun()) {
     const skipped = { ok: false, skipped: 'skipped (ORDERS_DRY_RUN=1)' }
     return { dryRun: true, telegram: skipped, email: skipped, customerEmail: skipped }
@@ -25,7 +29,7 @@ export async function notifyOrder(order: Order, csv: string): Promise<NotifyRepo
 
   const [telegram, email, customerEmail] = await Promise.all([
     sendTelegram(order),
-    sendEmail(order, csv),
+    sendEmail(order, csv, pdf),
     sendCustomerEmail(order),
   ])
   return { dryRun: false, telegram, email, customerEmail }

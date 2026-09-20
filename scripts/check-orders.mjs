@@ -114,6 +114,62 @@ check(
   !(lines[1] ?? '').split(';').some((cell, index) => index === 15 && cell.includes(';')),
 )
 
+// ── Печатная версия заявки (PDF) ──────────────────────────────────────────
+// Файл не хранится в документе, а собирается эндпойнтом по запросу — поэтому
+// проверяется и содержимое, и доступ: admin, manager, аноним.
+const pdfUrl = `${BASE}/api/orders/${order?.id}/pdf`
+
+const pdfAsAdmin = await fetch(pdfUrl, { headers: { Authorization: `JWT ${token}` } })
+const pdfBytes = Buffer.from(await pdfAsAdmin.arrayBuffer())
+check(
+  'PDF заявки отдаётся админу',
+  pdfAsAdmin.status === 200 && pdfAsAdmin.headers.get('content-type')?.includes('application/pdf'),
+  `HTTP ${pdfAsAdmin.status}, ${pdfAsAdmin.headers.get('content-type')}`,
+)
+check(
+  'PDF непустой и начинается с %PDF',
+  pdfBytes.length > 0 && pdfBytes.subarray(0, 5).toString('latin1') === '%PDF-',
+  `${pdfBytes.length} байт`,
+)
+check(
+  'имя файла PDF — номер заявки',
+  (pdfAsAdmin.headers.get('content-disposition') ?? '').includes(`${orderNumber}.pdf`),
+  pdfAsAdmin.headers.get('content-disposition'),
+)
+writeFileSync(`/tmp/${orderNumber}.pdf`, pdfBytes)
+
+const pdfAnon = await fetch(pdfUrl)
+check(
+  'аноним PDF заявки не получает',
+  pdfAnon.status === 401 || pdfAnon.status === 403,
+  `HTTP ${pdfAnon.status}`,
+)
+
+// Менеджер — вторая роль персонала: у него тот же доступ, что у админа.
+// Пользователь заводится на время проверки и удаляется в конце блока.
+const managerEmail = `check-orders-manager@local.test`
+const managerPassword = 'check-orders-manager-pass'
+await fetch(`${BASE}/api/users`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', Authorization: `JWT ${token}` },
+  body: JSON.stringify({ email: managerEmail, password: managerPassword, role: 'manager' }),
+})
+const managerLogin = await fetch(`${BASE}/api/users/login`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: managerEmail, password: managerPassword }),
+}).then((response) => response.json())
+
+const pdfAsManager = await fetch(pdfUrl, {
+  headers: { Authorization: `JWT ${managerLogin.token}` },
+})
+check('PDF заявки отдаётся менеджеру', pdfAsManager.status === 200, `HTTP ${pdfAsManager.status}`)
+
+await fetch(`${BASE}/api/users?where[email][equals]=${encodeURIComponent(managerEmail)}`, {
+  method: 'DELETE',
+  headers: { Authorization: `JWT ${token}` },
+})
+
 // ── Способ оформления и адрес (фаза 9.1) ──────────────────────────────────
 check(
   'обычная заявка не помечена «без звонка» ни в БД, ни в CSV',
@@ -634,5 +690,6 @@ await browser.close()
 
 const failed = results.filter((r) => !r.ok)
 console.log(`\nCSV сохранён: /tmp/${orderNumber}.csv`)
+console.log(`PDF сохранён: /tmp/${orderNumber}.pdf`)
 console.log(`Итог: ${results.length - failed.length}/${results.length} пройдено`)
 process.exit(failed.length ? 1 : 0)
