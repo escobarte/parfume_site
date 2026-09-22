@@ -87,7 +87,16 @@ export function ImportForm() {
   const [networkError, setNetworkError] = useState<string | null>(null)
 
   const [revalidating, setRevalidating] = useState(false)
-  const [revalidated, setRevalidated] = useState(false)
+  /**
+   * Итог последнего сброса кэша: явный статус вместо прежнего «сбросилось или
+   * молчим». Раньше неуспешный ответ (403, упавший сервер) не показывался
+   * вообще — кнопка просто переставала мигать, и понять, сработало или нет,
+   * было нельзя. Подписи хардкод-русские, как весь остальной admin UI
+   * (CLAUDE.md): админка на локали не переключается.
+   */
+  const [revalidateStatus, setRevalidateStatus] = useState<
+    { ok: true; at: string } | { ok: false; text: string } | null
+  >(null)
 
   const submit = async () => {
     const file = fileInputRef.current?.files?.[0]
@@ -116,7 +125,9 @@ export function ImportForm() {
       }
 
       if (!data) {
-        setNetworkError(`Сервер ответил ${res.status} — попробуй ещё раз или проверь права доступа.`)
+        setNetworkError(
+          `Сервер ответил ${res.status} — попробуй ещё раз или проверь права доступа.`,
+        )
         return
       }
 
@@ -130,10 +141,29 @@ export function ImportForm() {
 
   const resetCache = async () => {
     setRevalidating(true)
-    setRevalidated(false)
+    setRevalidateStatus(null)
     try {
       const res = await fetch('/api/catalog-revalidate', { method: 'POST' })
-      if (res.ok) setRevalidated(true)
+      if (res.ok) {
+        const data = (await res.json().catch(() => null)) as { at?: string } | null
+        setRevalidateStatus({
+          ok: true,
+          at: new Date(data?.at ?? Date.now()).toLocaleTimeString('ru-RU'),
+        })
+      } else {
+        setRevalidateStatus({
+          ok: false,
+          text:
+            res.status === 403
+              ? 'Нет прав: сброс кэша доступен только администратору.'
+              : `Сброс не выполнен — сервер ответил ${res.status}.`,
+        })
+      }
+    } catch (error) {
+      setRevalidateStatus({
+        ok: false,
+        text: `Сброс не выполнен: ${error instanceof Error ? error.message : 'нет связи с сервером'}.`,
+      })
     } finally {
       setRevalidating(false)
     }
@@ -177,24 +207,19 @@ export function ImportForm() {
           <option value="en">EN</option>
         </select>
         <p style={{ marginTop: '.4em', fontSize: '.8rem', color: 'var(--theme-elevation-600)' }}>
-          На описания больше не влияет. Если в файле одна колонка <code>description</code>, её
-          текст попадёт сразу во все языки, где описание пустое (готовые переводы не затираются) —
-          потом их нужно отредактировать вручную. Необязательные колонки{' '}
-          <code>country_of_origin</code> (<code>uae</code>/<code>europe</code>/<code>usa</code>) и{' '}
-          <code>variant_image</code> (фото под конкретный объём) описаны в{' '}
-          <code>docs/import-guide.md</code>. Если есть колонки <code>description_ro</code>/
-          <code>description_ru</code>/<code>description_en</code>, язык берётся из самой колонки.
-          Названия товаров не переводятся — они всегда общие. Выбор используется только для
-          названий брендов, категорий и нот, которые импорт заводит автоматически.
+          На описания больше не влияет. Если в файле одна колонка <code>description</code>, её текст
+          попадёт сразу во все языки, где описание пустое (готовые переводы не затираются) — потом
+          их нужно отредактировать вручную. Необязательные колонки <code>country_of_origin</code> (
+          <code>uae</code>/<code>europe</code>/<code>usa</code>) и <code>variant_image</code> (фото
+          под конкретный объём) описаны в <code>docs/import-guide.md</code>. Если есть колонки{' '}
+          <code>description_ro</code>/<code>description_ru</code>/<code>description_en</code>, язык
+          берётся из самой колонки. Названия товаров не переводятся — они всегда общие. Выбор
+          используется только для названий брендов, категорий и нот, которые импорт заводит
+          автоматически.
         </p>
       </div>
 
-      <button
-        type="button"
-        onClick={submit}
-        disabled={busy}
-        className="btn btn--style-primary"
-      >
+      <button type="button" onClick={submit} disabled={busy} className="btn btn--style-primary">
         {busy ? 'Выполняю…' : dryRun ? 'Проверить' : 'Импортировать'}
       </button>
 
@@ -230,7 +255,9 @@ export function ImportForm() {
       />
 
       <h2 style={{ marginBottom: '.5rem', fontSize: '1rem' }}>Сброс кэша витрины</h2>
-      <p style={{ color: 'var(--theme-elevation-600)', marginBottom: '.75rem', fontSize: '.85rem' }}>
+      <p
+        style={{ color: 'var(--theme-elevation-600)', marginBottom: '.75rem', fontSize: '.85rem' }}
+      >
         После реального импорта выше кэш сбрасывается автоматически. Эта кнопка — для случаев
         импорта через терминал сервера (CLI) или ручной правки данных напрямую в базе.
       </p>
@@ -242,9 +269,17 @@ export function ImportForm() {
       >
         {revalidating ? 'Сбрасываю…' : 'Сбросить кэш витрины'}
       </button>
-      {revalidated && (
-        <span style={{ marginLeft: '.75rem', color: 'var(--theme-success-500)' }}>
-          ✔ Кэш сброшен
+      {revalidateStatus && (
+        <span
+          role="status"
+          style={{
+            marginLeft: '.75rem',
+            color: revalidateStatus.ok ? 'var(--theme-success-500)' : 'var(--theme-error-500)',
+          }}
+        >
+          {revalidateStatus.ok
+            ? `✔ Кэш сброшен в ${revalidateStatus.at} — витрина отдаёт свежие данные с первого запроса`
+            : `✘ ${revalidateStatus.text}`}
         </span>
       )}
     </div>

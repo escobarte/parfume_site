@@ -14,20 +14,49 @@ export const TAXONOMY_TAG = 'taxonomy'
 export const GLOBALS_TAG = 'globals'
 export const HOMEPAGE_TAG = 'homepage'
 
-export async function revalidateCatalog(tag: string = CATALOG_TAG): Promise<void> {
+/** Все теги витрины — для полного сброса (кнопка в /admin, импорт, кампании). */
+export const ALL_TAGS = [CATALOG_TAG, GIFT_TAG, TAXONOMY_TAG, GLOBALS_TAG, HOMEPAGE_TAG] as const
+
+/**
+ * Единственная точка сброса кэша витрины в проекте (2026-09-20).
+ *
+ * **Почему `{ expire: 0 }`, а не профиль `'max'`.** В Next 16
+ * `revalidateTag(tag, profile)` кладёт в кэш-хендлер `durations = { expire:
+ * <из профиля> }`. У профиля `max` `expire` — «никогда», то есть `undefined`,
+ * и `FileSystemCache.revalidateTag` проставляет записи только `stale`, но НЕ
+ * `expired`. А решение «отдавать ли старое» принимает `areTagsExpired()`,
+ * которая смотрит исключительно на `expired`. Итог: после `'max'` ближайший
+ * запрос получал прежний ответ, а пересчёт уходил в фон — ровно тот
+ * stale-while-revalidate, из-за которого страницу приходилось обновлять по
+ * три-четыре раза. `{ expire: 0 }` ставит `expired = now`, запись считается
+ * протухшей сразу, и **первый же** запрос пересчитывает данные.
+ *
+ * `updateTag()` здесь применить нельзя: он работает только внутри Server
+ * Action, а все наши точки сброса — это route handler'ы Payload и хуки
+ * коллекций (Next бросает E872 на любом маршруте, чей путь кончается
+ * на «/route»).
+ *
+ * `revalidatePath('/', 'layout')` добавлен сверху тегов: он гасит неявный
+ * тег всего дерева под корневым layout — полный кэш маршрутов и клиентский
+ * роутер-кэш, до которых теги данных не достают.
+ */
+async function expireTags(tags: readonly string[]): Promise<void> {
   try {
-    const { revalidateTag } = await import('next/cache')
-    // Next 16 требует профиль кэша вторым аргументом; 'max' — сбросить всё по тегу.
-    revalidateTag(tag, 'max')
+    const { revalidatePath, revalidateTag } = await import('next/cache')
+    for (const tag of tags) revalidateTag(tag, { expire: 0 })
+    revalidatePath('/', 'layout')
   } catch {
     // вне запроса Next (CLI-скрипты) — ревалидировать нечего
   }
 }
 
+export async function revalidateCatalog(tag: string = CATALOG_TAG): Promise<void> {
+  await expireTags([tag])
+}
+
 /** Справочник изменился — устарели и его списки, и выдача каталога. */
 export async function revalidateTaxonomy(): Promise<void> {
-  await revalidateCatalog(CATALOG_TAG)
-  await revalidateCatalog(TAXONOMY_TAG)
+  await expireTags([CATALOG_TAG, TAXONOMY_TAG])
 }
 
 /**
@@ -37,9 +66,5 @@ export async function revalidateTaxonomy(): Promise<void> {
  * (отдельный процесс, см. комментарий выше) или прямая правка БД в обход Payload.
  */
 export async function revalidateAll(): Promise<void> {
-  await revalidateCatalog(CATALOG_TAG)
-  await revalidateCatalog(GIFT_TAG)
-  await revalidateCatalog(TAXONOMY_TAG)
-  await revalidateCatalog(GLOBALS_TAG)
-  await revalidateCatalog(HOMEPAGE_TAG)
+  await expireTags(ALL_TAGS)
 }

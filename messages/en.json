@@ -219,7 +219,6 @@
     "errorRate": "Too many requests. Try again in a few minutes.",
     "errorGeneric": "Could not send the request. Please try again.",
     "errorPromoInvalid": "The promo code is no longer valid — remove it in the cart and resend.",
-    "agreement": "By sending the request you agree to be contacted.",
     "checkoutMode": "Checkout method",
     "checkoutMode_standard": "Standard request — the manager calls you",
     "checkoutMode_noCall": "Order without a call",

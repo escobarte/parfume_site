@@ -264,6 +264,28 @@ export function OrderForm() {
           </select>
         </label>
 
+        {/* Адрес стоит сразу под способом получения (правка 2026-09-20): поле
+            появляется только при «Доставка» и читается как продолжение этого
+            выбора, а не как отдельный пункт где-то ниже. Логика не менялась —
+            рендер и обязательность по-прежнему завязаны на deliveryMethod. */}
+        {deliveryMethod === 'delivery' && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-ink-muted text-eyebrow tracking-label uppercase">
+              {t('address')}
+            </span>
+            <input
+              type="text"
+              value={address}
+              onChange={(event) => setAddress(event.target.value)}
+              placeholder={t('addressPlaceholder')}
+              autoComplete="street-address"
+              aria-invalid={Boolean(errors.address) || undefined}
+              className={fieldClass(Boolean(errors.address))}
+            />
+            {errors.address && <span className="text-danger text-eyebrow">{errors.address}</span>}
+          </label>
+        )}
+
         <label className="flex flex-col gap-1.5">
           <span className="text-ink-muted text-eyebrow tracking-label uppercase">
             {t('paymentMethod')}
@@ -306,24 +328,6 @@ export function OrderForm() {
           </div>
         </div>
 
-        {deliveryMethod === 'delivery' && (
-          <label className="flex flex-col gap-1.5">
-            <span className="text-ink-muted text-eyebrow tracking-label uppercase">
-              {t('address')}
-            </span>
-            <input
-              type="text"
-              value={address}
-              onChange={(event) => setAddress(event.target.value)}
-              placeholder={t('addressPlaceholder')}
-              autoComplete="street-address"
-              aria-invalid={Boolean(errors.address) || undefined}
-              className={fieldClass(Boolean(errors.address))}
-            />
-            {errors.address && <span className="text-danger text-eyebrow">{errors.address}</span>}
-          </label>
-        )}
-
         <label className="flex flex-col gap-1.5">
           <span className="text-ink-muted text-eyebrow tracking-label uppercase">
             {t('comment')}
@@ -358,8 +362,6 @@ export function OrderForm() {
         >
           {sending ? t('sending') : t('submit')}
         </button>
-
-        <p className="text-ink-subtle text-eyebrow">{t('agreement')}</p>
       </div>
     </form>
   )

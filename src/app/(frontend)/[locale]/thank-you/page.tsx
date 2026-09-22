@@ -33,83 +33,90 @@ export default async function ThankYouPage(props: {
   const order = orderNumber ? await findOrder(orderNumber) : null
 
   return (
-    <section className="bg-navy px-5 py-20 text-center md:px-8 md:py-28">
+    <section className="bg-navy px-5 py-14 md:px-8 md:py-20">
       <LeadEvent orderNumber={orderNumber} items={order?.items ?? undefined} total={order?.total} />
 
-      <p className="text-ink-on-dark-subtle text-eyebrow tracking-eyebrow uppercase">
-        {/* Фирменная EN-фраза (BRAND.md §7) — без точки в конце по правке
+      {/* Рамка вокруг всего блока подтверждения (правка 2026-09-20): 1px тем же
+          кремовым токеном, что и основной текст внутри, радиус — из токенов
+          (`rounded-sm` = 2px). Горизонтальные поля секции (px-5) остаются
+          снаружи рамки — так она не упирается в край экрана на телефоне и не
+          даёт горизонтальной прокрутки. */}
+      <div className="border-cream mx-auto max-w-160 rounded-sm border px-6 py-12 text-center sm:px-10 md:px-14 md:py-16">
+        <p className="text-ink-on-dark-subtle text-eyebrow tracking-eyebrow uppercase">
+          {/* Фирменная EN-фраза (BRAND.md §7) — без точки в конце по правке
             владельца 16.09; в мокапах и ui-kit фраза осталась с точкой. */}
-        A scent for every story
-      </p>
-      <h1 className="text-cream text-hero-mobile tracking-display leading-tight sm:text-hero mt-6 font-light uppercase">
-        {t('title')}
-      </h1>
-      <div className="bg-cream/45 mx-auto mt-7 h-px w-11" />
-      <p className="text-ink-on-dark-muted text-body leading-body mx-auto mt-7 max-w-100 font-light">
-        {t('text')}
-      </p>
-
-      {orderNumber && (
-        <p className="text-ink-on-dark-faint text-eyebrow tracking-label mt-6 uppercase">
-          {t('orderNumber')}: {orderNumber}
+          A scent for every story
         </p>
-      )}
+        <h1 className="text-cream text-hero-mobile tracking-display leading-tight sm:text-hero mt-6 font-light uppercase">
+          {t('title')}
+        </h1>
+        <div className="bg-cream/45 mx-auto mt-7 h-px w-11" />
+        <p className="text-ink-on-dark-muted text-body leading-body mx-auto mt-7 max-w-100 font-light">
+          {t('text')}
+        </p>
 
-      {order && (
-        <div className="border-cream/25 text-cream mx-auto mt-9 max-w-120 border-t pt-9 text-left">
-          <h2 className="text-eyebrow tracking-label text-ink-on-dark-subtle uppercase">
-            {t('itemsHeading')}
-          </h2>
-          <ul className="mt-4 flex flex-col gap-2">
-            {(order.items ?? []).map((item, index) => (
-              <li key={item.id ?? index} className="text-body-sm flex justify-between gap-4">
-                <span>
-                  {item.brandTitle ? `${item.brandTitle} · ` : ''}
-                  {item.title}
-                  {item.volume ? ` — ${item.volume}` : ''} × {item.qty}
-                </span>
-                <span className="whitespace-nowrap">{item.lineTotal} MDL</span>
-              </li>
-            ))}
-          </ul>
-          <p className="border-cream/25 text-body-sm mt-4 border-t pt-4">
-            <b>
-              {t('totalLabel')}: {order.total} MDL
-            </b>
+        {orderNumber && (
+          <p className="text-ink-on-dark-faint text-eyebrow tracking-label mt-6 uppercase">
+            {t('orderNumber')}: {orderNumber}
           </p>
+        )}
 
-          <h2 className="text-eyebrow tracking-label text-ink-on-dark-subtle mt-7 uppercase">
-            {t('contactsHeading')}
-          </h2>
-          <p className="text-body-sm mt-3 leading-relaxed">
-            {t('nameLabel')}: {order.customer?.name}
-            <br />
-            {t('phoneLabel')}: {order.customer?.phone}
-            {order.customer?.email && (
-              <>
-                <br />
-                {t('emailLabel')}: {order.customer.email}
-              </>
+        {order && (
+          <div className="border-cream/25 text-cream mx-auto mt-9 max-w-120 border-t pt-9 text-left">
+            <h2 className="text-eyebrow tracking-label text-ink-on-dark-subtle uppercase">
+              {t('itemsHeading')}
+            </h2>
+            <ul className="mt-4 flex flex-col gap-2">
+              {(order.items ?? []).map((item, index) => (
+                <li key={item.id ?? index} className="text-body-sm flex justify-between gap-4">
+                  <span>
+                    {item.brandTitle ? `${item.brandTitle} · ` : ''}
+                    {item.title}
+                    {item.volume ? ` — ${item.volume}` : ''} × {item.qty}
+                  </span>
+                  <span className="whitespace-nowrap">{item.lineTotal} MDL</span>
+                </li>
+              ))}
+            </ul>
+            <p className="border-cream/25 text-body-sm mt-4 border-t pt-4">
+              <b>
+                {t('totalLabel')}: {order.total} MDL
+              </b>
+            </p>
+
+            <h2 className="text-eyebrow tracking-label text-ink-on-dark-subtle mt-7 uppercase">
+              {t('contactsHeading')}
+            </h2>
+            <p className="text-body-sm mt-3 leading-relaxed">
+              {t('nameLabel')}: {order.customer?.name}
+              <br />
+              {t('phoneLabel')}: {order.customer?.phone}
+              {order.customer?.email && (
+                <>
+                  <br />
+                  {t('emailLabel')}: {order.customer.email}
+                </>
+              )}
+            </p>
+
+            {order.statusToken && (
+              <Link
+                href={`/order/${order.statusToken}`}
+                className="text-cream text-eyebrow tracking-label mt-5 inline-block underline underline-offset-4"
+              >
+                {t('statusCta')}
+              </Link>
             )}
-          </p>
+          </div>
+        )}
 
-          {order.statusToken && (
-            <Link
-              href={`/order/${order.statusToken}`}
-              className="text-cream text-eyebrow tracking-label mt-5 inline-block underline underline-offset-4"
-            >
-              {t('statusCta')}
-            </Link>
-          )}
-        </div>
-      )}
-
-      <Link
-        href="/catalog"
-        className="border-cream text-cream hover:bg-cream hover:text-navy text-label tracking-display mt-9 inline-block border px-8 py-3.5 uppercase transition-colors"
-      >
-        {tc('title')}
-      </Link>
+        <Link
+          href="/catalog"
+          className="border-cream text-cream hover:bg-cream hover:text-navy text-label tracking-display mt-9 inline-block border px-8 py-3.5 uppercase transition-colors"
+        >
+          {tc('title')}
+        </Link>
+      </div>
     </section>
   )
 }

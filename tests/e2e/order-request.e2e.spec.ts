@@ -68,3 +68,52 @@ test('заявка из корзины сохраняется в БД и вед�
   expect(order.customer?.phone).toBe('+37360123456')
   expect(order.total).toBe(240)
 })
+
+/**
+ * Порядок полей формы заявки и отсутствие подписи-согласия (правка 2026-09-20).
+ *
+ * Порядок тут — само требование, поэтому он и проверяется; цепляемся при этом
+ * за СМЫСЛ поля (подпись из messages), а не за «n-й div», как предписывает
+ * docs/GOTCHAS.md. Позиции сравниваются через compareDocumentPosition, а не
+ * по индексам в тексте страницы.
+ */
+test('адрес идёт сразу под способом получения, подписи-согласия под кнопкой нет', async ({
+  page,
+}) => {
+  // Форма заявки рендерится только при НЕпустой корзине (CartView: пустая
+  // корзина — отдельный экран), поэтому сначала кладём товар. Кладём с RO —
+  // `addToCartWithRetry` жмёт кнопку по румынской подписи; корзина лежит в
+  // localStorage и переживает смену локали (это проверяет check-orders.mjs).
+  await gotoAndWaitForFooter(page, '/ro/product/maison-orphee-signature-wood')
+  expect(await addToCartWithRetry(page, 'MO-SW-05')).toBe(true)
+  await gotoAndWaitForFooter(page, '/ru/cart')
+
+  const form = page.locator('form', { has: page.getByRole('button', { name: /отправить заявку/i }) })
+  const delivery = form.getByLabel('Способ получения')
+  const payment = form.getByLabel('Способ оплаты')
+  const messenger = form.getByText('Как связаться', { exact: true })
+
+  // Самовывоз — адреса нет вовсе (поведение не менялось).
+  await expect(delivery).toHaveValue('pickup')
+  await expect(form.getByLabel('Адрес')).toHaveCount(0)
+
+  await delivery.selectOption('delivery')
+  const address = form.getByLabel('Адрес')
+  await expect(address).toBeVisible()
+
+  // DOCUMENT_POSITION_FOLLOWING === 4: второй узел идёт ПОСЛЕ первого.
+  const follows = async (first: typeof delivery, second: typeof address) =>
+    (await first.evaluate(
+      (node, other) => node.compareDocumentPosition(other as Node),
+      await second.elementHandle(),
+    )) & 4
+
+  expect(await follows(delivery, address)).toBeTruthy()
+  expect(await follows(address, payment)).toBeTruthy()
+  expect(await follows(payment, messenger)).toBeTruthy()
+
+  // Подпись «Отправляя заявку, вы соглашаетесь…» удалена вместе с ключом
+  // OrderForm.agreement — ни текста, ни осиротевшего плейсхолдера ключа.
+  await expect(form).not.toContainText(/соглашаетесь/i)
+  await expect(form).not.toContainText('OrderForm.agreement')
+})
