@@ -93,6 +93,42 @@ const invalidVolumeMessage = (raw: string) => {
 }
 
 /**
+ * Пустая ячейка товарной колонки: `undefined`, пустая/пробельная строка или
+ * пустой список (`pipeList` на пустой ячейке даёт `[]`, а не `undefined`).
+ * Булевы `is_new`/`is_hit` пустыми не бывают: схема отдаёт `undefined` на
+ * пустой ячейке, а `false` — это ЗНАЧЕНИЕ, перебивать его строкой ниже нельзя.
+ */
+const isEmptyCell = (value: unknown): boolean =>
+  value === undefined ||
+  value === null ||
+  (typeof value === 'string' && value.trim() === '') ||
+  (Array.isArray(value) && value.length === 0)
+
+/**
+ * Формат A: поля УРОВНЯ ТОВАРА берутся из первой ЗАПОЛНЕННОЙ строки handle,
+ * а не просто из первой. Строк на товар несколько (одна на объём), и колонку
+ * вроде `product_category` или `gender` люди сплошь и рядом заполняют не в
+ * самой верхней строке — дописали к готовому прайсу, проставили у «главного»
+ * объёма, получили файл из 1С. До 2026-09-22 такое значение молча пропадало:
+ * `base` копировался с первой строки целиком, пустая ячейка в ней «побеждала»
+ * заполненную ниже, и товар с `product_category=bodyCare` оставался
+ * `perfume` — то есть не появлялся в разделе «Body Care».
+ *
+ * Это та же болезнь, что была у `stock`/`is_active`/`old_price`
+ * (docs/GOTCHAS.md): пустая ячейка принималась за данные. Здесь она значит
+ * «в этой строке не сказано» — и ничего не решает.
+ *
+ * Уже заполненное значение строка ниже НЕ перетирает: приоритет у первой
+ * заполненной. Для `country_of_origin`/`product_category` расхождение двух
+ * непустых ячеек вдобавок уходит предупреждением в отчёт (scalarConflict).
+ */
+function adoptFilledCells<T extends Record<string, unknown>>(base: T, row: T): void {
+  for (const key of Object.keys(row) as (keyof T)[]) {
+    if (isEmptyCell(base[key]) && !isEmptyCell(row[key])) base[key] = row[key]
+  }
+}
+
+/**
  * Формат A: строки одного handle склеиваются в один товар. Объём — не
  * строгий zod на уровне схемы (см. schema.ts): невалидное значение здесь
  * пропускает только ЭТУ строку (вариант), не весь файл — предупреждение
@@ -103,6 +139,8 @@ const invalidVolumeMessage = (raw: string) => {
  * валиден её объём или нет — иначе товар, у которого именно первая строка
  * оказалась с плохим объёмом, не попадал бы в Map вообще и пропадал бы из
  * отчёта молча (не «пропущен с предупреждением», а просто отсутствовал бы).
+ * Пустые ячейки этой первой строки дозаполняются следующими — см.
+ * `adoptFilledCells`.
  */
 export function groupFormatA(rows: ValidatedRow<FormatARow>[]): GroupResult {
   const grouped = new Map<string, ProductInput>()
@@ -116,9 +154,12 @@ export function groupFormatA(rows: ValidatedRow<FormatARow>[]): GroupResult {
     if (!existing) grouped.set(base.handle, { line, base, variants: [] })
 
     // Страна и раздел каталога — поля товара, а строк на товар несколько:
-    // канон — первая строка handle (она и лежит в base). Расхождение внутри
-    // одного handle почти всегда опечатка, поэтому не молчим: берём первую,
-    // остальные — в отчёт.
+    // канон — первая ЗАПОЛНЕННАЯ строка handle (она и лежит в base, пустые
+    // ячейки дозаполняются ниже). Расхождение двух непустых ячеек внутри
+    // одного handle почти всегда опечатка, поэтому не молчим: берём принятое
+    // значение, остальные — в отчёт. Сверка обязана идти ДО дозаполнения:
+    // иначе эта же строка сначала подставит своё значение в base, а потом
+    // сравнится сама с собой и предупреждение потеряется.
     if (existing) {
       const country = scalarConflict(
         COUNTRY_SPEC,
@@ -137,6 +178,9 @@ export function groupFormatA(rows: ValidatedRow<FormatARow>[]): GroupResult {
         value.product_category,
       )
       if (productCategory) productCategoryConflicts.push(productCategory)
+
+      // Пустые ячейки товарных колонок первой строки — дозаполнить этой.
+      adoptFilledCells(existing.base as Record<string, unknown>, base)
     }
 
     if (!isProductVolume(volume)) {

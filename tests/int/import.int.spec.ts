@@ -198,7 +198,40 @@ describe('скалярные поля товара (country_of_origin / product_
     expect(inputs[0].base.product_category).toBe('bodyCare')
   })
 
-  it('формат A: разные разделы внутри одного handle — предупреждение, взята первая', () => {
+  // Тот самый баг 2026-09-22: раздел стоял не в первой строке handle, и товар
+  // молча оставался perfume (не попадал в «Body Care»). Пустая ячейка ничего
+  // не решает — ни у stock/old_price, ни здесь.
+  it('формат A: пустая ячейка первой строки не «побеждает» заполненную ниже', () => {
+    const { inputs, scalarConflicts } = groupA(
+      [
+        'handle,title,brand,product_category,country_of_origin,volume,sku,price',
+        'A,Название,b,,,5ml,A-5,100',
+        'A,Название,b,bodyCare,uae,Full Size,A-30,300',
+      ].join('\n'),
+    )
+    expect(inputs[0].base.product_category).toBe('bodyCare')
+    expect(inputs[0].base.country_of_origin).toBe('uae')
+    // Пустая ячейка — не расхождение: предупреждений быть не должно.
+    expect(scalarConflicts.productCategory).toHaveLength(0)
+    expect(scalarConflicts.country).toHaveLength(0)
+  })
+
+  it('формат A: дозаполняются и остальные колонки товара, заполненное не перетирается', () => {
+    const { inputs } = groupA(
+      [
+        'handle,title,brand,gender,family_ro,images,description,volume,sku,price',
+        'A,Название,b,,,,Описание сверху,5ml,A-5,100',
+        'A,Название,b,female,Lemnos,a.webp|b.webp,Описание снизу,Full Size,A-30,300',
+      ].join('\n'),
+    )
+    expect(inputs[0].base.gender).toBe('female')
+    expect(inputs[0].base.family_ro).toBe('Lemnos')
+    expect(inputs[0].base.images).toEqual(['a.webp', 'b.webp'])
+    // Непустая ячейка первой строки остаётся за ней.
+    expect(inputs[0].base.description).toBe('Описание сверху')
+  })
+
+  it('формат A: разные разделы внутри одного handle — предупреждение, взято первое заполненное', () => {
     const { inputs, scalarConflicts } = groupA(
       [
         'handle,title,brand,product_category,volume,sku,price',
@@ -209,7 +242,7 @@ describe('скалярные поля товара (country_of_origin / product_
     expect(inputs[0].base.product_category).toBe('perfume')
     expect(scalarConflicts.productCategory).toHaveLength(1)
     expect(scalarConflicts.productCategory[0]).toMatchObject({ line: 3, field: 'product_category' })
-    expect(scalarConflicts.productCategory[0].message).toContain('взята первая')
+    expect(scalarConflicts.productCategory[0].message).toContain('взято первое заполненное')
     expect(scalarConflicts.country).toHaveLength(0)
   })
 
@@ -223,7 +256,7 @@ describe('скалярные поля товара (country_of_origin / product_
     )
     const message = scalarConflicts.productCategory[0].message
     expect(message).toContain('не из списка')
-    expect(message).toContain('взята первая')
+    expect(message).toContain('взято первое заполненное')
   })
 
   it('одинаковое значение во всех строках handle — не конфликт', () => {

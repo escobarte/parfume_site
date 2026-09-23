@@ -14,7 +14,8 @@ import type { RowError } from './types'
  *   импортируется, поле не трогается (опечатка не должна ронять прайс на 100+
  *   позиций — тот же принцип, что у `volume`);
  * - в формате A строк на один `handle` несколько, а поле одно на товар:
- *   канон — первая строка, расхождение уходит предупреждением.
+ *   канон — первая ЗАПОЛНЕННАЯ строка (пустая ячейка не «побеждает» тем, что
+ *   стоит выше), расхождение двух непустых уходит предупреждением.
  */
 export type ProductScalarSpec = {
   /** Имя колонки CSV — оно же показывается в отчёте как `field`. */
@@ -56,8 +57,16 @@ export const PRODUCT_CATEGORY_SPEC: ProductScalarSpec = {
 export const PRODUCT_SCALAR_SPECS = [COUNTRY_SPEC, PRODUCT_CATEGORY_SPEC] as const
 
 /**
- * Формат A: значение в очередной строке того же `handle` разошлось с первой.
- * Возвращает предупреждение либо undefined, если расхождения нет.
+ * Формат A: значение в очередной строке того же `handle` разошлось с уже
+ * принятым. Возвращает предупреждение либо undefined, если расхождения нет.
+ *
+ * Пустая ячейка НИ В КАКУЮ сторону не считается расхождением — ни пустая
+ * текущая (нечего применять), ни пустая принятая: во втором случае значение
+ * подхватывается этой строкой (см. `adoptFilledCells` в applyProducts.ts),
+ * а не проигрывает пустоте. До 2026-09-22 было наоборот — товар, у которого
+ * `product_category` заполнен не в первой строке handle (обычное дело, когда
+ * колонку дописывают руками к готовому прайсу), молча оставался с прежним
+ * разделом и не попадал в «Body Care».
  *
  * Если расходящееся значение к тому же не из списка — говорим об этом прямо:
  * иначе отчёт выглядит так, будто «Marte» — законная альтернатива, просто
@@ -72,11 +81,11 @@ export function scalarConflict(
 ): RowError | undefined {
   const first = firstRaw?.trim() ?? ''
   const current = currentRaw?.trim() ?? ''
-  if (!current || current === first) return undefined
+  if (!current || !first || current === first) return undefined
 
   const message = spec.canonical(current)
-    ? `${handle}: строки указывают разные ${spec.nounPlural} («${first || '—'}» и «${current}») — взята первая`
-    : `${handle}: ${spec.noun} «${current}» не из списка (${spec.values.join(' / ')}) и отличается от первой строки («${first || '—'}») — взята первая`
+    ? `${handle}: строки указывают разные ${spec.nounPlural} («${first}» и «${current}») — взято первое заполненное`
+    : `${handle}: ${spec.noun} «${current}» не из списка (${spec.values.join(' / ')}) и отличается от принятого («${first}») — взято первое заполненное`
 
   return { line, field: spec.column, message }
 }
