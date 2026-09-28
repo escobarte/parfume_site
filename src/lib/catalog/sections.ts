@@ -10,8 +10,15 @@ import type { CatalogScope } from './queries'
  * живёт только в «Body Care», бальзам — только в «Lip balm». Исключение —
  * «Kids»: все товары с `gender = kids` любой категории (решение владельца), так
  * что детский уход/бальзам виден и в «Kids», и в «Body Care» / «Lip balm».
- * `unisex` осознанно не входит ни в один раздел — доступен только фасетом
- * «Кому» общего `/catalog` (решение владельца).
+ *
+ * `unisex` (2026-09-28, решение клиентки — отменяет решение владельца от
+ * 15.09 «unisex только через фасет общего /catalog») виден ОДНОВРЕМЕННО в
+ * «For Her» и в «For Him»: `scope.gender` для обоих разделов — список
+ * `[свой пол, 'unisex']`, не одно значение. Разделы поэтому больше не
+ * взаимоисключающие между собой (тот же принцип, что уже был у Kids) —
+ * e2e-проверка «разделы не пересекаются» обязана пропускать и Kids, и
+ * unisex-товары. Дублей внутри одного раздела нет — это одно условие `in`
+ * на уровне БД, не объединение двух выдач.
  *
  * `hideGenderFacet` — раздел сам определяет пол: фасета «Кому» в фильтрах нет,
  * `gender` из URL игнорируется. У Body Care / Lip balm пол остаётся обычным
@@ -29,12 +36,12 @@ type CatalogSection = {
 export const CATALOG_SECTIONS = {
   forHer: {
     path: '/catalog/for-her',
-    scope: { gender: 'female', productCategory: 'perfume' },
+    scope: { gender: ['female', 'unisex'], productCategory: 'perfume' },
     hideGenderFacet: true,
   },
   forHim: {
     path: '/catalog/for-him',
-    scope: { gender: 'male', productCategory: 'perfume' },
+    scope: { gender: ['male', 'unisex'], productCategory: 'perfume' },
     hideGenderFacet: true,
   },
   kids: {

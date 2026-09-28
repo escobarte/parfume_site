@@ -8,19 +8,34 @@ import { cardPrices, cardTitles } from '../helpers/catalog'
  * Body Care / Lip balm — маршруты со своим scope, а не фильтр `?gender=`.
  * Ожидаемый состав разделов считается из REST (`gender` + `productCategory`),
  * поэтому спек не завязан на конкретные товары dev-базы.
+ *
+ * `unisex` (2026-09-28, решение клиентки) виден ОДНОВРЕМЕННО в For Her и
+ * For Him — `match` для обоих разделов включает `gender === 'unisex'`,
+ * не только «свой» пол.
  */
 const ro = JSON.parse(readFileSync('messages/ro.json', 'utf8'))
 
 const SECTIONS = {
-  forHer: { path: '/ro/catalog/for-her', match: (p: Product) => p.gender === 'female' && p.productCategory === 'perfume' },
-  forHim: { path: '/ro/catalog/for-him', match: (p: Product) => p.gender === 'male' && p.productCategory === 'perfume' },
+  forHer: {
+    path: '/ro/catalog/for-her',
+    match: (p: Product) =>
+      (p.gender === 'female' || p.gender === 'unisex') && p.productCategory === 'perfume',
+  },
+  forHim: {
+    path: '/ro/catalog/for-him',
+    match: (p: Product) =>
+      (p.gender === 'male' || p.gender === 'unisex') && p.productCategory === 'perfume',
+  },
   // Kids — все товары с gender=kids любой категории (решение владельца 2026-09-15).
   kids: { path: '/ro/catalog/kids', match: (p: Product) => p.gender === 'kids' },
-  bodyCare: { path: '/ro/catalog/body-care', match: (p: Product) => p.productCategory === 'bodyCare' },
+  bodyCare: {
+    path: '/ro/catalog/body-care',
+    match: (p: Product) => p.productCategory === 'bodyCare',
+  },
   lipBalm: { path: '/ro/catalog/lip-balm', match: (p: Product) => p.productCategory === 'lipBalm' },
 } as const
 
-type Product = { title: string; gender: string | null; productCategory: string }
+type Product = { title: string; slug: string; gender: string | null; productCategory: string }
 
 const openFilters = async (page: Page) => {
   const dialog = page.getByRole('dialog')
@@ -41,27 +56,51 @@ test.describe('Каталог: закрытые разделы левого ме
     await page.addInitScript(() => localStorage.setItem('mf-promo-popup-seen', '1'))
   })
 
-  test('состав каждого раздела совпадает с gender/productCategory, разделы кроме Kids не пересекаются', async ({
+  test('состав каждого раздела совпадает с gender/productCategory, разделы кроме Kids и unisex не пересекаются', async ({
     page,
     request,
   }) => {
     const response = await request.get('/api/products?limit=500&depth=0&locale=ro')
     const products = (await response.json()).docs as Product[]
+    const unisexTitles = new Set(
+      products
+        .filter((p) => p.gender === 'unisex' && p.productCategory === 'perfume')
+        .map((p) => p.title),
+    )
 
     const seen = new Map<string, string>()
     for (const [key, section] of Object.entries(SECTIONS)) {
       await gotoAndWaitForFooter(page, section.path)
-      const expected = products.filter(section.match).map((p) => p.title).sort()
+      const expected = products
+        .filter(section.match)
+        .map((p) => p.title)
+        .sort()
       const actual = (await cardTitles(page)).sort()
       expect(actual, key).toEqual(expected)
 
-      // Детский уход/бальзам по правилу виден и в Kids, и в Body Care / Lip balm.
+      // Детский уход/бальзам по правилу виден и в Kids, и в Body Care / Lip
+      // balm; unisex-парфюмерия (2026-09-28) — одновременно в For Her и
+      // For Him. Оба исключения из проверки «раздел встречается только раз».
       if (key === 'kids') continue
       for (const title of actual) {
+        if (unisexTitles.has(title)) continue
         expect(seen.get(title), `«${title}» уже есть в разделе ${seen.get(title)}`).toBeUndefined()
         seen.set(title, key)
       }
     }
+  })
+
+  test('товар unisex виден одновременно и в For Her, и в For Him', async ({ page, request }) => {
+    const response = await request.get('/api/products?limit=500&depth=0&locale=ro')
+    const products = (await response.json()).docs as Product[]
+    const unisex = products.find((p) => p.gender === 'unisex' && p.productCategory === 'perfume')
+    test.skip(!unisex, 'нет unisex-парфюмерии в дев-базе для проверки')
+
+    await gotoAndWaitForFooter(page, SECTIONS.forHer.path)
+    expect(await cardTitles(page)).toContain(unisex!.title)
+
+    await gotoAndWaitForFooter(page, SECTIONS.forHim.path)
+    expect(await cardTitles(page)).toContain(unisex!.title)
   })
 
   test('пол-раздел: тулбар виден, фасета «Кому» нет, фильтры и сортировка не выводят из раздела', async ({
@@ -107,7 +146,9 @@ test.describe('Каталог: закрытые разделы левого ме
     }
   })
 
-  test('?gender= на пол-разделе игнорируется — выдача та же, что без параметра', async ({ page }) => {
+  test('?gender= на пол-разделе игнорируется — выдача та же, что без параметра', async ({
+    page,
+  }) => {
     await gotoAndWaitForFooter(page, '/ro/catalog/for-her')
     const plain = (await cardTitles(page)).sort()
 

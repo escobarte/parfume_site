@@ -18,7 +18,12 @@ export type CatalogScope = {
   // Раздел каталога (`Products.productCategory`, фаза 11.1) — не «Кому».
   // Вместе с `gender` задаёт закрытые разделы левого меню (`sections.ts`).
   productCategory?: string
-  gender?: string
+  // Список, не одно значение — For Her/For Him берут `female`/`male` ПЛЮС
+  // `unisex` (2026-09-28, решение клиентки отменяет решение владельца от
+  // 15.09 «unisex только через фасет общего /catalog»), Kids — по-прежнему
+  // один элемент (`['kids']`). Одно условие `in`, а не объединение двух
+  // отдельных запросов — товар физически не может попасть в выдачу дважды.
+  gender?: string | string[]
 }
 
 const scopeWhere = (scope: CatalogScope): Where[] => {
@@ -26,7 +31,10 @@ const scopeWhere = (scope: CatalogScope): Where[] => {
   if (scope.categoryIds?.length) conditions.push({ categories: { in: scope.categoryIds } })
   if (scope.brandIds?.length) conditions.push({ brand: { in: scope.brandIds } })
   if (scope.productCategory) conditions.push({ productCategory: { equals: scope.productCategory } })
-  if (scope.gender) conditions.push({ gender: { equals: scope.gender } })
+  if (scope.gender) {
+    const genders = Array.isArray(scope.gender) ? scope.gender : [scope.gender]
+    conditions.push({ gender: { in: genders } })
+  }
   if (scope.slugs) {
     // Поиск ничего не нашёл: пустой список в `in` уходит в SQL пустым
     // параметром и роняет запрос (invalid byte sequence 0x00), поэтому
