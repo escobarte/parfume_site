@@ -1,11 +1,16 @@
-import type { Field } from 'payload'
+import type { Field, TextFieldValidation } from 'payload'
 import { slugify } from '@/lib/slugify'
 
 /**
  * Slug — общий для всех локалей (PLAN.md §1: локализуются контент и SEO, не URL).
  * Если поле пустое, собирается из указанного источника (обычно title).
+ *
+ * `validate` — опциональная кастомная проверка сверху обычной (например,
+ * список зарезервированных slug у `Pages`, 2026-09-28). Передавая её,
+ * заменяешь дефолтную валидацию Payload целиком — включая проверку
+ * `required`, поэтому такая функция обязана сама отвергать пустое значение.
  */
-export const slugField = (from = 'title'): Field => ({
+export const slugField = (from = 'title', options?: { validate?: TextFieldValidation }): Field => ({
   name: 'slug',
   type: 'text',
   required: true,
@@ -15,6 +20,7 @@ export const slugField = (from = 'title'): Field => ({
     position: 'sidebar',
     description: 'Латиницей, один на все локали. Пусто — соберётся из названия.',
   },
+  ...(options?.validate ? { validate: options.validate } : {}),
   hooks: {
     beforeValidate: [
       ({ value, data, originalDoc }) => {
