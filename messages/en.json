@@ -81,6 +81,7 @@
     "emptyHint": "Try removing some filters.",
     "sort": {
       "label": "Sort",
+      "relevance": "By relevance",
       "priceAsc": "Price: low to high",
       "priceDesc": "Price: high to low",
       "titleAsc": "By name",

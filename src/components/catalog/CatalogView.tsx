@@ -3,7 +3,13 @@ import type { Locale } from '@/i18n/routing'
 import { computeFacets } from '@/lib/catalog/facets'
 import type { CatalogNavKey } from '@/lib/catalog/navSections'
 import { getFacetSource, getProductCards, type CatalogScope } from '@/lib/catalog/queries'
-import { countActiveFilters, PAGE_SIZE, type CatalogQuery } from '@/lib/catalog/searchParams'
+import {
+  CATALOG_SORT_OPTIONS,
+  countActiveFilters,
+  PAGE_SIZE,
+  type CatalogQuery,
+  type SortOption,
+} from '@/lib/catalog/searchParams'
 import { getBrands } from '@/lib/catalog/taxonomy'
 import { ActiveFilters } from './ActiveFilters'
 import { CatalogShell } from './CatalogShell'
@@ -43,12 +49,19 @@ export async function CatalogView({
   showCategoryNav = false,
   activeNavKey,
   hideGenderFacet = false,
+  sortOptions = CATALOG_SORT_OPTIONS,
 }: {
   locale: Locale
   query: CatalogQuery
   scope: CatalogScope
   title: string
   subtitle?: string
+  /**
+   * Список сортировок раздела. По умолчанию каталожный (без «по
+   * релевантности» — ранжировать в каталоге нечего); страница поиска передаёт
+   * `SEARCH_SORT_OPTIONS`.
+   */
+  sortOptions?: readonly SortOption[]
   // Левая колонка навигации (задача 1, фаза 11.1) — только на страницах
   // каталога/категорий, не на страницах бренда (те тоже рендерят CatalogView).
   showCategoryNav?: boolean
@@ -132,7 +145,9 @@ export async function CatalogView({
             <FiltersDrawer facets={facets} activeCount={activeCount} />
             <ActiveFilters facets={facets} hideGender={hideGenderFacet} />
           </div>
-          <SortSelect />
+          {/* `value` — то, что применил сервер: у поиска свой дефолт
+              (релевантность), и клиентский хук сам его не угадает. */}
+          <SortSelect options={sortOptions} value={query.sort} />
         </div>
 
         {grid}

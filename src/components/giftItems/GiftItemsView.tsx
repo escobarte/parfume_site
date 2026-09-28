@@ -36,7 +36,7 @@ export async function GiftItemsView({
       <div className="mt-6">
         {items.length > 1 && (
           <div className="mb-5 flex justify-end">
-            <SortSelect options={GIFT_SORT_OPTIONS} />
+            <SortSelect options={GIFT_SORT_OPTIONS} value={sort} />
           </div>
         )}
         {items.length === 0 ? (

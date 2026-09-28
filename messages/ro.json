@@ -81,6 +81,7 @@
     "emptyHint": "Încercați să eliminați câteva filtre.",
     "sort": {
       "label": "Sortare",
+      "relevance": "După relevanță",
       "priceAsc": "Preț crescător",
       "priceDesc": "Preț descrescător",
       "titleAsc": "După nume",

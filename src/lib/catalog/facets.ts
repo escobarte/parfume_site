@@ -26,10 +26,14 @@ function predicates(query: CatalogQuery) {
     !query.country.length || (!!row.country && query.country.includes(row.country))
   const flags: Predicate = (row) =>
     !query.flags.length || query.flags.some((flag) => row.flags[flag])
+  // Цена — по видимой цене карточки (`displayPrice` = `maxPrice`), тем же
+  // правилом, что и `filterWhere` в queries.ts. Раньше счётчик смотрел на
+  // `minPrice`, а выдача — на пересечение интервала товара с фильтром: числа
+  // у фасета и в выдаче не совпадали (2026-09-28).
   const price: Predicate = (row) => {
-    if (row.minPrice === null) return query.priceMin === null && query.priceMax === null
-    if (query.priceMin !== null && row.minPrice < query.priceMin) return false
-    if (query.priceMax !== null && row.minPrice > query.priceMax) return false
+    if (row.displayPrice === null) return query.priceMin === null && query.priceMax === null
+    if (query.priceMin !== null && row.displayPrice < query.priceMin) return false
+    if (query.priceMax !== null && row.displayPrice > query.priceMax) return false
     return true
   }
 
@@ -90,7 +94,9 @@ export function computeFacets(
 
   // Границы слайдера цены берём по всей области, а не по текущей выдаче —
   // иначе диапазон схлопывается вокруг уже выбранного значения.
-  const prices = rows.map((row) => row.minPrice).filter((price): price is number => price !== null)
+  const prices = rows
+    .map((row) => row.displayPrice)
+    .filter((price): price is number => price !== null)
   const price = prices.length ? { min: Math.min(...prices), max: Math.max(...prices) } : null
 
   return { brand, gender, country, flags, price }

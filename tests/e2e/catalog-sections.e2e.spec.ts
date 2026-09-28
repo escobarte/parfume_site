@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { test, expect, type Page } from '@playwright/test'
 import { gotoAndWaitForFooter } from '../helpers/cart'
+import { cardPrices, cardTitles } from '../helpers/catalog'
 
 /**
  * Закрытые разделы левого меню (2026-09-15): For Her / For Him / Kids /
@@ -20,9 +21,6 @@ const SECTIONS = {
 } as const
 
 type Product = { title: string; gender: string | null; productCategory: string }
-
-const cardTitles = async (page: Page) =>
-  (await page.locator('main article h3').allInnerTexts()).map((title) => title.trim())
 
 const openFilters = async (page: Page) => {
   const dialog = page.getByRole('dialog')
@@ -88,6 +86,25 @@ test.describe('Каталог: закрытые разделы левого ме
       await page.getByRole('combobox', { name: ro.Catalog.sort.label }).selectOption('priceDesc')
       await expect(page).toHaveURL(/\/ro\/catalog\/for-her\?.*sort=priceDesc/, { timeout: 3000 })
     }).toPass({ timeout: 30000 })
+  })
+
+  // Регрессия бага 2026-09-27: `sort` доходил до запроса, но поле было чужое
+  // (`minPrice` вместо видимой цены). Проверяем через URL, а не через селект:
+  // выбор в комбобоксе до гидрации теряется (см. GOTCHAS.md), а спека здесь
+  // про порядок выдачи, не про сам контрол.
+  test('сортировка по цене совпадает с ценой НА КАРТОЧКЕ, а не с minPrice', async ({ page }) => {
+    for (const path of ['/ro/catalog', SECTIONS.forHer.path, SECTIONS.bodyCare.path]) {
+      for (const sort of ['priceAsc', 'priceDesc'] as const) {
+        await gotoAndWaitForFooter(page, `${path}?sort=${sort}`)
+        const prices = await cardPrices(page)
+        // Раздел из одной карточки сортировать нечем — это не провал.
+        if (prices.length < 2) continue
+
+        expect(prices.every(Number.isFinite), `${path}?sort=${sort}: цены не распознаны`).toBe(true)
+        const expected = [...prices].sort((a, b) => (sort === 'priceAsc' ? a - b : b - a))
+        expect(prices, `${path}?sort=${sort}`).toEqual(expected)
+      }
+    }
   })
 
   test('?gender= на пол-разделе игнорируется — выдача та же, что без параметра', async ({ page }) => {

@@ -132,32 +132,74 @@ const afterReset = await waitForCards(comboCount)
 check('сброс возвращает полную выдачу', afterReset === totalAll, `${afterReset} из ${totalAll}`)
 
 // ── Сортировка по цене ────────────────────────────────────────────────────
-// Сортировка на сервере идёт по минимальной цене товара (minPrice), но с
-// «вариантом B» (фаза 4.5) карточка может показывать цену уценённого
-// варианта, а не минимальную — поэтому сверяем порядок не с текстом на
-// карточке, а с реальным minPrice по REST (slug → minPrice), независимо от
-// того, что отображено.
+// Сверяем с maxPrice по REST: это и есть цена, НАПЕЧАТАННАЯ на карточке
+// (максимум по активным вариантам, промпт «новая логика цены»). До 2026-09-27
+// сортировка шла по `minPrice`, и этот же чек сверялся с `minPrice` — то есть
+// подтверждал ровно то, по чему сортировал сервер, и багу не мешал. Поэтому
+// ниже дополнительно проверяется порядок ЦЕН ИЗ ТЕКСТА карточек.
 const slugsOf = async () =>
   (await page.locator('article a[href*="/product/"]').evaluateAll((nodes) => nodes.map((n) => n.getAttribute('href')))).map(
     (href) => href.split('/').pop(),
   )
+// Цена из текста карточки: «MDL» встречается дважды при скидке (зачёркнутая
+// старая цена идёт первой) — берём последнее совпадение, оставляя только цифры.
+const shownPricesOf = async () =>
+  (await page.locator('main article').allInnerTexts()).map((text) => {
+    const matches = [...text.matchAll(/([\d\s.,\u00a0]+)MDL/g)]
+    return matches.length ? Number(matches.at(-1)[1].replace(/\D/g, '')) : NaN
+  })
 const priceIndex = await fetch(`${BASE}/api/products?limit=100&locale=ro&depth=0`)
   .then((r) => r.json())
-  .then((data) => new Map(data.docs.map((doc) => [doc.slug, doc.minPrice])))
+  .then((data) => new Map(data.docs.map((doc) => [doc.slug, doc.maxPrice])))
 
 await goto(`${BASE}/ro/catalog?sort=priceAsc`)
 const ascSlugs = await slugsOf()
 const asc = ascSlugs.map((slug) => priceIndex.get(slug))
+const ascShown = await shownPricesOf()
 await goto(`${BASE}/ro/catalog?sort=priceDesc`)
 const descSlugs = await slugsOf()
 const desc = descSlugs.map((slug) => priceIndex.get(slug))
+const descShown = await shownPricesOf()
 check(
-  'сортировка по цене работает в обе стороны (по реальному minPrice, не по тексту карточки)',
+  'сортировка по цене работает в обе стороны (по maxPrice — цене карточки)',
   asc.every((v, i) => i === 0 || asc[i - 1] <= v) &&
     desc.every((v, i) => i === 0 || desc[i - 1] >= v),
   `${asc[0]}…${asc.at(-1)} / ${desc[0]}…${desc.at(-1)}`,
 )
+check(
+  'порядок совпадает с ценой, напечатанной на карточках',
+  ascShown.every(Number.isFinite) &&
+    descShown.every(Number.isFinite) &&
+    ascShown.every((v, i) => i === 0 || ascShown[i - 1] <= v) &&
+    descShown.every((v, i) => i === 0 || descShown[i - 1] >= v),
+  `${ascShown[0]}…${ascShown.at(-1)} / ${descShown[0]}…${descShown.at(-1)}`,
+)
 check('сортировка не теряет товары', asc.length === totalAll && desc.length === totalAll)
+
+// ── Фильтр цены: по цене КАРТОЧКИ + честный счётчик фасета (2026-09-28) ────
+// Раньше листинг брал пересечение интервала товара с фильтром, а счётчик
+// фасета — попадание minPrice в диапазон: в выдаче «до 600» стояли карточки
+// с ценой 900, а числа у фасетов не совпадали с числом карточек.
+const PRICE_CAP = 600
+await goto(`${BASE}/ro/catalog?priceMax=${PRICE_CAP}`)
+const cappedShown = await shownPricesOf()
+check(
+  `фильтр цены «до ${PRICE_CAP}» оставляет только карточки с такой ценой`,
+  cappedShown.length > 0 &&
+    cappedShown.every(Number.isFinite) &&
+    cappedShown.every((price) => price <= PRICE_CAP),
+  `${cappedShown.length} карточек, максимум ${Math.max(...cappedShown)}`,
+)
+const cappedCount = cappedShown.length
+const pricedRow = (await openFilters()).locator('label').first()
+const pricedFacet = Number((await pricedRow.locator('span.tabular-nums').innerText()).trim())
+await pricedRow.locator('input').check()
+const pricedShownCount = await waitForCards(cappedCount)
+check(
+  'счётчик фасета честный и при включённом фильтре цены',
+  pricedShownCount === pricedFacet,
+  `счётчик ${pricedFacet}, карточек ${pricedShownCount}`,
+)
 
 // ── Карточка товара: переключение объёма ──────────────────────────────────
 await goto(`${BASE}/ro/product/maison-orphee-signature-wood`)

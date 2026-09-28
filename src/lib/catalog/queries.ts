@@ -48,10 +48,17 @@ function filterWhere(query: CatalogQuery, ids: { brands: Map<string, number | st
   if (query.gender.length) conditions.push({ gender: { in: query.gender } })
   if (query.country.length) conditions.push({ countryOfOrigin: { in: query.country } })
 
-  // Диапазон цены — пересечение с ценовым интервалом товара, а не попадание
-  // minPrice в интервал: товар 200–900 должен находиться и по фильтру 500–600.
+  // Диапазон цены — по ЦЕНЕ КАРТОЧКИ (`maxPrice`, максимум по активным
+  // вариантам), той же, по которой идёт сортировка. Раньше здесь было
+  // пересечение интервала товара с фильтром (`maxPrice >= min` И
+  // `minPrice <= max`): товар 200–900 попадал в фильтр «500–600». Это было
+  // осмысленно, пока карточка показывала «от 200 MDL» — диапазон. Сейчас она
+  // показывает одно число (900), и такой товар в фильтре «до 600» выглядел
+  // просто ошибкой: на карточке 900, а она в выдаче «до 600». Заодно правило
+  // стало ОДНИМ для листинга и для счётчиков фасетов (`facets.ts`), которые
+  // считали по-своему — попаданием `minPrice` в диапазон (2026-09-28).
   if (query.priceMin !== null) conditions.push({ maxPrice: { greater_than_equal: query.priceMin } })
-  if (query.priceMax !== null) conditions.push({ minPrice: { less_than_equal: query.priceMax } })
+  if (query.priceMax !== null) conditions.push({ maxPrice: { less_than_equal: query.priceMax } })
 
   if (query.flags.length) {
     conditions.push({ or: query.flags.map((flag) => ({ [flag]: { equals: true } })) })
@@ -60,11 +67,32 @@ function filterWhere(query: CatalogQuery, ids: { brands: Map<string, number | st
   return conditions
 }
 
-const SORT: Record<CatalogQuery['sort'], string> = {
-  priceAsc: 'minPrice',
-  priceDesc: '-minPrice',
-  titleAsc: 'title',
-  discount: '-maxDiscountPercent',
+/**
+ * Сортировка листинга. **Цена для сортировки обязана быть той же, что на
+ * карточке** — а карточка со времён «новой логики цены» показывает ОДНУ цену,
+ * максимальную среди активных вариантов (`toCard` → `displayPrice`, фаза
+ * «новая логика цены»), а не «от X». Сортировка же осталась с прежних времён
+ * на `minPrice` (цена самого маленького объёма), и выдача выглядела
+ * неотсортированной вовсе: у товара 3ml/5ml/…/Full Size порядок по minPrice
+ * и порядок по видимой цене — два разных порядка (найдено 2026-09-27,
+ * пример с прода: `?sort=priceDesc` отдавал 1780 → 1550 → 1490 → 1590 MDL).
+ * Поэтому `maxPrice` — денормализованный максимум по активным вариантам,
+ * ровно то число, которое напечатано на карточке (оба считает один хук,
+ * `denormalizeVariants`).
+ *
+ * `title` вторым ключом — детерминированный порядок внутри одной цены
+ * (в прайсе клиентки цены повторяются десятками): без него равные цены
+ * Postgres отдаёт в произвольном порядке, и выдача «прыгает» между заходами.
+ */
+const SORT: Record<CatalogQuery['sort'], string[]> = {
+  priceAsc: ['maxPrice', 'title'],
+  priceDesc: ['-maxPrice', 'title'],
+  titleAsc: ['title'],
+  discount: ['-maxDiscountPercent', 'title'],
+  // Релевантность СУБД не знает — порядок задаёт ранг FTS уже после выборки
+  // (см. ниже). Значение здесь нужно для случая, когда `relevance` пришло без
+  // результатов поиска (руками в адресе каталога): ведём себя как `titleAsc`.
+  relevance: ['title'],
 }
 
 /**
@@ -86,9 +114,36 @@ export async function getProductCards(
 
   const key = JSON.stringify({ locale, where, sort: query.sort, limit })
 
+  // Порядок по релевантности существует только у поиска: ранг считает FTS
+  // (`searchProductSlugs` отдаёт slug-и уже отсортированными), СУБД его не
+  // знает. Поэтому здесь берём ВСЕ найденные товары (их не больше лимита
+  // поиска — 200) и режем страницу уже после сортировки по рангу: сортировать
+  // страницу, которую выбрала БД своим порядком, значит показать на первом
+  // экране не самые релевантные товары, а первые по алфавиту среди всех
+  // найденных. До 2026-09-28 так и было — плюс этот же ранг перебивал любую
+  // ВЫБРАННУЮ пользователем сортировку, из-за чего селект на `/search`
+  // не работал вообще.
+  const byRelevance = query.sort === 'relevance' && !!scope.slugs?.length
+
   return unstable_cache(
     async () => {
       const payload = await getPayloadClient()
+
+      if (byRelevance) {
+        const rank = new Map(scope.slugs!.map((slug, index) => [slug, index]))
+        const { docs } = await payload.find({
+          collection: 'products',
+          locale,
+          depth: 1,
+          pagination: false,
+          where,
+        })
+        const ordered = [...docs].sort(
+          (a, b) => (rank.get(a.slug) ?? Infinity) - (rank.get(b.slug) ?? Infinity),
+        )
+        return { items: ordered.slice(0, limit).map(toCard), total: ordered.length }
+      }
+
       const result = await payload.find({
         collection: 'products',
         locale,
@@ -99,14 +154,7 @@ export async function getProductCards(
         where,
       })
 
-      const items = result.docs.map(toCard)
-      // Поиск задаёт свой порядок релевантности — сохраняем его.
-      if (scope.slugs?.length) {
-        const rank = new Map(scope.slugs.map((slug, index) => [slug, index]))
-        items.sort((a, b) => (rank.get(a.slug) ?? 0) - (rank.get(b.slug) ?? 0))
-      }
-
-      return { items, total: result.totalDocs }
+      return { items: result.docs.map(toCard), total: result.totalDocs }
     },
     ['catalog', key],
     { tags: [CATALOG_TAG], revalidate: CACHE_TTL },
@@ -153,7 +201,9 @@ export async function getFacetSource(
           categories,
           gender: doc.gender ?? null,
           country: doc.countryOfOrigin ?? null,
-          minPrice: doc.minPrice ?? null,
+          // Цена карточки (максимум по активным вариантам) — по ней же считает
+          // фильтр цены в `filterWhere` выше и рисуются границы слайдера.
+          displayPrice: doc.maxPrice ?? null,
           flags: {
             isNew: Boolean(doc.isNew),
             isHit: Boolean(doc.isHit),

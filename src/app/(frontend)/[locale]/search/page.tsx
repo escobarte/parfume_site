@@ -4,7 +4,7 @@ import type { SearchParams } from 'nuqs/server'
 import { CatalogView } from '@/components/catalog/CatalogView'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import type { Locale } from '@/i18n/routing'
-import { loadCatalogParams } from '@/lib/catalog/searchParams'
+import { loadSearchParams, SEARCH_SORT_OPTIONS } from '@/lib/catalog/searchParams'
 import { searchProductSlugs } from '@/lib/search/fts'
 import { buildMetadata } from '@/lib/seo/metadata'
 
@@ -24,8 +24,10 @@ export default async function SearchPage(props: {
   const { locale } = await props.params
   setRequestLocale(locale)
 
+  // Свой лоадер, а не каталожный: у поиска на одну сортировку больше
+  // («по релевантности») и она же дефолт (см. searchParams.ts).
   const [query, t] = await Promise.all([
-    loadCatalogParams(props.searchParams),
+    loadSearchParams(props.searchParams),
     getTranslations('Search'),
   ])
 
@@ -44,7 +46,10 @@ export default async function SearchPage(props: {
           locale={locale}
           query={query}
           // Поиск отдаёт slug-и в порядке релевантности — они и задают область.
+          // Сам порядок применяется только при `sort=relevance` (дефолт
+          // поиска); выбрал цену — сортирует БД, как в каталоге.
           scope={{ slugs: await searchProductSlugs(term, locale) }}
+          sortOptions={SEARCH_SORT_OPTIONS}
           title={t('title')}
           subtitle={t('resultsFor', { query: term })}
         />
