@@ -1,3 +1,6 @@
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Payload } from 'payload'
 
@@ -16,6 +19,10 @@ import type { Payload } from 'payload'
  */
 
 process.env.ORDERS_DRY_RUN = '1'
+// Экспорт CSV для 1С (orderExport.ts) по дефолту пишет в /app/order-export —
+// увести в tmp, иначе каждый вызов POST() в этом файле пытался бы (безуспешно,
+// но с шумом в консоли) создать системную папку /app на машине разработчика.
+process.env.ORDER_EXPORT_DIR = mkdtempSync(path.join(tmpdir(), 'order-export-test-'))
 
 const find = vi.fn()
 const create = vi.fn()
@@ -31,6 +38,26 @@ vi.mock('@/lib/payload', () => ({
       logger: { info: vi.fn(), warn, error: vi.fn() },
     }) as unknown as Payload,
 }))
+
+/**
+ * `after()` из next/server требует настоящий request scope Next
+ * (AsyncLocalStorage, см. docs/GOTCHAS.md) — его нет, когда POST() роута
+ * вызывается прямо, как здесь. Без подмены `after()` бросает `was called
+ * outside a request scope` синхронно, роняя тест ДО того, как заявка
+ * успевает создаться. Замена сохраняет саму суть `after()` — задача не
+ * блокирует и не задерживает завершение route handler'а, которое тест и
+ * проверяет (`await order(...)` возвращается сразу после ответа, а не
+ * после записи CSV-экспорта на диск).
+ */
+vi.mock('next/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('next/server')>()
+  return {
+    ...actual,
+    after: (task: () => unknown) => {
+      void Promise.resolve().then(task).catch(() => {})
+    },
+  }
+})
 
 const { POST } = await import('@/app/(frontend)/api/order-request/route')
 

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 import type { Order } from '@/payload-types'
 import { buildOrderCsv } from '@/lib/orders/csv'
 import { logNotifyReport, notifyOrder } from '@/lib/orders/notify'
@@ -135,13 +135,14 @@ export async function POST(request: Request) {
     data: { exportCsv: csv },
   })
 
-  // Файл для 1С (SFTP забирает их специалист, сайт только пишет на диск).
-  // `after()` здесь не подходит: роут вызывают прямым POST() и в тестах, и
-  // (теоретически) не всегда внутри настоящего request scope Next —
-  // `writeOrderCsvExport` сама глотает любую ошибку (папка недоступна, нет
-  // места) и не бросает исключение наверх, поэтому простой await безопасен
-  // и не может уронить заявку.
-  await writeOrderCsvExport(order, csv)
+  // Файл для 1С (SFTP забирает их специалист, сайт только пишет) — после
+  // ответа клиенту, как и остальная фоновая работа (GOTCHAS.md: `after()`,
+  // не висячий промис). Собственный try/catch внутри `writeOrderCsvExport`
+  // не даёт сбою записи на диск повлиять на заявку: она уже в базе. В
+  // интеграционных тестах, зовущих POST() напрямую (вне request scope
+  // Next), `after()` нужно мокать — см. docs/GOTCHAS.md и
+  // tests/int/order-promo-burn.int.spec.ts.
+  after(() => writeOrderCsvExport(order, csv))
 
   // Печатная версия заявки — вторым вложением к письму менеджеру. Падение
   // генерации (нет шрифтов, сломанный документ) не должно ронять ни заявку,
