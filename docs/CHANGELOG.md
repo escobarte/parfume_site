@@ -6,6 +6,28 @@
 >
 > Архивы: `docs/archive/CHANGELOG-2026-08-phases-1-4.5.md` (фазы 1 → 4.5 + расширение плана).
 
+## [2026-10-01] Экспорт CSV заявки на диск — интеграция с 1С по SFTP
+
+> Дополнительный, а не замещающий, канал: при создании заявки тот же CSV, что уже уходит письмом/Telegram и отдаётся кнопкой «CSV» в `/admin`, дополнительно пишется файлом на диск — их специалист 1С забирает файлы по SFTP, сайт только пишет. Файлы: `src/lib/orders/orderExport.ts` (новый), `src/app/(frontend)/api/order-request/route.ts`, `docker-entrypoint.sh`, `.env.example`, `tests/int/order-export.int.spec.ts` (новый).
+
+1. **`writeOrderCsvExport(order, csv)`** — переиспользует уже существующий `buildOrderCsv`/`orderCsvFilename` (`src/lib/orders/csv.ts`), ничего не генерирует заново. Путь — `ORDER_EXPORT_DIR` (дефолт `/app/order-export`, по аналогии с `ORDER_PDF_FONT_DIR`), имя файла — `<номер заявки>.csv`, повторная запись тем же номером перезатирает файл (`writeFile`, не `wx`/append) — дублей с суффиксами не бывает. Любая ошибка файловой системы (папка недоступна, нет места, volume не смонтирован) ловится внутри функции и уходит только в `console.error` с номером заявки — наружу не пробрасывается никогда.
+2. **Подключено в `order-request/route.ts`** сразу после того, как CSV посчитан и записан в `exportCsv` заказа — тем же местом, где дальше строится PDF и уходят уведомления. **Не через `after()`**, хотя `docs/GOTCHAS.md` рекомендует его для фоновой работы в route handler'ах: роут в этом проекте вызывается прямым `POST()` и в интеграционных тестах (`order-promo-burn.int.spec.ts`), а `after()` бросает `was called outside a request scope` вне настоящего Next-запроса — поймано первым прогоном `test:int` (14 упавших). Решение — простой `await`: функция гарантированно не бросает исключение (см. п.1), поэтому `await` безопасен и не может уронить заявку; задержка ответа — запись одного небольшого файла на локальный volume, то же порядка величины, что уже вносят предыдущие awaited-шаги (`payload.update` с `exportCsv`).
+3. **`docker-entrypoint.sh`**: та же грабля, что у `/app/media` (см. `docs/GOTCHAS.md`, «Non-root `nextjs`…») — Coolify монтирует persistent volume от root ПОСЛЕ build-time `chown`, поэтому для `ORDER_EXPORT_DIR` добавлен тот же блок `mkdir -p` + `chown -R nextjs:nodejs` рядом с существующим для `/app/media`, до сброса привилегий на `nextjs`.
+4. **`.env.example`**: добавлена `ORDER_EXPORT_DIR=/app/order-export` с комментарием — переменную можно не задавать вовсе, дефолт в коде совпадает.
+
+### Тесты и проверка
+
+- `tests/int/order-export.int.spec.ts` (4 теста, node-окружение): пишет файл с ожидаемым именем и содержимым; повторная запись тем же номером перезатирает, а не дублирует; создаёт папку, если её нет; ошибка записи (папка подменена обычным файлом → `ENOTDIR` на `mkdir`) логируется через `console.error` с номером заявки и не бросает исключение.
+- `pnpm tsc --noEmit` ✔ · `pnpm lint` ✔ · `pnpm build` ✔ (exit 0) · `pnpm test:int` 311/311 ✔ (+4, включая весь существующий пакет без регрессий после фикса `after()` → `await`).
+- `pnpm test:e2e` — не прогнан: локальный webServer не поднимается уже на старте (`Cannot find module '.pnpmfile.mjs'`, corepack/pnpm, не относится к этой правке и не входит в её scope) — отдельная задача, если понадобится гонять e2e локально. `check-orders.mjs` по той же причине (нужен живой dev-сервер) тоже не прогнан этой сессией.
+- **Не проверено вживую** (нужен реальный volume Coolify) — см. «Ждёт владельца» ниже: тестовая заявка на деплое + файл в `/app/order-export` через Coolify Terminal.
+
+### Ждёт владельца
+
+- **Задать `ORDER_EXPORT_DIR` в Coolify** (или оставить дефолт `/app/order-export`) и смонтировать под этим путём persistent volume, как уже сделано для `/app/media` — иначе папки не будет и каждая запись будет падать в лог (заявки при этом продолжат создаваться нормально).
+- После деплоя создать тестовую заявку и проверить через Coolify Terminal, что файл `<номер>.csv` появился в `ORDER_EXPORT_DIR` и его содержимое совпадает с тем, что отдаёт кнопка «CSV» в `/admin` для той же заявки.
+- Дать SFTP-доступ специалисту 1С к этому volume (вне кода, настройка Coolify/сервера).
+
 ## [2026-09-28в] Товары unisex — одновременно в For Her и в For Him
 
 > Решение клиентки, отменяет решение владельца от 15.09 «unisex только через фасет общего `/catalog`». Файлы: `src/lib/catalog/sections.ts`, `src/lib/catalog/queries.ts`, `tests/e2e/catalog-sections.e2e.spec.ts`, `docs/import-guide.md`, `docs/GOTCHAS.md`.

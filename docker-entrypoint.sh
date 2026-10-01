@@ -26,6 +26,13 @@ if [ "$(id -u)" = "0" ]; then
   mkdir -p /app/media
   chown -R nextjs:nodejs /app/media
 
+  # Тот же персистентный-volume-от-root случай, что у /app/media выше —
+  # Coolify монтирует ORDER_EXPORT_DIR (экспорт CSV для 1С, см.
+  # src/lib/orders/orderExport.ts) тем же способом и тем же root:root 755.
+  echo "[entrypoint] running as root — fixing ownership of ${ORDER_EXPORT_DIR:-/app/order-export}..."
+  mkdir -p "${ORDER_EXPORT_DIR:-/app/order-export}"
+  chown -R nextjs:nodejs "${ORDER_EXPORT_DIR:-/app/order-export}"
+
   echo "[entrypoint] dropping privileges to nextjs..."
   exec setpriv --reuid=nextjs --regid=nodejs --init-groups --no-new-privs \
     /app/docker-entrypoint.sh "$@"

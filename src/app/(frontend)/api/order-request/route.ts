@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { Order } from '@/payload-types'
 import { buildOrderCsv } from '@/lib/orders/csv'
 import { logNotifyReport, notifyOrder } from '@/lib/orders/notify'
+import { writeOrderCsvExport } from '@/lib/orders/orderExport'
 import { buildOrderPdf } from '@/lib/orders/pdf'
 import { claimPromoCode, resolveOrderPromoPhone, resolvePromoCode } from '@/lib/orders/promo'
 import { checkRateLimit, clientIp } from '@/lib/orders/rateLimit'
@@ -133,6 +134,14 @@ export async function POST(request: Request) {
     id: order.id,
     data: { exportCsv: csv },
   })
+
+  // Файл для 1С (SFTP забирает их специалист, сайт только пишет на диск).
+  // `after()` здесь не подходит: роут вызывают прямым POST() и в тестах, и
+  // (теоретически) не всегда внутри настоящего request scope Next —
+  // `writeOrderCsvExport` сама глотает любую ошибку (папка недоступна, нет
+  // места) и не бросает исключение наверх, поэтому простой await безопасен
+  // и не может уронить заявку.
+  await writeOrderCsvExport(order, csv)
 
   // Печатная версия заявки — вторым вложением к письму менеджеру. Падение
   // генерации (нет шрифтов, сломанный документ) не должно ронять ни заявку,
