@@ -6,6 +6,15 @@
 >
 > Архивы: `docs/archive/CHANGELOG-2026-08-phases-1-4.5.md` (фазы 1 → 4.5 + расширение плана).
 
+## [2026-10-02] Переименование раздела "Lip balm" → "Skin Care" (только текст)
+
+> Отображаемое название закрытого раздела `/catalog/lip-balm` заменено на "Skin Care" дословно одинаково на всех трёх локалях (прецедент — `CatalogNav.bodyCare`, тоже англ. на всех локалях). Файлы: `messages/ro.json`, `messages/ru.json`, `messages/en.json` (ключ `CatalogNav.lipBalm`).
+
+1. Правка только текста — `value: 'lipBalm'`, slug `/catalog/lip-balm`, поле `productCategory`, CSV-импорт не тронуты. `src/lib/catalog/productCategories.ts:20` (label для `/admin`-дропдауна) оставлен как есть — "Бальзам для губ", это отдельный источник, пользователь сайта его не видит.
+2. Один i18n-ключ покрывает все публичные места: левое меню каталога, H1 страницы раздела, хлебные крошки (включая JSON-LD), `<title>` страницы — проверено curl'ом на `/ro`, `/ru`, `/en` после `pnpm dev`.
+3. Регресс: `pnpm tsc --noEmit`, `pnpm lint`, `pnpm build` — чисто. Существующие e2e (`catalog-sections.e2e.spec.ts`) не завязаны на текст раздела, не затронуты.
+4. Ждёт владельца: нет.
+
 ## [2026-10-01] Экспорт CSV заявки на диск — интеграция с 1С по SFTP
 
 > Дополнительный, а не замещающий, канал: при создании заявки тот же CSV, что уже уходит письмом/Telegram и отдаётся кнопкой «CSV» в `/admin`, дополнительно пишется файлом на диск — их специалист 1С забирает файлы по SFTP, сайт только пишет. Файлы: `src/lib/orders/orderExport.ts` (новый), `src/app/(frontend)/api/order-request/route.ts`, `docker-entrypoint.sh`, `.env.example`, `tests/int/order-export.int.spec.ts` (новый), `tests/int/order-promo-burn.int.spec.ts` (мок `next/server`, см. п.2).
