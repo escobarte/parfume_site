@@ -6,6 +6,10 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost
   '',
 )
 
+/** Media-URL от Payload может быть относительным (локальный диск в dev) — абсолютный нужен там, где URL уходит за пределы Next (og-image fetch, JSON-LD). */
+export const absoluteMediaUrl = (url: string): string =>
+  url.startsWith('http') ? url : `${SITE_URL}${url}`
+
 export const SITE_NAME = 'MON FLACON'
 
 /** Фирменная EN-фраза — не переводится ни в одной локали (BRAND.md §7). */

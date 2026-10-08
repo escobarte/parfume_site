@@ -8,6 +8,7 @@ import { routing, type Locale } from '@/i18n/routing'
 import { getAllBrands, getBrandBySlug } from '@/lib/catalog/brands'
 import { countActiveFilters, loadCatalogParams } from '@/lib/catalog/searchParams'
 import { staticParamsOrEmpty } from '@/lib/catalog/staticParams'
+import { absoluteMediaUrl } from '@/lib/seo/config'
 import { buildMetadata } from '@/lib/seo/metadata'
 
 export async function generateStaticParams() {
@@ -28,12 +29,22 @@ export async function generateMetadata(props: {
   ])
   if (!brand) return {}
 
+  // Логотип бренда (Brands.logo) — отдельное от seo.image поле, которое
+  // buildMetadata сам не видит (его `image` — приоритетная OG-картинка,
+  // раньше сюда для бренда ничего не передавалось — баг, см. GOTCHAS.md).
+  // Решается через og-image-генератор (`logo=<абсолютный URL>`), не напрямую:
+  // логотипы квадратные/с прозрачным фоном, соцсети ждут плашку 1200×630.
+  const image = brand.logo
+    ? `/${locale}/og-image?title=${encodeURIComponent(brand.title)}&logo=${encodeURIComponent(absoluteMediaUrl(brand.logo.url))}`
+    : undefined
+
   return buildMetadata({
     locale,
     path: `/brands/${slug}`,
     title: brand.title,
     seo: brand.seo,
     description: brand.description,
+    image,
     noindex: countActiveFilters(query) > 0,
   })
 }
