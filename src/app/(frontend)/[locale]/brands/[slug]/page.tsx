@@ -34,8 +34,11 @@ export async function generateMetadata(props: {
   // раньше сюда для бренда ничего не передавалось — баг, см. GOTCHAS.md).
   // Решается через og-image-генератор (`logo=<абсолютный URL>`), не напрямую:
   // логотипы квадратные/с прозрачным фоном, соцсети ждут плашку 1200×630.
+  // `v` — версия превью от updatedAt самого файла логотипа: замена файла в
+  // ТОМ ЖЕ документе Media (тот же url/filename) иначе оставила бы соцсети
+  // с закэшированным превью от старого файла — сама ссылка не поменялась.
   const image = brand.logo
-    ? `/${locale}/og-image?title=${encodeURIComponent(brand.title)}&logo=${encodeURIComponent(absoluteMediaUrl(brand.logo.url))}`
+    ? `/${locale}/og-image?title=${encodeURIComponent(brand.title)}&logo=${encodeURIComponent(absoluteMediaUrl(brand.logo.url))}&v=${new Date(brand.logo.updatedAt).getTime()}`
     : undefined
 
   return buildMetadata({

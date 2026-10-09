@@ -15,6 +15,19 @@ export const SITE_NAME = 'MON FLACON'
 /** Фирменная EN-фраза — не переводится ни в одной локали (BRAND.md §7). */
 export const SITE_TAGLINE = 'Perfumes for everyone'
 
+/**
+ * Версия ВИЗУАЛА фирменного og-image fallback (`og-image/route.tsx`, ветка
+ * без логотипа/без параметров). URL fallback-превью одинаков у всех страниц
+ * без своей картинки (`/${locale}/og-image?title=...`) — без версии в адресе
+ * смена дизайна fallback (как при переходе со старого рисунка флакона на
+ * финальный знак бренда, 2026-10-08) не долетает до того, что уже закэшировано
+ * ПО ЭТОМУ ЖЕ URL на стороне соцсети (Facebook/Viber кэшируют превью по
+ * ссылке, не всегда уважая `Cache-Control` источника). Бампать эту строку
+ * при каждой визуальной правке самого fallback — тогда адрес меняется, и
+ * старый закэшированный превью больше не совпадает с новым.
+ */
+export const OG_FALLBACK_VERSION = '2026-10-08'
+
 /** `/ro/catalog`, `/ru/catalog`, `/en/catalog`, plus `x-default` → дефолтная локаль. */
 export function localizedPaths(path: string): Record<string, string> {
   const languages: Record<string, string> = {}

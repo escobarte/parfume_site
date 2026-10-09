@@ -1,52 +1,63 @@
 import { ImageResponse } from 'next/og'
 import type { NextRequest } from 'next/server'
+import sharp from 'sharp'
 import { SITE_NAME, SITE_TAGLINE } from '@/lib/seo/config'
 
-export const runtime = 'edge'
+// Без `export const runtime = 'edge'` (был здесь раньше) — sharp требует
+// нативный биндинг, недоступный в edge-рантайме (тот же класс ограничения,
+// что у `Buffer`/`node:crypto` там же, см. GOTCHAS.md). Node-рантайм для
+// `ImageResponse` в проекте уже используется — `src/app/icon.tsx`.
 
 // Значения — src/styles/tokens.css: --color-navy (строка 17), --color-cream
-// (строка 18). ImageResponse рендерит через Satori, не настоящий браузер —
-// CSS-переменные ему недоступны, поэтому цвета продублированы тут константами.
+// (строка 18), --color-surface-warm (строка 20, «тёплый нейтральный фон...
+// фото-зон» — тот же токен, что у фото-зоны карточки товара и у логотипа на
+// /brands, `bg-surface-warm` в `ProductCard.tsx`/`Gallery.tsx`/`BrandCard.tsx`).
+// ImageResponse рендерит через Satori, не настоящий браузер — CSS-переменные
+// ему недоступны, поэтому цвета продублированы тут константами.
 const NAVY = '#16293D'
 const CREAM = '#E8CFB0'
+const SURFACE_WARM = '#F6F0E4'
 
-/** ArrayBuffer → base64 без `Buffer` — в edge-рантайме его может не быть
- * (тот же класс ограничения, что у `node:crypto` в мидлвари, см. GOTCHAS.md). */
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer)
-  let binary = ''
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  return btoa(binary)
-}
-
-/**
- * Форматы, которые Satori (рендерер `next/og`) реально умеет декодировать
- * как растровую картинку. **WebP не входит** — проверено живьём: `<img>` с
- * `data:image/webp` не кидает ошибку синхронно (сам `ImageResponse()` строится
- * нормально), роут отдаёт 200, но стриминг тела падает уже ПОСЛЕ ответа
- * (`TypeError: u2 is not iterable` при попытке Next отдать тело клиенту) —
- * то есть `try/catch` вокруг конструктора `ImageResponse` эту ошибку
- * физически не ловит, она происходит позже. Конвертация в PNG недоступна:
- * edge-рантайм не тащит `sharp`. Поэтому формат проверяется ДО вызова
- * `ImageResponse` — неподдерживаемый откатывается на фирменный fallback,
- * как и сбой скачивания.
- */
-const SUPPORTED_LOGO_TYPES = ['image/png', 'image/jpeg', 'image/jpg']
+/** Входной файл логотипа крупнее этого — не читаем вовсе (память процесса, не только edge). */
+const MAX_LOGO_BYTES = 10 * 1024 * 1024
+/** Длинная сторона результата — логотип в OG-карточке крупнее реально не нужен. */
+const LOGO_MAX_DIMENSION = 1000
+/** Скачивание логотипа не должно вешать весь роут, если медиа-хост медленный/недоступен. */
+const LOGO_FETCH_TIMEOUT_MS = 8000
 
 /**
- * Логотип бренда скачивается и встраивается сам (data URI), а не отдаётся
- * Satori как удалённый URL напрямую — так сбой скачивания (битая ссылка,
- * временная недоступность медиа-хоста) ловится здесь и превью откатывается
- * на фирменный fallback вместо падения всего роута с 500.
+ * Логотип бренда может прийти в любом формате, который Payload принимает на
+ * загрузку (PNG/JPEG/WebP/GIF/AVIF/SVG) — Satori же умеет рендерить как
+ * `<img>` надёжно только PNG/JPEG (см. GOTCHAS.md: WebP не кидает ошибку
+ * при построении `ImageResponse`, роут отвечает 200, но падает уже при
+ * стриминге тела). Поэтому логотип не отдаётся Satori как есть — скачивается
+ * и прогоняется через `sharp` в PNG здесь, в Node-рантайме этого роута.
+ * Любой сбой (битая ссылка, таймаут, нечитаемый sharp'ом файл, файл больше
+ * `MAX_LOGO_BYTES`) — `null`, вызывающий код откатывается на фирменный
+ * fallback вместо падения всего превью.
  */
-async function fetchLogoDataUrl(url: string): Promise<string | null> {
+async function logoToPngDataUrl(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url)
+    const res = await fetch(url, { signal: AbortSignal.timeout(LOGO_FETCH_TIMEOUT_MS) })
     if (!res.ok) return null
-    const contentType = res.headers.get('content-type') || 'image/png'
-    if (!SUPPORTED_LOGO_TYPES.includes(contentType)) return null
-    const buffer = await res.arrayBuffer()
-    return `data:${contentType};base64,${arrayBufferToBase64(buffer)}`
+
+    const contentLength = Number(res.headers.get('content-length') ?? 0)
+    if (contentLength > MAX_LOGO_BYTES) return null
+
+    const input = Buffer.from(await res.arrayBuffer())
+    if (input.byteLength > MAX_LOGO_BYTES) return null
+
+    const png = await sharp(input, { failOn: 'none' })
+      .resize({
+        width: LOGO_MAX_DIMENSION,
+        height: LOGO_MAX_DIMENSION,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .png()
+      .toBuffer()
+
+    return `data:image/png;base64,${png.toString('base64')}`
   } catch {
     return null
   }
@@ -61,9 +72,12 @@ async function fetchLogoDataUrl(url: string): Promise<string | null> {
  * React-компоненты с Tailwind-классами в Satori не переносятся.
  *
  * Параметр `logo` (абсолютный URL) — превью страницы бренда с загруженным
- * логотипом: тот же navy-холст, вместо знака — сам логотип целиком, без
- * обрезки (`object-fit: contain`), с запасом по краям. Логотипы разной формы
- * (квадрат, круглая эмблема, вытянутый вордмарк) вписываются одинаково.
+ * логотипом: тёплый светлый холст (`--color-surface-warm`, тот же фон, что
+ * у фото товара), логотип по центру, целиком, без обрезки (`object-fit:
+ * contain`), с запасом не менее ~15% по каждому краю. Тёмные/контурные лого
+ * (как у настоящих fashion-брендов) тонут на navy — светлый фон читается
+ * одинаково для любого цвета лого, поэтому тут нет ни navy, ни подписи под
+ * знаком: сам логотип уже несёт название бренда.
  */
 export async function GET(request: NextRequest) {
   const title = request.nextUrl.searchParams.get('title')?.slice(0, 90) || SITE_NAME
@@ -72,7 +86,7 @@ export async function GET(request: NextRequest) {
   const subtitle = request.nextUrl.searchParams.get('subtitle')?.slice(0, 60) || SITE_TAGLINE
   const logoParam = request.nextUrl.searchParams.get('logo')
 
-  const logoDataUrl = logoParam ? await fetchLogoDataUrl(logoParam) : null
+  const logoDataUrl = logoParam ? await logoToPngDataUrl(logoParam) : null
 
   if (logoDataUrl) {
     return new ImageResponse(
@@ -84,16 +98,20 @@ export async function GET(request: NextRequest) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: NAVY,
-            padding: 100,
+            backgroundColor: SURFACE_WARM,
+            // 190/1200 = 15.8% по горизонтали, 95/630 = 15.1% по вертикали.
+            paddingLeft: 190,
+            paddingRight: 190,
+            paddingTop: 95,
+            paddingBottom: 95,
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- next/image недоступен внутри next/og ImageResponse (рендерит Satori, не браузер) */}
           <img
             src={logoDataUrl}
             alt={title}
-            width={1000}
-            height={430}
+            width={820}
+            height={440}
             style={{ width: '100%', height: '100%', objectFit: 'contain' }}
           />
         </div>

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import type { Locale } from '@/i18n/routing'
-import { localizedPaths, SITE_NAME } from './config'
+import { localizedPaths, OG_FALLBACK_VERSION, SITE_NAME } from './config'
 
 export type SeoFields = {
   title?: string | null
@@ -41,7 +41,11 @@ export function buildMetadata({
   // индексируемых страниц — noindex-экраны (корзина/поиск/заказ) делиться
   // в соцсетях не предполагаются, лишний рендер ни к чему.
   const ogImage =
-    image ?? seo?.image?.url ?? (noindex ? undefined : `/${locale}/og-image?title=${encodeURIComponent(metaTitle)}`)
+    image ??
+    seo?.image?.url ??
+    (noindex
+      ? undefined
+      : `/${locale}/og-image?title=${encodeURIComponent(metaTitle)}&v=${OG_FALLBACK_VERSION}`)
 
   return {
     title: metaTitle,

@@ -12,7 +12,7 @@ export type BrandView = {
   title: string
   description: string | null
   country: string | null
-  logo: { url: string; alt: string } | null
+  logo: { url: string; alt: string; updatedAt: string } | null
   seo: { title?: string | null; description?: string | null; image?: { url: string } | null } | null
 }
 
@@ -31,7 +31,12 @@ function toView(doc: Brand): BrandView {
     title: doc.title || doc.slug,
     description: doc.description ?? null,
     country: doc.country ?? null,
-    logo: logo?.url ? { url: logo.url, alt: logo.alt ?? doc.title } : null,
+    // `updatedAt` — версия для кэш-бастинга og-превью (см. og-image route):
+    // замена файла логотипа в ТОМ ЖЕ документе Media меняет updatedAt, даже
+    // если имя файла (а значит и url) осталось прежним.
+    logo: logo?.url
+      ? { url: logo.url, alt: logo.alt ?? doc.title, updatedAt: logo.updatedAt }
+      : null,
     seo: doc.seo
       ? {
           title: doc.seo.title,
