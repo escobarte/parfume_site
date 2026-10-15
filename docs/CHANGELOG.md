@@ -6,6 +6,13 @@
 >
 > Архивы: `docs/archive/CHANGELOG-2026-08-phases-1-4.5.md` (фазы 1 → 4.5 + расширение плана).
 
+## [2026-10-10] Документация для передачи проекта — `docs/HANDOVER/`
+
+- Сделано: комплект документации для нового разработчика и администратора, сверенный с кодом. Код, схема, конфиги, миграции и `docs/STATE.md` не менялись.
+- Файлы: `docs/HANDOVER/00-README.md` (обзор, словарь), `01-architecture.md`, `02-request-flow.md`, `03-data-model.md`, `04-order-flow.md`, `05-catalog-and-content.md`, `06-import.md`, `07-admin-guide.md`, `08-infrastructure.md`, `09-operations.md`, `10-tests-and-tools.md`.
+- Зависимости: нет.
+- Заметки: рабочие заметки к передаче ведутся вне репозитория.
+
 ## [2026-10-09] OG-превью брендов в соцсетях — логотип вместо общей заглушки
 
 > Баг: ссылка на страницу бренда в соцсетях (Viber/Facebook) всегда показывала общую заглушку со старым контуром флакона, даже у брендов с загруженным логотипом — `generateMetadata` страницы бренда никогда не передавал `brand.logo` в `buildMetadata`. Две сессии подряд: сначала сам факт передачи логотипа + финальный знак `BrandMark` в заглушке, затем доработка по контрасту/формату/кэшу. Файлы: `src/app/(frontend)/[locale]/og-image/route.tsx`, `src/app/(frontend)/[locale]/brands/[slug]/page.tsx`, `src/lib/catalog/brands.ts`, `src/lib/seo/config.ts`, `src/lib/seo/metadata.ts`, `docs/GOTCHAS.md`.
