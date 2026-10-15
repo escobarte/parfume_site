@@ -1,7 +1,14 @@
-/** GA4 Measurement ID — плейсхолдер до боевого домена (PLAN.md §9.5, .env.example). */
+/** GA4 Measurement ID — боевой, задаётся через .env/Coolify (NEXT_PUBLIC_GA_ID). */
 export const GA_ID = process.env.NEXT_PUBLIC_GA_ID
+
+/**
+ * Только прод: `pnpm dev` всегда `NODE_ENV=development`, `pnpm build`+`pnpm start`
+ * (и Coolify) — `production`. В dev баннер согласия и gtag.js не показываются
+ * вовсе, даже если локально стоит боевой ID — без этого каждый `pnpm dev`
+ * слал бы реальные события в GA4-аккаунт клиентки.
+ */
 export const isGaConfigured = (id: string | undefined = GA_ID): boolean =>
-  Boolean(id && !id.startsWith('CHANGEME'))
+  process.env.NODE_ENV === 'production' && Boolean(id && !id.startsWith('CHANGEME'))
 
 export type GaItem = {
   item_id: string
