@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from 'react'
 import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
 import { getConsent, onConsentChange, setConsent } from '@/lib/analytics/consent'
 import { isGaConfigured } from '@/lib/analytics/gtag'
 
@@ -30,7 +31,15 @@ export function ConsentBanner() {
   return (
     <div className="bg-navy border-line-on-dark fixed inset-x-0 bottom-0 z-50 border-t px-5 py-4 md:px-8">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-4">
-        <p className="text-ink-on-dark-muted text-body-sm max-w-140">{t('text')}</p>
+        <p className="text-ink-on-dark-muted text-body-sm max-w-140">
+          {t.rich('text', {
+            link: (chunks) => (
+              <Link href="/protection" className="text-cream underline underline-offset-4">
+                {chunks}
+              </Link>
+            ),
+          })}
+        </p>
         <div className="flex shrink-0 gap-3">
           <button
             type="button"

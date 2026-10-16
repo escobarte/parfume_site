@@ -1,6 +1,6 @@
 {
   "ConsentBanner": {
-    "text": "We use analytics to understand which scents visitors are interested in. Personal data is never shared with third parties.",
+    "text": "We use cookies and Google Analytics to analyze traffic and improve the site. Data is used for statistics only. You can accept or decline. Learn more in our <link>Privacy Policy</link>.",
     "accept": "Accept",
     "decline": "Decline"
   },
