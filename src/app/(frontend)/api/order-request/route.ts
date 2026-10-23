@@ -1,10 +1,11 @@
 import { after, NextResponse } from 'next/server'
-import type { Order } from '@/payload-types'
+import type { GiftItem, Order, Product } from '@/payload-types'
 import { buildOrderCsv } from '@/lib/orders/csv'
 import { logNotifyReport, notifyOrder } from '@/lib/orders/notify'
 import { writeOrderCsvExport } from '@/lib/orders/orderExport'
 import { buildOrderPdf } from '@/lib/orders/pdf'
 import { claimPromoCode, resolveOrderPromoPhone, resolvePromoCode } from '@/lib/orders/promo'
+import { lineMatchesPromoRule, promoConditionMet, type PromoRule } from '@/lib/orders/promoRule'
 import { checkRateLimit, clientIp } from '@/lib/orders/rateLimit'
 import { orderRequestSchema, type OrderRequest } from '@/lib/orders/schema'
 import { getPayloadClient } from '@/lib/payload'
@@ -48,8 +49,10 @@ export async function POST(request: Request) {
 
   // Цены и названия берём из БД, а не из тела запроса: клиент может прислать
   // что угодно, а в заявке должен лежать честный снапшот каталога.
-  // Промокод резолвится ДО сборки позиций: его процент нужен, чтобы
-  // посчитать каждую позицию по правилу «выигрывает больший процент».
+  // Промокод резолвится ДО сборки позиций: его процент (и правило условия)
+  // нужны, чтобы посчитать каждую позицию по правилу «выигрывает больший
+  // процент» — но сначала позиции нужно резолвнуть из БД (resolveOrderLines
+  // ниже), иначе объём для проверки условия взялся бы с клиента.
   let promo: Awaited<ReturnType<typeof resolvePromoCode>> | null = null
   if (data.promoCode) {
     promo = await resolvePromoCode(payload, data.promoCode, data.promoPhone)
@@ -61,20 +64,44 @@ export async function POST(request: Request) {
     }
   }
 
-  const { items, promoSaving, promoWonAnywhere } = await buildItems(
-    payload,
-    data,
-    promo?.ok ? promo.percent : 0,
-  )
-  if (!items.length) {
+  const resolvedLines = await resolveOrderLines(payload, data)
+  if (!resolvedLines.length) {
     return NextResponse.json({ ok: false, error: 'items_unavailable' }, { status: 400 })
   }
+
+  // Авторитетная проверка условия — по позициям, пересчитанным из БД (объём
+  // варианта, не то, что прислал клиент). Условие не выполнено → заявка не
+  // создаётся, корзина клиента не очищается (ответ `promo_invalid` до этого
+  // уже обрабатывается тем же путём на фронте — см. OrderForm.tsx).
+  const rule: PromoRule | null = promo?.ok ? promo : null
+  if (
+    rule &&
+    !promoConditionMet(
+      resolvedLines.map((line) => ({
+        kind: line.kind,
+        volume: line.kind === 'product' ? line.variant.volume : null,
+        qty: line.qty,
+      })),
+      rule,
+    )
+  ) {
+    return NextResponse.json(
+      { ok: false, error: 'promo_invalid', promoError: 'min_quantity' },
+      { status: 400 },
+    )
+  }
+
+  const { items, promoSaving, promoWonAnywhere } = priceOrderLines(
+    resolvedLines,
+    promo?.ok ? promo.percent : 0,
+    rule,
+  )
 
   const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0)
 
   // `subtotal` уже со всеми скидками: каждая позиция посчитана по правилу
-  // «выигрывает больший процент» внутри buildItems. Отдельного вычитания на
-  // уровне заказа больше нет — до 2026-09-12 здесь был один агрегат на всю
+  // «выигрывает больший процент» внутри priceOrderLines. Отдельного вычитания
+  // на уровне заказа больше нет — до 2026-09-12 здесь был один агрегат на всю
   // заявку, теперь скидка попозиционная.
   const total = subtotal
 
@@ -169,22 +196,32 @@ export async function POST(request: Request) {
 
 type PayloadClient = Awaited<ReturnType<typeof getPayloadClient>>
 
+type ResolvedGiftLine = {
+  kind: 'gift'
+  qty: number
+  giftItem: GiftItem
+  variant: NonNullable<GiftItem['variants']>[number]
+}
+
+type ResolvedProductLine = {
+  kind: 'product'
+  qty: number
+  product: Product
+  variant: NonNullable<Product['variants']>[number]
+}
+
+type ResolvedLine = ResolvedGiftLine | ResolvedProductLine
+
 /**
- * Сборка позиций заявки с пересчётом цен по данным БД.
- *
- * С 2026-09-12 здесь же применяется правило совмещения скидок: на КАЖДОЙ
- * позиции выигрывает больший процент — собственная уценка товара или
- * промокод (`priceLine`). Раньше промокод вычитался одним агрегатом из всей
- * суммы, теперь у каждой позиции свой исход, и `lineTotal` уже со скидкой.
- *
- * Возвращает заодно две величины, которые нужны вызывающему: фактическую
- * выгоду от кода (`promoSaving`) и признак «код выиграл хоть где-то»
- * (`promoWonAnywhere`) — от второго зависит, сгорает ли одноразовый код.
+ * Резолвит каждую позицию заявки в БД — товар/подарочный товар, его вариант,
+ * объём. Раньше это было частью `buildItems` и шло вперемешку с расчётом
+ * цены; разделено (2026-10-23), потому что условие промокода (минимум штук,
+ * фильтр по объёму) нужно проверить ПОСЛЕ резолва (объём берётся из БД,
+ * не от клиента), но ДО того, как считать скидку — иначе решение «применять
+ * ли код вообще» принималось бы по неполной картине.
  */
-async function buildItems(payload: PayloadClient, data: OrderRequest, promoPercent: number) {
-  const items: NonNullable<Order['items']> = []
-  let promoSaving = 0
-  let promoWonAnywhere = false
+async function resolveOrderLines(payload: PayloadClient, data: OrderRequest): Promise<ResolvedLine[]> {
+  const lines: ResolvedLine[] = []
 
   for (const requested of data.items) {
     if (requested.kind === 'gift') {
@@ -206,18 +243,7 @@ async function buildItems(payload: PayloadClient, data: OrderRequest, promoPerce
       if (!giftItem || giftItem.isActive === false || !variant || variant.isActive === false) {
         continue
       }
-
-      const qty = requested.qty
-      // Промокод на подарочные сертификаты/Gift box не действует
-      // (фаза 11.2, задача 7) — правило к ним просто не применяется.
-      items.push({
-        title: giftItem.title,
-        brandTitle: '',
-        sku: variant.sku,
-        price: variant.amount,
-        qty,
-        lineTotal: variant.amount * qty,
-      })
+      lines.push({ kind: 'gift', qty: requested.qty, giftItem, variant })
       continue
     }
 
@@ -234,10 +260,54 @@ async function buildItems(payload: PayloadClient, data: OrderRequest, promoPerce
     // Товар пропал или вариант отключили, пока корзина лежала в localStorage.
     if (!product || !variant || variant.isActive === false) continue
 
-    const brand = typeof product.brand === 'object' && product.brand ? product.brand.title : ''
-    const qty = requested.qty
+    lines.push({ kind: 'product', qty: requested.qty, product, variant })
+  }
 
-    const pricing = priceLine(variant.price, variant.oldPrice, promoPercent)
+  return lines
+}
+
+/**
+ * Считает позиции заявки по уже резолвленным из БД строкам.
+ *
+ * С 2026-09-12 здесь же применяется правило совмещения скидок: на КАЖДОЙ
+ * позиции выигрывает больший процент — собственная уценка товара или
+ * промокод (`priceLine`). Раньше промокод вычитался одним агрегатом из всей
+ * суммы, теперь у каждой позиции свой исход, и `lineTotal` уже со скидкой.
+ *
+ * С 2026-10-23 промокод с условием по объёму/типу (`rule`) побеждает ТОЛЬКО
+ * на подходящих позициях (`lineMatchesPromoRule`) — на неподходящих (нет
+ * объёма или вне фильтра кода) код не участвует вовсе, они идут по своей
+ * цене/скидке товара, как если бы кода не было.
+ *
+ * Возвращает заодно две величины, которые нужны вызывающему: фактическую
+ * выгоду от кода (`promoSaving`) и признак «код выиграл хоть где-то»
+ * (`promoWonAnywhere`) — от второго зависит, сгорает ли одноразовый код.
+ */
+function priceOrderLines(lines: ResolvedLine[], promoPercent: number, rule: PromoRule | null) {
+  const items: NonNullable<Order['items']> = []
+  let promoSaving = 0
+  let promoWonAnywhere = false
+
+  for (const line of lines) {
+    if (line.kind === 'gift') {
+      // Промокод на подарочные сертификаты/Gift box не действует
+      // (фаза 11.2, задача 7) — правило к ним просто не применяется.
+      items.push({
+        title: line.giftItem.title,
+        brandTitle: '',
+        sku: line.variant.sku,
+        price: line.variant.amount,
+        qty: line.qty,
+        lineTotal: line.variant.amount * line.qty,
+      })
+      continue
+    }
+
+    const { product, variant, qty } = line
+    const brand = typeof product.brand === 'object' && product.brand ? product.brand.title : ''
+    const eligible = rule ? lineMatchesPromoRule({ kind: 'product', volume: variant.volume, qty }, rule) : true
+
+    const pricing = priceLine(variant.price, variant.oldPrice, eligible ? promoPercent : 0)
     if (pricing.source === 'promo') {
       promoWonAnywhere = true
       // Выгода именно от кода: разница с тем, что клиент заплатил бы без него.

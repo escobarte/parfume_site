@@ -15,6 +15,7 @@ import {
   type PaymentMethod,
 } from '@/lib/orders/schema'
 import { usePromo } from '@/lib/orders/promoStore'
+import { promoConditionMet } from '@/lib/orders/promoRule'
 import { PhoneInput } from '@/components/forms/PhoneInput'
 import { PHONE_PREFIX, toLocalPhoneDigits } from '@/lib/orders/phone'
 
@@ -39,9 +40,20 @@ export function OrderForm() {
   const router = useRouter()
   const items = useCart((state) => state.items)
   const promoCode = usePromo((state) => state.code)
+  const promoRule = usePromo((state) => state.rule)
   // Телефон сверки кода — отдельно от телефона доставки в полях формы.
   const promoPhone = usePromo((state) => state.phone)
   const clearPromo = usePromo((state) => state.clear)
+
+  // Условие кода (2026-10-23) проверяется тем же общим кодом, что в корзине
+  // (CartView.tsx) и на сервере — заявка отправляет promoCode ТОЛЬКО когда
+  // условие по ТЕКУЩЕЙ корзине выполнено. Иначе отправка кода, который
+  // сервер всё равно отклонит (`min_quantity`), только добавила бы лишний
+  // шаг ошибки там, где CartView уже честно показала отсутствие скидки.
+  const promoConditionOk = promoConditionMet(
+    items.map((item) => ({ kind: item.kind, volume: item.volume, qty: item.qty })),
+    promoRule,
+  )
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -68,7 +80,7 @@ export function OrderForm() {
    * попадают в общий текст, а не в пустоту.
    */
   const promoReason = (reason?: string) => {
-    const known = ['not_found', 'inactive', 'used', 'expired', 'phone_mismatch']
+    const known = ['not_found', 'inactive', 'used', 'expired', 'phone_mismatch', 'min_quantity']
     return known.includes(reason ?? '') ? tCart(`promoError_${reason}`) : t('errorPromoInvalid')
   }
 
@@ -104,7 +116,7 @@ export function OrderForm() {
           locale,
           source: 'cart',
           company,
-          promoCode: promoCode ?? undefined,
+          promoCode: promoConditionOk ? promoCode ?? undefined : undefined,
           promoPhone: promoPhone ?? undefined,
           items: items.map((item) => ({
             kind: item.kind ?? 'product',

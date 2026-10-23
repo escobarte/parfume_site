@@ -11,6 +11,7 @@ import { useCart } from '@/lib/cart/store'
 import { formatPrice, formatVolume } from '@/lib/format'
 import { priceLine } from '@/lib/pricing'
 import { usePromo } from '@/lib/orders/promoStore'
+import { lineMatchesPromoRule, matchingQuantity, promoConditionMet } from '@/lib/orders/promoRule'
 import { useHasHydrated } from '@/lib/useHasHydrated'
 import { OrderForm } from './OrderForm'
 import { PromoCodeInput } from './PromoCodeInput'
@@ -28,6 +29,7 @@ export function CartView() {
   const revalidated = useRef(false)
   const promoCode = usePromo((state) => state.code)
   const promoPercent = usePromo((state) => state.percent)
+  const promoRule = usePromo((state) => state.rule)
 
   /** Ключи позиций, у которых цена изменилась с момента добавления. */
   const [repriced, setRepriced] = useState<string[]>([])
@@ -84,20 +86,36 @@ export function CartView() {
     void run()
   }, [hydrated, sync])
 
+  // Условие промокода (2026-10-23, акция «от 3 отливантов −20%») — считается
+  // по позициям КОРЗИНЫ тем же общим кодом, что и на сервере при оформлении
+  // (`src/lib/orders/promoRule.ts`). У кода без условия (`NO_PROMO_RULE`)
+  // условие всегда выполнено — старые коды ведут себя ровно как раньше.
+  const eligibilityLines = useMemo(
+    () => items.map((item) => ({ kind: item.kind, volume: item.volume, qty: item.qty })),
+    [items],
+  )
+  const promoConditionOk = promoConditionMet(eligibilityLines, promoRule)
+  const promoNeeded = promoRule.minQuantity
+    ? Math.max(0, promoRule.minQuantity - matchingQuantity(eligibilityLines, promoRule))
+    : 0
+
   // Правило совмещения скидок (2026-09-12): выигрывает БОЛЬШИЙ процент, и
   // считается он попозиционно — см. priceLine(). Промокод не действует на
-  // подарочные позиции (фаза 11.2, задача 7), им передаём 0.
+  // подарочные позиции и на позиции вне фильтра кода (объём/тип), а также
+  // вовсе не участвует, пока условие по количеству не выполнено — таким
+  // позициям передаём 0.
   const priced = useMemo(
     () =>
-      items.map((item) => ({
-        item,
-        pricing: priceLine(
-          item.price,
-          item.oldPrice,
-          (item.kind ?? 'product') === 'gift' ? 0 : promoPercent,
-        ),
-      })),
-    [items, promoPercent],
+      items.map((item) => {
+        const eligible =
+          promoConditionOk &&
+          lineMatchesPromoRule({ kind: item.kind, volume: item.volume, qty: item.qty }, promoRule)
+        return {
+          item,
+          pricing: priceLine(item.price, item.oldPrice, eligible ? promoPercent : 0),
+        }
+      }),
+    [items, promoPercent, promoRule, promoConditionOk],
   )
 
   const totalWithDiscount = priced.reduce((sum, row) => sum + row.pricing.unitPrice * row.item.qty, 0)
@@ -110,8 +128,10 @@ export function CartView() {
         : sum,
     0,
   )
-  // Код введён, но ни на одной позиции не дал выгоды — молчать нельзя.
-  const promoUseless = Boolean(promoCode) && promoSaving <= 0
+  // Код введён, условие выполнено, но ни на одной позиции не дал выгоды —
+  // молчать нельзя. Если условие НЕ выполнено, причина другая (показывается
+  // подсказкой «добавьте ещё N» ниже) — тут эта ветка не срабатывает.
+  const promoUseless = Boolean(promoCode) && promoConditionOk && promoSaving <= 0
 
   // GA4 begin_checkout (PLAN.md §7.5) — один раз за визит на непустую
   // корзину, после гидрации (до неё `items` не отражает localStorage).
@@ -239,7 +259,18 @@ export function CartView() {
           <PromoCodeInput />
         </div>
 
-        {promoCode && !promoUseless && (
+        {/* Код введён, но условие (минимум подходящих штук) пока не выполнено —
+            показываем, сколько ещё добрать, вместо строки скидки с нулём. */}
+        {promoCode && !promoConditionOk && (
+          <p className="border-line text-ink-muted text-body-sm mt-3 border-t pt-3">
+            {t(`promoConditionHint_${promoRule.appliesTo}`, {
+              count: promoNeeded,
+              percent: promoPercent ?? 0,
+            })}
+          </p>
+        )}
+
+        {promoCode && promoConditionOk && !promoUseless && (
           <div className="mt-3 flex items-baseline justify-between">
             <span className="text-ink-muted text-eyebrow tracking-label uppercase">
               {t('promoSaving', { code: promoCode })}
@@ -248,8 +279,8 @@ export function CartView() {
           </div>
         )}
 
-        {/* Промокод введён, но проиграл собственным скидкам на всех позициях.
-            Строка с нулём выглядела бы как ошибка — говорим прямо. */}
+        {/* Условие выполнено, но код проиграл собственным скидкам на всех
+            позициях. Строка с нулём выглядела бы как ошибка — говорим прямо. */}
         {promoUseless && (
           <p className="border-line text-ink-muted text-body-sm mt-3 border-t pt-3">
             {t('promoNoBenefit', { code: promoCode ?? '' })}

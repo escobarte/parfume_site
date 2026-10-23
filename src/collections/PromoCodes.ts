@@ -1,5 +1,13 @@
-import type { CollectionConfig, TextFieldValidation, DateFieldValidation } from 'payload'
+import type {
+  CollectionConfig,
+  TextFieldValidation,
+  DateFieldValidation,
+  NumberFieldValidation,
+  SelectFieldValidation,
+} from 'payload'
 import { adminOnly, staffOnly } from '@/access/roles'
+import { PRODUCT_VOLUMES } from '@/lib/catalog/volumes'
+import { PROMO_APPLIES_TO_VALUES, type PromoAppliesTo } from '@/lib/orders/promoRule'
 
 /**
  * Промокоды. Скидка только процентная (без фикс. суммы). С 2026-09-11 у кода
@@ -51,6 +59,26 @@ const expiresRequiredForPublic: DateFieldValidation = (value, { data }) => {
   return value ? true : 'Действует до: обязательно для публичного кода — он ничем другим не ограничен'
 }
 
+const PROMO_APPLIES_TO_LABELS: Record<PromoAppliesTo, string> = {
+  all: 'Любые товары',
+  decants: 'Только отливанты (3/5/10 мл)',
+  volumes: 'Выбранные объёмы',
+}
+
+/** Целое ≥1 — пусто (не 0) значит «условия по количеству нет». */
+const minQuantityValidate: NumberFieldValidation = (value) => {
+  if (value === undefined || value === null) return true
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1
+    ? true
+    : 'Минимум штук: целое число не меньше 1 (пусто — условия нет).'
+}
+
+const volumesRequiredForVolumesMode: SelectFieldValidation = (value, { data }) => {
+  if ((data as { appliesTo?: string } | undefined)?.appliesTo !== 'volumes') return true
+  const list = Array.isArray(value) ? value : []
+  return list.length > 0 ? true : 'Объёмы: обязательно для режима «Выбранные объёмы».'
+}
+
 export const PromoCodes: CollectionConfig = {
   slug: 'promo-codes',
   labels: { singular: 'Промокод', plural: 'Промокоды' },
@@ -80,6 +108,9 @@ export const PromoCodes: CollectionConfig = {
           data.customerName = null
         }
         if (data?.codeType === 'personal') data.expiresAt = null
+        // Выбрали 'all'/'decants' — список объёмов от прежнего 'volumes' не
+        // должен залипать в базе (условие по нему больше не проверяется).
+        if (data?.appliesTo !== 'volumes') data.volumes = []
         return data
       },
     ],
@@ -116,6 +147,46 @@ export const PromoCodes: CollectionConfig = {
       min: 1,
       max: 100,
       admin: { description: 'Скидка, % от суммы заказа без учёта подарочных товаров.' },
+    },
+    {
+      // Условия применения (акция «от 3 отливантов −20%», 2026-10-23) — чтобы
+      // такие акции заводились без разработчика. Все поля необязательные по
+      // смыслу: у старых кодов `appliesTo` по умолчанию 'all', `minQuantity`
+      // пуст — ведут себя ровно как раньше. Общая логика «подходит ли
+      // позиция» / «выполнено ли условие» — src/lib/orders/promoRule.ts,
+      // используется и здесь (косвенно, через тот же модуль), и клиентом,
+      // и сервером при оформлении заявки.
+      name: 'minQuantity',
+      label: 'Минимум штук для скидки',
+      type: 'number',
+      validate: minQuantityValidate,
+      admin: {
+        description:
+          'Сколько подходящих позиций должно быть в корзине, чтобы скидка сработала. Пусто — условия нет.',
+      },
+    },
+    {
+      name: 'appliesTo',
+      label: 'К каким позициям применяется',
+      type: 'select',
+      defaultValue: 'all',
+      options: PROMO_APPLIES_TO_VALUES.map((value) => ({ label: PROMO_APPLIES_TO_LABELS[value], value })),
+      admin: {
+        description:
+          'Какие позиции считаются «подходящими» для условия и получают скидку. «Любые товары» — как раньше.',
+      },
+    },
+    {
+      name: 'volumes',
+      label: 'Объёмы',
+      type: 'select',
+      hasMany: true,
+      options: [...PRODUCT_VOLUMES],
+      validate: volumesRequiredForVolumesMode,
+      admin: {
+        condition: (data) => data?.appliesTo === 'volumes',
+        description: 'Обязательно для режима «Выбранные объёмы» — сами значения объёма.',
+      },
     },
     {
       name: 'isActive',

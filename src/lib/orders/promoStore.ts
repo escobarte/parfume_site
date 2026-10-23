@@ -1,6 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
+import { NO_PROMO_RULE, type PromoRule } from '@/lib/orders/promoRule'
 
 /**
  * Применённый промокод (фаза 11.2, задача 7) — отдельный маленький стор,
@@ -14,6 +15,12 @@ type PromoState = {
   code: string | null
   percent: number | null
   /**
+   * Условие применения кода (2026-10-23) — `/api/promo-code-check` отдаёт
+   * его вместе с процентом. `NO_PROMO_RULE` у старых кодов без условий, не
+   * `null`, — чтобы вызывающему не нужно было помнить два разных «пусто».
+   */
+  rule: PromoRule
+  /**
    * Телефон, которым код подтвердили на шаге сверки в корзине (2026-09-11).
    * Уезжает в заявку ОТДЕЛЬНО от телефона доставки: код выдан на конкретный
    * номер, а заказ человек может оформлять на другой (например, телефон
@@ -25,14 +32,15 @@ type PromoState = {
    * шага сверки.
    */
   phone: string | null
-  apply: (code: string, percent: number, phone?: string | null) => void
+  apply: (code: string, percent: number, rule: PromoRule, phone?: string | null) => void
   clear: () => void
 }
 
 export const usePromo = create<PromoState>()((set) => ({
   code: null,
   percent: null,
+  rule: NO_PROMO_RULE,
   phone: null,
-  apply: (code, percent, phone = null) => set({ code, percent, phone }),
-  clear: () => set({ code: null, percent: null, phone: null }),
+  apply: (code, percent, rule, phone = null) => set({ code, percent, rule, phone }),
+  clear: () => set({ code: null, percent: null, rule: NO_PROMO_RULE, phone: null }),
 }))

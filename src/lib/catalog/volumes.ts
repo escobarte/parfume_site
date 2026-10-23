@@ -15,3 +15,11 @@ export const isProductVolume = (value: unknown): value is ProductVolume =>
 
 /** Индекс в каноническом порядке — для сортировки; -1 у значения вне списка. */
 export const volumeOrder = (value: string): number => PRODUCT_VOLUMES.indexOf(value as ProductVolume)
+
+/**
+ * «Отливант» — единственный источник истины для условий промокода
+ * (`src/lib/orders/promoRule.ts`) и для любого будущего места, которому
+ * понадобится то же понятие. Отдельного boolean на товаре/варианте нет —
+ * принадлежность к отливантам определяется только объёмом.
+ */
+export const DECANT_VOLUMES = ['3ml', '5ml', '10ml'] as const satisfies readonly ProductVolume[]

@@ -27,6 +27,7 @@ import * as migration_20260914_132807_hero_banners_carousel from './20260914_132
 import * as migration_20260914_151857_hero_banners_responsive_images from './20260914_151857_hero_banners_responsive_images';
 import * as migration_20260915_140321_lip_balm_product_category from './20260915_140321_lip_balm_product_category';
 import * as migration_20260919_081038_promo_popup_images_and_texts from './20260919_081038_promo_popup_images_and_texts';
+import * as migration_20261023_093234_promo_code_conditions from './20261023_093234_promo_code_conditions';
 
 export const migrations = [
   {
@@ -172,6 +173,11 @@ export const migrations = [
   {
     up: migration_20260919_081038_promo_popup_images_and_texts.up,
     down: migration_20260919_081038_promo_popup_images_and_texts.down,
-    name: '20260919_081038_promo_popup_images_and_texts'
+    name: '20260919_081038_promo_popup_images_and_texts',
+  },
+  {
+    up: migration_20261023_093234_promo_code_conditions.up,
+    down: migration_20261023_093234_promo_code_conditions.down,
+    name: '20261023_093234_promo_code_conditions'
   },
 ];

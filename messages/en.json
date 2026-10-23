@@ -188,6 +188,9 @@
     "itemsRemoved": "Some items are no longer available — they were removed from the cart.",
     "promoSaving": "Promo code {code} discount",
     "promoNoBenefit": "Your items already have a bigger discount than code {code}, so it was not applied. The code stays yours.",
+    "promoConditionHint_all": "{count, plural, one {Add # more item} other {Add # more items}} to unlock the {percent}% code discount.",
+    "promoConditionHint_decants": "{count, plural, one {Add # more decant} other {Add # more decants}} to unlock the {percent}% code discount.",
+    "promoConditionHint_volumes": "{count, plural, one {Add # more item of the selected volume} other {Add # more items of the selected volume}} to unlock the {percent}% code discount.",
     "promoConfirmPhoneTitle": "Confirm the number the code was issued to",
     "promoConfirm": "Confirm",
     "promoConfirming": "Checking…",
@@ -198,6 +201,7 @@
     "promoError_inactive": "Code inactive",
     "promoError_used": "Code already used",
     "promoError_expired": "Code has expired",
+    "promoError_min_quantity": "The code's minimum quantity condition is no longer met. Check your cart and try again.",
     "promoError_generic": "Could not check the code, try again",
     "promoPhoneLabel": "Phone the code was issued to"
   },

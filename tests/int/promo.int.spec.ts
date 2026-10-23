@@ -371,6 +371,41 @@ describe('телефон доставки ≠ телефон сверки код
   })
 })
 
+describe('resolvePromoCode — правило условия (2026-10-23)', () => {
+  it('код без условий отдаёт правило "без условий" (appliesTo всегда all в БД у старых кодов)', async () => {
+    const { payload } = fakePayload([publicCode()])
+    await expect(resolvePromoCode(payload, 'AUTUMN20')).resolves.toMatchObject({
+      ok: true,
+      minQuantity: null,
+      appliesTo: 'all',
+      volumes: [],
+    })
+  })
+
+  it('условие из БД попадает в результат — используется превью и оформлением', async () => {
+    const { payload } = fakePayload([
+      publicCode({ minQuantity: 3, appliesTo: 'decants' }),
+    ])
+    await expect(resolvePromoCode(payload, 'AUTUMN20')).resolves.toMatchObject({
+      ok: true,
+      minQuantity: 3,
+      appliesTo: 'decants',
+      volumes: [],
+    })
+  })
+
+  it('режим "volumes" отдаёт сам список объёмов', async () => {
+    const { payload } = fakePayload([
+      publicCode({ minQuantity: 2, appliesTo: 'volumes', volumes: ['10ml', 'Travel Size'] }),
+    ])
+    await expect(resolvePromoCode(payload, 'AUTUMN20')).resolves.toMatchObject({
+      ok: true,
+      appliesTo: 'volumes',
+      volumes: ['10ml', 'Travel Size'],
+    })
+  })
+})
+
 describe('генерация персонального кода', () => {
   it('формат WELCOME-XXXXXX, 6 символов из безопасного алфавита', async () => {
     const { payload } = fakePayload([])

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { PhoneInput } from '@/components/forms/PhoneInput'
 import { PHONE_PREFIX, toLocalPhoneDigits } from '@/lib/orders/phone'
 import { usePromo } from '@/lib/orders/promoStore'
+import { promoRuleFrom } from '@/lib/orders/promoRule'
 
 type PromoErrorCode =
   | 'not_found'
@@ -15,7 +16,14 @@ type PromoErrorCode =
   | 'generic'
 
 type CheckResponse =
-  | { ok: true; code: string; percent: number }
+  | {
+      ok: true
+      code: string
+      percent: number
+      minQuantity: number | null
+      appliesTo: string
+      volumes: string[]
+    }
   | { ok: false; error?: PromoErrorCode | 'phone_required'; code?: string }
 
 /**
@@ -85,7 +93,7 @@ export function PromoCodeInput() {
 
       // Номер запоминается только если им реально подтверждали код: у
       // публичного кода шага сверки нет, и телефон тут пустой.
-      apply(data.code, data.percent, rawPhone ?? null)
+      apply(data.code, data.percent, promoRuleFrom(data), rawPhone ?? null)
       setPendingCode(null)
       setPhone('')
       setChecking(false)

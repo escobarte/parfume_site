@@ -636,6 +636,18 @@ export interface PromoCode {
    */
   percent: number;
   /**
+   * Сколько подходящих позиций должно быть в корзине, чтобы скидка сработала. Пусто — условия нет.
+   */
+  minQuantity?: number | null;
+  /**
+   * Какие позиции считаются «подходящими» для условия и получают скидку. «Любые товары» — как раньше.
+   */
+  appliesTo?: ('all' | 'decants' | 'volumes') | null;
+  /**
+   * Обязательно для режима «Выбранные объёмы» — сами значения объёма.
+   */
+  volumes?: ('3ml' | '5ml' | '10ml' | 'Travel Size' | 'Full Size')[] | null;
+  /**
    * Снять, чтобы отключить код, не удаляя его. Действует на оба типа.
    */
   isActive?: boolean | null;
@@ -1164,6 +1176,9 @@ export interface PromoCodesSelect<T extends boolean = true> {
   codeType?: T;
   code?: T;
   percent?: T;
+  minQuantity?: T;
+  appliesTo?: T;
+  volumes?: T;
   isActive?: T;
   isUsed?: T;
   expiresAt?: T;

@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 import type { PromoCodeType } from '@/collections/PromoCodes'
 import { normalizePhone } from '@/lib/orders/schema'
+import { promoRuleFrom, type PromoRule } from '@/lib/orders/promoRule'
 
 /**
  * Промокоды — общая точка резолва для проверки (`/api/promo-code-check`,
@@ -14,6 +15,13 @@ import { normalizePhone } from '@/lib/orders/schema'
  * |------------|----------|---------------------|--------------------|
  * | `personal` | да       | да (одноразовый)    | **не проверяется** |
  * | `public`   | да       | **не проверяется**  | да (обязателен)    |
+ *
+ * С 2026-10-23 код может ещё и требовать условие (минимум подходящих штук в
+ * корзине, с фильтром по объёму) — это НЕ проверяется здесь: `resolvePromoCode`
+ * не видит корзину, только достаёт правило (`promoRuleFrom`) и отдаёт его
+ * вызывающему. Условие проверяет сам вызывающий (`promoConditionMet` из
+ * `src/lib/orders/promoRule.ts`) по своим позициям — клиент по корзине,
+ * сервер по пересчитанным из БД.
  */
 
 export type PromoCheckError =
@@ -24,9 +32,16 @@ export type PromoCheckError =
   /** Персональный код найден, но нужен телефон — это ШАГ, а не отказ. */
   | 'phone_required'
   | 'phone_mismatch'
+  /**
+   * Условие (минимум штук) не выполнено — выдаётся не отсюда, а
+   * `order-request/route.ts` при авторитетной переоценке на оформлении
+   * (`resolvePromoCode` не видит корзину). Здесь в типе — чтобы `promoError`
+   * оставался одним union-ом на оба места.
+   */
+  | 'min_quantity'
 
 export type PromoCheckResult =
-  | { ok: true; id: number | string; code: string; percent: number; codeType: PromoCodeType }
+  | ({ ok: true; id: number | string; code: string; percent: number; codeType: PromoCodeType } & PromoRule)
   /** `code` заполняется только у `phone_required`: экрану нужно его показать. */
   | { ok: false; error: PromoCheckError; code?: string }
 
@@ -98,7 +113,14 @@ export async function resolvePromoCode(
     if (new Date(promo.expiresAt).getTime() < Date.now()) return { ok: false, error: 'expired' }
   }
 
-  return { ok: true, id: promo.id, code: promo.code, percent: promo.percent, codeType }
+  return {
+    ok: true,
+    id: promo.id,
+    code: promo.code,
+    percent: promo.percent,
+    codeType,
+    ...promoRuleFrom(promo),
+  }
 }
 
 /**

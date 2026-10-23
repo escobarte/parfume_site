@@ -188,6 +188,9 @@
     "itemsRemoved": "O parte din poziții nu mai sunt disponibile — au fost scoase din coș.",
     "promoSaving": "Reducere după codul {code}",
     "promoNoBenefit": "Produsele dvs. au deja o reducere mai mare decât codul {code}, de aceea el nu a fost aplicat. Codul rămâne al dvs.",
+    "promoConditionHint_all": "{count, plural, one {Mai adăugați # produs} few {Mai adăugați # produse} other {Mai adăugați # de produse}} — reducerea de {percent}% din cod se va aplica.",
+    "promoConditionHint_decants": "{count, plural, one {Mai adăugați # decant} few {Mai adăugați # decanturi} other {Mai adăugați # de decanturi}} — reducerea de {percent}% din cod se va aplica.",
+    "promoConditionHint_volumes": "{count, plural, one {Mai adăugați # produs de volumul selectat} few {Mai adăugați # produse de volumul selectat} other {Mai adăugați # de produse de volumul selectat}} — reducerea de {percent}% din cod se va aplica.",
     "promoConfirmPhoneTitle": "Confirmați numărul pe care a fost emis codul",
     "promoConfirm": "Confirmă",
     "promoConfirming": "Verificăm…",
@@ -198,6 +201,7 @@
     "promoError_inactive": "Cod inactiv",
     "promoError_used": "Codul a fost deja folosit",
     "promoError_expired": "Codul a expirat",
+    "promoError_min_quantity": "Condiția codului promoțional (cantitatea minimă) nu mai este îndeplinită. Verificați coșul și încercați din nou.",
     "promoError_generic": "Nu am putut verifica codul, încercați din nou",
     "promoPhoneLabel": "Telefonul pe care a fost emis codul"
   },
