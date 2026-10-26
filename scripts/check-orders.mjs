@@ -1,5 +1,6 @@
 import { chromium } from '@playwright/test'
-import { readFileSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync } from 'fs'
+import path from 'path'
 
 /**
  * Сквозная проверка заявки (PLAN.md §6.2): корзина → форма → БД → CSV →
@@ -67,8 +68,12 @@ const orderNumber = okBody.orderNumber
 check('номер заявки присвоен', /^MF-\d{6}-[A-Z0-9]{4}$/.test(orderNumber ?? ''), orderNumber)
 
 // ── Заявка в БД + CSV ─────────────────────────────────────────────────────
-const email = readFileSync('.env', 'utf8').match(/^SEED_ADMIN_EMAIL=(.*)$/m)[1]
-const password = readFileSync('.env', 'utf8').match(/^SEED_ADMIN_PASSWORD=(.*)$/m)[1]
+const envFile = readFileSync('.env', 'utf8')
+const email = envFile.match(/^SEED_ADMIN_EMAIL=(.*)$/m)[1]
+const password = envFile.match(/^SEED_ADMIN_PASSWORD=(.*)$/m)[1]
+// Тот же путь, что видит дев-сервер — дефолт /app/order-export в коде
+// локально не существует, поэтому сверяемся с .env, а не с голым дефолтом.
+const exportDir = envFile.match(/^ORDER_EXPORT_DIR=(.*)$/m)?.[1] || '/app/order-export'
 const login = await fetch(`${BASE}/api/users/login`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
@@ -113,6 +118,29 @@ check(
   'поле с «;» взято в кавычки или экранировано',
   !(lines[1] ?? '').split(';').some((cell, index) => index === 15 && cell.includes(';')),
 )
+
+// ── Экспорт JSON для 1С (ORDER_EXPORT_DIR) ─────────────────────────────────
+// Пишется через after() вне ответа клиенту — даём серверу немного времени.
+await new Promise((resolve) => setTimeout(resolve, 500))
+const jsonExportPath = path.join(exportDir, `${orderNumber}.json`)
+const csvExportPath = path.join(exportDir, `${orderNumber}.csv`)
+let exportJson = null
+try {
+  exportJson = JSON.parse(readFileSync(jsonExportPath, 'utf8'))
+} catch (error) {
+  console.log(`  (не удалось прочитать ${jsonExportPath}: ${error.message})`)
+}
+check('JSON заявки появился в ORDER_EXPORT_DIR', Boolean(exportJson), jsonExportPath)
+check(
+  'итог в JSON совпадает с заказом в БД',
+  exportJson?.total === order?.total,
+  `JSON ${exportJson?.total} / БД ${order?.total}`,
+)
+check(
+  'в JSON нет statusToken и exportCsv',
+  exportJson ? !('statusToken' in exportJson) && !('exportCsv' in exportJson) : false,
+)
+check('CSV в ORDER_EXPORT_DIR не пишется', !existsSync(csvExportPath), csvExportPath)
 
 // ── Печатная версия заявки (PDF) ──────────────────────────────────────────
 // Файл не хранится в документе, а собирается эндпойнтом по запросу — поэтому
@@ -306,17 +334,13 @@ check(
 )
 
 // Подарочный товар — для проверки, что скидка НЕ считается от его суммы.
-const giftForPromo = await promoRest(
-  'POST',
-  '/gift-items?locale=ro',
-  {
-    title: 'TEST Promo Gift',
-    slug: 'test-promo-gift',
-    type: 'certificate',
-    isActive: true,
-    variants: [{ amount: 500, sku: 'TEST-PROMO-GIFT-500', stock: 5, isActive: true }],
-  },
-)
+const giftForPromo = await promoRest('POST', '/gift-items?locale=ro', {
+  title: 'TEST Promo Gift',
+  slug: 'test-promo-gift',
+  type: 'certificate',
+  isActive: true,
+  variants: [{ amount: 500, sku: 'TEST-PROMO-GIFT-500', stock: 5, isActive: true }],
+})
 const giftForPromoDoc = (await giftForPromo.json()).doc
 check('временный gift-item для теста промокода создан', Boolean(giftForPromoDoc?.id))
 
@@ -605,9 +629,16 @@ check(
 
 // ── Навигация: «Noutăți» ведёт на flags=isNew (фаза 4.6.4) ─────────────────
 await goto('/ro')
-await page.locator('header').getByRole('link', { name: /noutăți/i }).first().click()
+await page
+  .locator('header')
+  .getByRole('link', { name: /noutăți/i })
+  .first()
+  .click()
 await page.waitForURL(/flags=isNew/, { timeout: 10000 }).catch(() => {})
-check('клик по «Noutăți» в шапке фильтрует каталог (flags=isNew)', page.url().includes('flags=isNew'))
+check(
+  'клик по «Noutăți» в шапке фильтрует каталог (flags=isNew)',
+  page.url().includes('flags=isNew'),
+)
 
 // ── Статус заказа: публичная страница + запасной поиск (фаза 4.7.2) ────────
 const lookup = (body) =>

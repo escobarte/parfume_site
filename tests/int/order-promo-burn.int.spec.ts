@@ -19,7 +19,7 @@ import type { Payload } from 'payload'
  */
 
 process.env.ORDERS_DRY_RUN = '1'
-// Экспорт CSV для 1С (orderExport.ts) по дефолту пишет в /app/order-export —
+// Экспорт JSON для 1С (orderExport.ts) по дефолту пишет в /app/order-export —
 // увести в tmp, иначе каждый вызов POST() в этом файле пытался бы (безуспешно,
 // но с шумом в консоли) создать системную папку /app на машине разработчика.
 process.env.ORDER_EXPORT_DIR = mkdtempSync(path.join(tmpdir(), 'order-export-test-'))
@@ -54,7 +54,9 @@ vi.mock('next/server', async (importOriginal) => {
   return {
     ...actual,
     after: (task: () => unknown) => {
-      void Promise.resolve().then(task).catch(() => {})
+      void Promise.resolve()
+        .then(task)
+        .catch(() => {})
     },
   }
 })
@@ -108,7 +110,9 @@ const stub = (promo: Doc | null, products: Doc[], claimed = 1) => {
     createdAt: new Date().toISOString(),
   }))
   update.mockImplementation(async ({ collection }: { collection: string }) =>
-    collection === 'promo-codes' ? { docs: Array.from({ length: claimed }, () => ({ id: 7 })) } : {},
+    collection === 'promo-codes'
+      ? { docs: Array.from({ length: claimed }, () => ({ id: 7 })) }
+      : {},
   )
 }
 
@@ -147,8 +151,7 @@ const item = (slug: string, sku: string, qty = 1) => ({
 /** Данные, с которыми был создан заказ. */
 const createdOrder = () => create.mock.calls[0][0].data as Doc
 /** Вызовы обновления промокода — их наличие и есть «код сгорел». */
-const claimCalls = () =>
-  update.mock.calls.filter((call) => call[0].collection === 'promo-codes')
+const claimCalls = () => update.mock.calls.filter((call) => call[0].collection === 'promo-codes')
 
 beforeEach(() => {
   find.mockReset()

@@ -2,7 +2,8 @@ import { after, NextResponse } from 'next/server'
 import type { GiftItem, Order, Product } from '@/payload-types'
 import { buildOrderCsv } from '@/lib/orders/csv'
 import { logNotifyReport, notifyOrder } from '@/lib/orders/notify'
-import { writeOrderCsvExport } from '@/lib/orders/orderExport'
+import { writeOrderJsonExport } from '@/lib/orders/orderExport'
+import { buildOrderJson } from '@/lib/orders/orderJson'
 import { buildOrderPdf } from '@/lib/orders/pdf'
 import { claimPromoCode, resolveOrderPromoPhone, resolvePromoCode } from '@/lib/orders/promo'
 import { lineMatchesPromoRule, promoConditionMet, type PromoRule } from '@/lib/orders/promoRule'
@@ -129,7 +130,11 @@ export async function POST(request: Request) {
       // фактическая выгода именно от кода (сколько клиент заплатил бы без
       // него минус сколько платит), по позициям, где код выиграл.
       ...(promo?.ok
-        ? { promoCode: promo.code, promoDiscountPercent: promo.percent, promoDiscountAmount: promoSaving }
+        ? {
+            promoCode: promo.code,
+            promoDiscountPercent: promo.percent,
+            promoDiscountAmount: promoSaving,
+          }
         : {}),
     },
   })) as Order
@@ -162,14 +167,15 @@ export async function POST(request: Request) {
     data: { exportCsv: csv },
   })
 
-  // Файл для 1С (SFTP забирает их специалист, сайт только пишет) — после
-  // ответа клиенту, как и остальная фоновая работа (GOTCHAS.md: `after()`,
-  // не висячий промис). Собственный try/catch внутри `writeOrderCsvExport`
-  // не даёт сбою записи на диск повлиять на заявку: она уже в базе. В
-  // интеграционных тестах, зовущих POST() напрямую (вне request scope
-  // Next), `after()` нужно мокать — см. docs/GOTCHAS.md и
+  // Файл для 1С (FTP забирает их специалист, сайт только пишет) — JSON,
+  // не CSV (CSV выше — для письма/Telegram/кнопки в `/admin`, в эту папку
+  // не идёт). После ответа клиенту, как и остальная фоновая работа
+  // (GOTCHAS.md: `after()`, не висячий промис). Собственный try/catch внутри
+  // `writeOrderJsonExport` не даёт сбою записи на диск повлиять на заявку:
+  // она уже в базе. В интеграционных тестах, зовущих POST() напрямую (вне
+  // request scope Next), `after()` нужно мокать — см. docs/GOTCHAS.md и
   // tests/int/order-promo-burn.int.spec.ts.
-  after(() => writeOrderCsvExport(order, csv))
+  after(() => writeOrderJsonExport(order, buildOrderJson(order)))
 
   // Печатная версия заявки — вторым вложением к письму менеджеру. Падение
   // генерации (нет шрифтов, сломанный документ) не должно ронять ни заявку,
@@ -220,7 +226,10 @@ type ResolvedLine = ResolvedGiftLine | ResolvedProductLine
  * не от клиента), но ДО того, как считать скидку — иначе решение «применять
  * ли код вообще» принималось бы по неполной картине.
  */
-async function resolveOrderLines(payload: PayloadClient, data: OrderRequest): Promise<ResolvedLine[]> {
+async function resolveOrderLines(
+  payload: PayloadClient,
+  data: OrderRequest,
+): Promise<ResolvedLine[]> {
   const lines: ResolvedLine[] = []
 
   for (const requested of data.items) {
@@ -305,7 +314,9 @@ function priceOrderLines(lines: ResolvedLine[], promoPercent: number, rule: Prom
 
     const { product, variant, qty } = line
     const brand = typeof product.brand === 'object' && product.brand ? product.brand.title : ''
-    const eligible = rule ? lineMatchesPromoRule({ kind: 'product', volume: variant.volume, qty }, rule) : true
+    const eligible = rule
+      ? lineMatchesPromoRule({ kind: 'product', volume: variant.volume, qty }, rule)
+      : true
 
     const pricing = priceLine(variant.price, variant.oldPrice, eligible ? promoPercent : 0)
     if (pricing.source === 'promo') {
