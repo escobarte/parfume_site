@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 FROM node:22-bookworm-slim AS base
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@11.20.0 --activate
 
 # --- deps: полный набор (прод + dev) отдельным слоем для кэша — нужен build-стадии ---
 FROM base AS deps

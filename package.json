@@ -4,6 +4,7 @@
   "description": "MON FLACON — каталог парфюмерии (Молдова)",
   "license": "MIT",
   "type": "module",
+  "packageManager": "pnpm@11.20.0",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
