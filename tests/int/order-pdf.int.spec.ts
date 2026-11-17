@@ -6,7 +6,7 @@
 
 import { PDFDocument } from 'pdf-lib'
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { buildOrderPdf, orderPdfFilename } from '@/lib/orders/pdf'
 import type { Order } from '@/payload-types'
 
@@ -62,6 +62,13 @@ async function extractText(bytes: Uint8Array): Promise<string> {
 
 const pageCount = async (bytes: Uint8Array): Promise<number> =>
   (await PDFDocument.load(bytes)).getPageCount()
+
+/**
+ * Межбуквенный трекинг заголовков ИТОГО (BRAND.md) заставляет pdfjs вставлять
+ * пробел между каждой буквой при извлечении текста — сравнивать такие строки
+ * нужно без пробелов вообще, обычные (без трекинга) строки это не трогает.
+ */
+const flatten = (text: string): string => text.replace(/\s+/g, '')
 
 describe('PDF заявки', () => {
   it('валидный файл: сигнатура %PDF и ненулевой размер', async () => {
@@ -138,7 +145,23 @@ describe('PDF заявки', () => {
           checkoutMode: 'noCall',
           promoCode: 'WELCOME-ABC123',
           promoDiscountPercent: 10,
-          promoDiscountAmount: 240,
+          // order.promoDiscountAmount больше не читается PDF для этой строки
+          // (см. docs/GOTCHAS.md) — оставлено здесь как снапшот заказа,
+          // проверка на «-240 MDL» ниже идёт от itemized basePrice/discountSource.
+          promoDiscountAmount: 50,
+          items: [
+            item({
+              title: 'Signature Wood',
+              sku: 'MO-SW-05',
+              price: 240,
+              basePrice: 360,
+              discountPercent: 33,
+              discountSource: 'promo',
+              qty: 2,
+              lineTotal: 480,
+            }),
+            item({ title: 'Nuit Étoilée', sku: 'AC-NE-10', price: 840, qty: 2, lineTotal: 1680 }),
+          ],
           total: 2160,
         }),
       ),
@@ -227,5 +250,237 @@ describe('PDF заявки', () => {
     const bytes = await buildOrderPdf(order({ items, total: 3600 }))
 
     expect(await pageCount(bytes)).toBe(1)
+  })
+
+  it('заголовки «Цена»/«Сумма» поясняются подписью «без скидки»/«со скидкой» — даже без единой скидки в заявке', async () => {
+    const text = await extractText(await buildOrderPdf(order()))
+
+    expect(text).toContain('Цена')
+    expect(text).toContain('без скидки')
+    expect(text).toContain('Сумма')
+    expect(text).toContain('со скидкой')
+  })
+})
+
+describe('PDF заявки — блок итогов со скидками', () => {
+  // basePrice/discountPercent/discountSource — попозиционный снапшот скидки
+  // (src/collections/Orders.ts), который считает src/lib/pricing.ts::priceLine
+  // на сервере. Здесь воссоздаём его руками, как это делает order-request/route.ts.
+
+  it('(1) без скидок — только «ИТОГО», без разбивки', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const text = await extractText(
+      await buildOrderPdf(
+        order({
+          items: [item({ title: 'Signature Wood', sku: 'MO-SW-05', price: 240, qty: 2, lineTotal: 480 })],
+          total: 480,
+        }),
+      ),
+    )
+
+    expect(text).not.toContain('Сумма без скидки')
+    expect(text).not.toContain('Скидка на товары')
+    expect(text).not.toContain('Промокод')
+    expect(flatten(text)).toContain(flatten('ИТОГО'))
+    expect(flatten(text)).not.toContain(flatten('ИТОГО СО СКИДКОЙ'))
+    expect(text).toContain('480 MDL')
+    expect(errorSpy).not.toHaveBeenCalled()
+    errorSpy.mockRestore()
+  })
+
+  it('(2) только скидка на товары — «Сумма без скидки» и «Скидка на товары», без промокода', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const text = await extractText(
+      await buildOrderPdf(
+        order({
+          items: [
+            item({
+              title: 'Signature Wood',
+              sku: 'MO-SW-05',
+              price: 150,
+              basePrice: 200,
+              discountPercent: 25,
+              discountSource: 'product',
+              qty: 1,
+              lineTotal: 150,
+            }),
+          ],
+          total: 150,
+        }),
+      ),
+    )
+
+    expect(text).toContain('Сумма без скидки')
+    expect(text).toContain('200 MDL')
+    expect(text).toContain('Скидка на товары')
+    expect(text).toContain('-50 MDL')
+    expect(text).not.toContain('Промокод')
+    expect(flatten(text)).toContain(flatten('ИТОГО СО СКИДКОЙ'))
+    expect(text).toContain('150 MDL')
+    expect(errorSpy).not.toHaveBeenCalled()
+    errorSpy.mockRestore()
+  })
+
+  it('(3) только промокод — «Сумма без скидки» и «Промокод», без «Скидка на товары»', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const text = await extractText(
+      await buildOrderPdf(
+        order({
+          items: [
+            item({
+              title: 'Signature Wood',
+              sku: 'MO-SW-05',
+              price: 90,
+              basePrice: 100,
+              discountPercent: 10,
+              discountSource: 'promo',
+              qty: 2,
+              lineTotal: 180,
+            }),
+          ],
+          promoCode: 'AUTUMN20',
+          promoDiscountPercent: 10,
+          promoDiscountAmount: 20,
+          total: 180,
+        }),
+      ),
+    )
+
+    expect(text).toContain('Сумма без скидки')
+    expect(text).toContain('200 MDL')
+    expect(text).not.toContain('Скидка на товары')
+    expect(text).toContain('Промокод AUTUMN20 (-10%)')
+    expect(text).toContain('-20 MDL')
+    expect(flatten(text)).toContain(flatten('ИТОГО СО СКИДКОЙ'))
+    expect(text).toContain('180 MDL')
+    expect(errorSpy).not.toHaveBeenCalled()
+    errorSpy.mockRestore()
+  })
+
+  it('(4) скидка на товары и промокод одновременно (на разных позициях) — обе строки, согласованность сходится', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const text = await extractText(
+      await buildOrderPdf(
+        order({
+          items: [
+            item({
+              title: 'Signature Wood',
+              sku: 'MO-SW-05',
+              price: 150,
+              basePrice: 200,
+              discountPercent: 25,
+              discountSource: 'product',
+              qty: 1,
+              lineTotal: 150,
+            }),
+            item({
+              title: 'Nuit Étoilée',
+              sku: 'AC-NE-10',
+              price: 90,
+              basePrice: 100,
+              discountPercent: 10,
+              discountSource: 'promo',
+              qty: 2,
+              lineTotal: 180,
+            }),
+          ],
+          promoCode: 'AUTUMN20',
+          promoDiscountPercent: 10,
+          promoDiscountAmount: 20,
+          total: 330,
+        }),
+      ),
+    )
+
+    expect(text).toContain('Сумма без скидки')
+    expect(text).toContain('400 MDL')
+    expect(text).toContain('Скидка на товары')
+    expect(text).toContain('-50 MDL')
+    expect(text).toContain('Промокод AUTUMN20 (-10%)')
+    expect(text).toContain('-20 MDL')
+    expect(flatten(text)).toContain(flatten('ИТОГО СО СКИДКОЙ'))
+    expect(text).toContain('330 MDL')
+    // 400 - 50 - 20 = 330 — сходится, предупреждения о расхождении быть не должно.
+    expect(errorSpy).not.toHaveBeenCalled()
+    errorSpy.mockRestore()
+  })
+
+  it('(5) на одной позиции своя скидка 10% против промокода 15% — выигрывает промокод, вся скидка позиции идёт в «Промокод»', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const text = await extractText(
+      await buildOrderPdf(
+        order({
+          items: [
+            item({
+              title: 'Signature Wood',
+              sku: 'MO-SW-05',
+              price: 850,
+              basePrice: 1000,
+              discountPercent: 15,
+              discountSource: 'promo',
+              qty: 1,
+              lineTotal: 850,
+            }),
+            item({ title: 'Nuit Étoilée', sku: 'AC-NE-10', price: 300, qty: 1, lineTotal: 300 }),
+          ],
+          promoCode: 'SPRING15',
+          promoDiscountPercent: 15,
+          // Намеренно НЕ равно правильному расчёту (150) — order.promoDiscountAmount
+          // больше не читается этой строкой (docs/GOTCHAS.md), значение ниже должно
+          // прийти из позиции (basePrice 1000 − price 850), а не из этого поля.
+          promoDiscountAmount: 50,
+          total: 1150,
+        }),
+      ),
+    )
+
+    expect(text).toContain('Сумма без скидки')
+    expect(text).toContain('1 300 MDL')
+    expect(text).not.toContain('Скидка на товары')
+    expect(text).toContain('Промокод SPRING15 (-15%)')
+    expect(text).toContain('-150 MDL')
+    expect(flatten(text)).toContain(flatten('ИТОГО СО СКИДКОЙ'))
+    expect(text).toContain('1 150 MDL')
+    // 1300 - 0 - 150 = 1150 — сходится целиком, вся скидка позиции учтена в «Промокод».
+    expect(errorSpy).not.toHaveBeenCalled()
+    errorSpy.mockRestore()
+  })
+
+  it('(6) на одной позиции своя скидка 20% против промокода 15% — выигрывает скидка товара, вся скидка позиции идёт в «Скидку на товары»', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const text = await extractText(
+      await buildOrderPdf(
+        order({
+          items: [
+            item({
+              title: 'Signature Wood',
+              sku: 'MO-SW-05',
+              price: 800,
+              basePrice: 1000,
+              discountPercent: 20,
+              discountSource: 'product',
+              qty: 1,
+              lineTotal: 800,
+            }),
+            item({ title: 'Nuit Étoilée', sku: 'AC-NE-10', price: 300, qty: 1, lineTotal: 300 }),
+          ],
+          promoCode: 'SPRING15',
+          promoDiscountPercent: 15,
+          promoDiscountAmount: 0,
+          total: 1100,
+        }),
+      ),
+    )
+
+    expect(text).toContain('Сумма без скидки')
+    expect(text).toContain('1 300 MDL')
+    expect(text).toContain('Скидка на товары')
+    expect(text).toContain('-200 MDL')
+    expect(text).toContain('Промокод SPRING15 (-15%)')
+    expect(flatten(text)).toContain(flatten('ИТОГО СО СКИДКОЙ'))
+    expect(text).toContain('1 100 MDL')
+    // 1300 - 200 - 0 = 1100 — сходится, промокод проиграл и не вычитает ничего лишнего.
+    expect(errorSpy).not.toHaveBeenCalled()
+    errorSpy.mockRestore()
   })
 })

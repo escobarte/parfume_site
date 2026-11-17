@@ -112,6 +112,8 @@ const SIZE_BODY = 9
 const SIZE_TABLE = 8.5
 const SIZE_TOTAL = 12
 const SIZE_FOOTER = 7.5
+/** Подпись под заголовком колонки («без скидки» / «со скидкой») — мельче самого заголовка. */
+const SIZE_TABLE_HEADER_NOTE = 6
 
 const LINE_BODY = 13
 const LINE_TABLE = 11
@@ -124,6 +126,8 @@ const LABEL_WIDTH = 118
 type Column = {
   key: 'brand' | 'title' | 'volume' | 'sku' | 'qty' | 'price' | 'sum'
   title: string
+  /** Вторая строка заголовка мельче и серым — поясняет, что именно в колонке. */
+  note?: string
   width: number
   align: 'left' | 'right'
 }
@@ -136,8 +140,8 @@ const COLUMNS: Column[] = [
   { key: 'volume', title: 'Объём', width: 48, align: 'left' },
   { key: 'sku', title: 'Артикул', width: 78, align: 'left' },
   { key: 'qty', title: 'Кол-во', width: 40, align: 'right' },
-  { key: 'price', title: 'Цена', width: 42, align: 'right' },
-  { key: 'sum', title: 'Сумма', width: 43, align: 'right' },
+  { key: 'price', title: 'Цена', note: 'без скидки', width: 42, align: 'right' },
+  { key: 'sum', title: 'Сумма', note: 'со скидкой', width: 43, align: 'right' },
 ]
 
 const CELL_PAD_X = 4
@@ -327,21 +331,38 @@ const columnX = (index: number): number =>
   MARGIN_X + COLUMNS.slice(0, index).reduce((sum, column) => sum + column.width, 0)
 
 function drawTableHeader(layout: Layout) {
+  const titleY = layout.y
+  const noteY = titleY - 8
+
   COLUMNS.forEach((column, index) => {
     const x = columnX(index)
-    const options: DrawTextOptions = {
+    const titleOptions: DrawTextOptions = {
       font: layout.fonts.semibold,
       size: SIZE_SECTION,
       color: INK_MUTED,
       tracking: 0.6,
     }
     if (column.align === 'right') {
-      drawTextRight(layout.page, column.title, x + column.width - CELL_PAD_X, layout.y, options)
+      drawTextRight(layout.page, column.title, x + column.width - CELL_PAD_X, titleY, titleOptions)
     } else {
-      drawText(layout.page, column.title, x + CELL_PAD_X, layout.y, options)
+      drawText(layout.page, column.title, x + CELL_PAD_X, titleY, titleOptions)
+    }
+
+    if (column.note) {
+      const noteOptions: DrawTextOptions = {
+        font: layout.fonts.regular,
+        size: SIZE_TABLE_HEADER_NOTE,
+        color: INK_MUTED,
+      }
+      if (column.align === 'right') {
+        drawTextRight(layout.page, column.note, x + column.width - CELL_PAD_X, noteY, noteOptions)
+      } else {
+        drawText(layout.page, column.note, x + CELL_PAD_X, noteY, noteOptions)
+      }
     }
   })
-  layout.y -= 7
+
+  layout.y = noteY - 6
   drawRule(layout.page, layout.y, 0.6)
   layout.y -= CELL_PAD_Y + LINE_TABLE - 2
 }
@@ -383,30 +404,50 @@ function drawItemsTable(layout: Layout) {
   layout.y -= 10
 }
 
+/** Строка блока итогов: подпись слева (приглушена), сумма справа, тем же стилем. */
+function drawTotalRow(layout: Layout, label: string, value: string) {
+  ensureSpace(layout, LINE_BODY)
+  const options: DrawTextOptions = { font: layout.fonts.regular, size: SIZE_BODY, color: INK_MUTED }
+  drawText(layout.page, label, MARGIN_X, layout.y, options)
+  drawTextRight(layout.page, value, MARGIN_X + CONTENT_WIDTH, layout.y, options)
+  layout.y -= LINE_BODY + 4
+}
+
 function drawTotals(layout: Layout) {
-  const { promo, total } = layout.summary
+  const { promo, total, totalAmount, discountBreakdown } = layout.summary
   const right = MARGIN_X + CONTENT_WIDTH
+
+  if (discountBreakdown) {
+    drawTotalRow(layout, 'Сумма без скидки', `${formatMdl(discountBreakdown.withoutDiscount)} MDL`)
+    if (discountBreakdown.productDiscount) {
+      drawTotalRow(layout, 'Скидка на товары', `-${formatMdl(discountBreakdown.productDiscount)} MDL`)
+    }
+  }
 
   if (promo) {
     const percent = promo.percent === null ? '' : ` (-${promo.percent}%)`
     const amount = promo.amount === null ? '' : `-${formatMdl(promo.amount)} MDL`
-    ensureSpace(layout, LINE_BODY * 2)
-    drawText(layout.page, `Промокод ${promo.code}${percent}`, MARGIN_X, layout.y, {
-      font: layout.fonts.regular,
-      size: SIZE_BODY,
-      color: INK_MUTED,
-    })
-    drawTextRight(layout.page, amount, right, layout.y, {
-      font: layout.fonts.regular,
-      size: SIZE_BODY,
-      color: INK_MUTED,
-    })
-    layout.y -= LINE_BODY + 4
+    drawTotalRow(layout, `Промокод ${promo.code}${percent}`, amount)
   }
 
+  // Контроль согласованности (ТЗ): не подгоняем числа молча — только лог,
+  // ИТОГО всегда остаётся готовым значением из заказа, не пересчитывается.
+  if (discountBreakdown) {
+    const computed =
+      discountBreakdown.withoutDiscount - (discountBreakdown.productDiscount ?? 0) - (promo?.amount ?? 0)
+    if (Math.abs(computed - totalAmount) > 0.01) {
+      console.error(
+        `[order-pdf] Расхождение итогов: без скидки ${discountBreakdown.withoutDiscount}, скидка на товары ${
+          discountBreakdown.productDiscount ?? 0
+        }, промокод ${promo?.amount ?? 0}, расчёт ${computed}, в заказе ${totalAmount}.`,
+      )
+    }
+  }
+
+  const totalLabel = discountBreakdown ? 'ИТОГО СО СКИДКОЙ' : 'ИТОГО'
   ensureSpace(layout, 30)
   drawRule(layout.page, layout.y + 12, 1)
-  drawText(layout.page, 'ИТОГО', MARGIN_X, layout.y - 6, {
+  drawText(layout.page, totalLabel, MARGIN_X, layout.y - 6, {
     font: layout.fonts.semibold,
     size: SIZE_TOTAL,
     tracking: 1.6,

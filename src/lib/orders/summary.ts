@@ -78,8 +78,18 @@ export type OrderSummaryItem = {
   volume: string
   sku: string
   qty: string
+  /** Цена за единицу ДО скидки (`basePrice`, иначе `price`) — колонка «Цена». */
   price: string
+  /** Сумма позиции СО скидкой (`lineTotal`) — колонка «Сумма». */
   sum: string
+}
+
+/** Разбивка итогов по скидкам — только когда хоть одна позиция её имеет (см. buildOrderSummary). */
+export type OrderSummaryDiscountBreakdown = {
+  /** Сумма оригинальных цен (`basePrice ?? price`) × количество по всем позициям, MDL. */
+  withoutDiscount: number
+  /** Сумма скидок, где победил товар (`discountSource === 'product'`), MDL. `null` — таких позиций нет. */
+  productDiscount: number | null
 }
 
 export type OrderSummary = {
@@ -93,6 +103,9 @@ export type OrderSummary = {
   items: OrderSummaryItem[]
   promo: { code: string; percent: number | null; amount: number | null } | null
   total: string
+  /** `order.total`, число — для проверки согласованности блока итогов в pdf.ts. */
+  totalAmount: number
+  discountBreakdown: OrderSummaryDiscountBreakdown | null
   comment: string
 }
 
@@ -156,9 +169,38 @@ export function buildOrderSummary(order: Order, options: OrderSummaryOptions = {
     volume: trimmed(item.volume),
     sku: trimmed(item.sku),
     qty: String(item.qty ?? 0),
-    price: formatMdl(item.price),
+    price: formatMdl(item.basePrice ?? item.price),
     sum: formatMdl(item.lineTotal),
   }))
+
+  // Разбивка «Сумма без скидки»/«Скидка на товары»/«Промокод» в PDF — только
+  // если хоть у одной позиции реально записан basePrice (сервер пишет его при
+  // ЛЮБОЙ победившей скидке — товарной или промокодной, см. src/lib/pricing.ts).
+  // Без этого блок итогов не трогаем — старое поведение (только ИТОГО/промокод).
+  const orderItems = order.items ?? []
+  const hasItemDiscount = orderItems.some((item) => typeof item.basePrice === 'number')
+
+  // На позиции выигрывает ровно ОДИН источник скидки (discountSource) — больший
+  // процент от priceLine (src/lib/pricing.ts). Поэтому вся скидка позиции
+  // (basePrice − price) × qty целиком относится к источнику, записанному в
+  // discountSource, без остатка. Это и устраняет расхождение «известного
+  // ограничения» (docs/GOTCHAS.md, снято 2026-11-17): «Сумма без скидки» минус
+  // обе эти суммы всегда равно ИТОГО, сколько бы товарных и промо-позиций ни
+  // было в заказе одновременно.
+  const discountAmountBy = (source: 'product' | 'promo'): number =>
+    orderItems
+      .filter((item) => item.discountSource === source)
+      .reduce((sum, item) => sum + ((item.basePrice ?? item.price ?? 0) - (item.price ?? 0)) * (item.qty ?? 0), 0)
+
+  const discountBreakdown: OrderSummaryDiscountBreakdown | null = hasItemDiscount
+    ? {
+        withoutDiscount: orderItems.reduce(
+          (sum, item) => sum + (item.basePrice ?? item.price ?? 0) * (item.qty ?? 0),
+          0,
+        ),
+        productDiscount: discountAmountBy('product') || null,
+      }
+    : null
 
   return {
     orderNumber: trimmed(order.orderNumber),
@@ -168,14 +210,20 @@ export function buildOrderSummary(order: Order, options: OrderSummaryOptions = {
     contact,
     fulfilment,
     items,
+    // amount — НЕ order.promoDiscountAmount (тот считает выгоду сверх уже
+    // уцененной variant.price, см. docs/GOTCHAS.md про order-request/route.ts),
+    // а сумма по позициям с discountSource === 'promo' — ровно то же правило,
+    // что и у «Скидки на товары» выше, просто другой источник.
     promo: order.promoCode
       ? {
           code: order.promoCode,
           percent: order.promoDiscountPercent ?? null,
-          amount: order.promoDiscountAmount ?? null,
+          amount: discountAmountBy('promo'),
         }
       : null,
     total: formatMdl(order.total),
+    totalAmount: typeof order.total === 'number' ? order.total : 0,
+    discountBreakdown,
     comment: trimmed(order.comment),
   }
 }
