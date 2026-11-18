@@ -1,8 +1,9 @@
 import type { CollectionConfig, TextField, Validate, Where } from 'payload'
 import crypto from 'node:crypto'
-import { adminOnly, isStaff, staffOnly } from '@/access/roles'
+import { adminOnly, isAdmin, isStaff, staffOnly } from '@/access/roles'
 import { PRODUCT_VOLUMES } from '@/lib/catalog/volumes'
 import { buildOrdersCsvBulk } from '@/lib/orders/csv'
+import { logNotifyReport, resendFailedNotifications } from '@/lib/orders/notify'
 import { buildOrderPdf, orderPdfFilename } from '@/lib/orders/pdf'
 import { resolveOrderPromoPhone } from '@/lib/orders/promo'
 import type { Order } from '@/payload-types'
@@ -40,6 +41,41 @@ export const PAYMENT_METHOD_OPTIONS = [
   { label: 'Картой (курьеру)', value: 'card' },
 ] as const
 
+// Статус доставки уведомления о заявке по одному каналу (2026-11-17).
+// `sent`/`failed`/`skipped` — что реально произошло; пусто (ни одно из
+// значений) значит «ещё не пытались» (свежесозданная заявка, before() фоновой
+// отправки в after() не успел отработать). `skipped` — канал не настроен
+// (нет ключа/токена/email получателя), не ошибка сети/API.
+export const NOTIFY_STATUS_OPTIONS = [
+  { label: 'Отправлено', value: 'sent' },
+  { label: 'Не отправлено', value: 'failed' },
+  { label: 'Пропущено', value: 'skipped' },
+] as const
+
+const notifyChannelField = (name: string, label: string) => ({
+  name,
+  type: 'group' as const,
+  label,
+  fields: [
+    {
+      name: 'status',
+      type: 'select' as const,
+      options: [...NOTIFY_STATUS_OPTIONS],
+      admin: { readOnly: true, width: '34%' },
+    },
+    {
+      name: 'attempts',
+      type: 'number' as const,
+      admin: { readOnly: true, width: '16%', description: 'Попыток.' },
+    },
+    {
+      name: 'lastError',
+      type: 'text' as const,
+      admin: { readOnly: true, width: '50%', description: 'Текст последней ошибки, если была.' },
+    },
+  ],
+})
+
 export const Orders: CollectionConfig = {
   slug: 'orders',
   labels: { singular: 'Заявка', plural: 'Заявки' },
@@ -59,6 +95,7 @@ export const Orders: CollectionConfig = {
       'paymentMethod',
       'promoCode',
       'total',
+      'notifyStatusColumn',
       'status',
     ],
     group: 'Заказы',
@@ -142,6 +179,55 @@ export const Orders: CollectionConfig = {
             'Content-Length': String(pdf.length),
           },
         })
+      },
+    },
+    {
+      // Кнопка «Отправить письма заново» в карточке заказа (2026-11-17) —
+      // почему теряются уведомления: см. CHANGELOG/GOTCHAS о ретраях.
+      // Только admin (не staffOnly, как CSV/PDF выше) — та же граница роли,
+      // что у кампаний скидок (adminCampaigns.ts): массовая/ручная пересылка
+      // внешних писем клиенту менеджеру лучше не доверять.
+      //
+      // Повторяет ТОЛЬКО каналы, которые ещё не в статусе `sent`
+      // (resendFailedNotifications в notify.ts) — уже доставленные не трогает
+      // ни сетевым вызовом, ни статусом, поэтому повторное нажатие безопасно.
+      path: '/:id/resend-notifications',
+      method: 'post',
+      handler: async (req) => {
+        if (!req.user) return new Response('Unauthorized', { status: 401 })
+        if (!isAdmin(req.user)) return new Response('Forbidden', { status: 403 })
+
+        const id = req.routeParams?.id
+        if (typeof id !== 'string' && typeof id !== 'number') {
+          return new Response('Bad Request', { status: 400 })
+        }
+
+        const order = (await req.payload
+          .findByID({ collection: 'orders', id, depth: 0 })
+          .catch(() => null)) as Order | null
+        if (!order) return new Response('Not Found', { status: 404 })
+
+        // PDF для письма менеджеру пересобирается на лету — тот же путь, что
+        // и у скачивания PDF выше, в БД файл не хранится вообще.
+        let pdf: Uint8Array | null = null
+        try {
+          const promoPhone = await resolveOrderPromoPhone(req.payload, order)
+          pdf = await buildOrderPdf(order, { promoPhone })
+        } catch (error) {
+          req.payload.logger.error(
+            `[order ${order.orderNumber}] resend: pdf failed — ${error instanceof Error ? error.message : error}`,
+          )
+        }
+
+        const { report, retried } = await resendFailedNotifications(
+          req.payload,
+          order,
+          order.exportCsv ?? '',
+          pdf,
+        )
+        logNotifyReport(req.payload.logger, order, report)
+
+        return Response.json({ ok: true, retried, report })
       },
     },
   ],
@@ -439,6 +525,52 @@ export const Orders: CollectionConfig = {
           },
         },
       ],
+    },
+    {
+      // Статус доставки уведомлений (2026-11-17) — письмо менеджеру, письмо
+      // клиенту, Telegram. Пишется только сервером (notify.ts::recordNotifyStatus,
+      // вызывается из after() в order-request/route.ts и из эндпойнта кнопки
+      // «Отправить письма заново» ниже).
+      //
+      // `admin.hidden: true` — чисто контейнер данных, сам по себе нигде не
+      // рендерится: `group` в этой версии Payload поддерживает кастомный
+      // `admin.components` только для `Label`, НЕ для всего поля целиком
+      // (проверено вживую — с `Field`/`Cell` на самой группе карточка молча
+      // ничего не рисовала, хотя и TS, и схема принимали эти ключи без
+      // единой ошибки). Отображение — двумя отдельными `ui`-полями ниже, тем
+      // же приёмом, что уже работает у `exportPdf`/`csvDownload`.
+      name: 'notifyStatus',
+      type: 'group',
+      label: 'Статус уведомлений',
+      admin: { hidden: true },
+      fields: [
+        notifyChannelField('emailManager', 'Письмо менеджеру'),
+        notifyChannelField('emailCustomer', 'Письмо клиенту'),
+        notifyChannelField('telegram', 'Telegram'),
+      ],
+    },
+    {
+      // Карточка заказа: три плашки статуса + кнопка «Отправить письма
+      // заново» (только admin) — `ui`-поле читает значения скрытой группы
+      // `notifyStatus` через `useFormFields` (OrderNotifyStatusField.tsx).
+      name: 'notifyStatusView',
+      type: 'ui',
+      label: 'Статус уведомлений',
+      admin: {
+        position: 'sidebar',
+        components: { Field: '@/components/admin/OrderNotifyStatusField#OrderNotifyStatusField' },
+      },
+    },
+    {
+      // Та же тройка плашек компактно — колонкой в списке заявок. `ui`-поле
+      // в списке получает `rowData` целого документа (как у `csvDownload`
+      // выше), поэтому читает `rowData.notifyStatus` напрямую, без формы.
+      name: 'notifyStatusColumn',
+      type: 'ui',
+      label: 'Уведомления',
+      admin: {
+        components: { Cell: '@/components/admin/OrderNotifyStatusCell#OrderNotifyStatusCell' },
+      },
     },
     {
       // Файл заявки в нашем формате (не 1С): менеджер скачивает его кнопкой

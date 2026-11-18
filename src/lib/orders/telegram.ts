@@ -1,4 +1,5 @@
 import type { Order } from '@/payload-types'
+import { fetchWithRetry } from './retry'
 
 const MESSENGER_LABEL: Record<string, string> = {
   telegram: 'Telegram',
@@ -73,12 +74,28 @@ export function buildTelegramMessage(order: Order): string {
   return lines.join('\n')
 }
 
-export type NotifyResult = { ok: boolean; skipped?: string; error?: string }
+export type NotifyResult = { ok: boolean; skipped?: string; error?: string; attempts?: number }
 
 const isPlaceholder = (value: string | undefined) =>
   !value || value.startsWith('CHANGEME') || value.trim() === ''
 
-/** Отправка в Telegram. Плейсхолдер токена — не ошибка, а пропуск. */
+/**
+ * Отправка в Telegram. Плейсхолдер токена — не ошибка, а пропуск.
+ *
+ * Ретраи (2026-11-17): 3 попытки, пауза 1с/3с, таймаут на запрос — только на
+ * сетевой сбой и 429/5xx (`fetchWithRetry`, общий с `email.ts`). `403
+ * Forbidden` Telegram отдаёт ровно тогда, когда получатель заблокировал
+ * бота — повтор здесь бесполезен (тот же результат на каждой попытке),
+ * поэтому `retryStatus` по умолчанию его и не трогает; код ниже только
+ * подменяет текст ошибки на диагностируемый, не трогая саму заявку.
+ *
+ * Идемпотентность: у Bot API нет ключа идемпотентности (в отличие от
+ * Resend, см. email.ts) — если `fetch` упал с сетевой ошибкой уже ПОСЛЕ
+ * того, как Telegram реально отправил сообщение (ответ потерялся в сети),
+ * повтор теоретически продублирует сообщение менеджеру. Это принятый
+ * остаточный риск платформы (см. docs/GOTCHAS.md): большинство `fetch
+ * failed` — обрыв ДО обработки на стороне Telegram, не после.
+ */
 export async function sendTelegram(order: Order): Promise<NotifyResult> {
   const token = process.env.TELEGRAM_BOT_TOKEN
   const chatId = process.env.TELEGRAM_CHAT_ID
@@ -87,24 +104,36 @@ export async function sendTelegram(order: Order): Promise<NotifyResult> {
     return { ok: false, skipped: 'telegram skipped (no token/chat id)' }
   }
 
-  try {
-    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: buildTelegramMessage(order),
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-      }),
-    })
+  const outcome = await fetchWithRetry(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: buildTelegramMessage(order),
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+    }),
+  })
 
-    if (!response.ok) {
-      const body = await response.text()
-      return { ok: false, error: `telegram ${response.status}: ${body.slice(0, 200)}` }
+  if (outcome.kind === 'network-error') {
+    return {
+      ok: false,
+      error: `telegram: ${outcome.error instanceof Error ? outcome.error.message : outcome.error}`,
+      attempts: outcome.attempts,
     }
-    return { ok: true }
-  } catch (error) {
-    return { ok: false, error: `telegram: ${error instanceof Error ? error.message : error}` }
   }
+
+  const { response, attempts } = outcome
+  if (response.ok) return { ok: true, attempts }
+
+  if (response.status === 403) {
+    return {
+      ok: false,
+      error: 'telegram: получатель заблокировал бота — проверьте chat_id/разблокируйте бота.',
+      attempts,
+    }
+  }
+
+  const body = await response.text()
+  return { ok: false, error: `telegram ${response.status}: ${body.slice(0, 200)}`, attempts }
 }

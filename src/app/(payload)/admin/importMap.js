@@ -25,6 +25,8 @@ import { InStockCell as InStockCell_29df0bd8828d6bdf8838d6e7dd8e6387 } from '@/c
 import { OrderStatusCell as OrderStatusCell_a62e47b57797e0bb7a9458ad5341f335 } from '@/components/admin/OrderStatusCell'
 import { OrderCsvCell as OrderCsvCell_e28494c9b9c6e689db6427e4e3307e66 } from '@/components/admin/OrderCsvCell'
 import { OrderPdfCell as OrderPdfCell_3b405cf6b2b76e9d9e9e110d0babc855 } from '@/components/admin/OrderPdfCell'
+import { OrderNotifyStatusField as OrderNotifyStatusField_09589db7afe8e53d8bd3148b18b8752e } from '@/components/admin/OrderNotifyStatusField'
+import { OrderNotifyStatusCell as OrderNotifyStatusCell_d31cd6fe3f39728f9477dcc5c696543b } from '@/components/admin/OrderNotifyStatusCell'
 import { OrderCsvField as OrderCsvField_5c20d67acbc090c31251851b7badb16d } from '@/components/admin/OrderCsvField'
 import { OrderPdfField as OrderPdfField_aae49acb17259ed068f77681ceb9ab32 } from '@/components/admin/OrderPdfField'
 import { OrdersBulkCsv as OrdersBulkCsv_7ad9e903c706a6be51a308e2fc658f7c } from '@/components/admin/OrdersBulkCsv'
@@ -69,6 +71,8 @@ export const importMap = {
   "@/components/admin/OrderStatusCell#OrderStatusCell": OrderStatusCell_a62e47b57797e0bb7a9458ad5341f335,
   "@/components/admin/OrderCsvCell#OrderCsvCell": OrderCsvCell_e28494c9b9c6e689db6427e4e3307e66,
   "@/components/admin/OrderPdfCell#OrderPdfCell": OrderPdfCell_3b405cf6b2b76e9d9e9e110d0babc855,
+  "@/components/admin/OrderNotifyStatusField#OrderNotifyStatusField": OrderNotifyStatusField_09589db7afe8e53d8bd3148b18b8752e,
+  "@/components/admin/OrderNotifyStatusCell#OrderNotifyStatusCell": OrderNotifyStatusCell_d31cd6fe3f39728f9477dcc5c696543b,
   "@/components/admin/OrderCsvField#OrderCsvField": OrderCsvField_5c20d67acbc090c31251851b7badb16d,
   "@/components/admin/OrderPdfField#OrderPdfField": OrderPdfField_aae49acb17259ed068f77681ceb9ab32,
   "@/components/admin/OrdersBulkCsv#OrdersBulkCsv": OrdersBulkCsv_7ad9e903c706a6be51a308e2fc658f7c,

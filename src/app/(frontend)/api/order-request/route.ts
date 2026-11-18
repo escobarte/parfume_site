@@ -1,7 +1,7 @@
 import { after, NextResponse } from 'next/server'
 import type { GiftItem, Order, Product } from '@/payload-types'
 import { buildOrderCsv } from '@/lib/orders/csv'
-import { logNotifyReport, notifyOrder } from '@/lib/orders/notify'
+import { isDryRun, logNotifyReport, notifyOrder, recordNotifyStatus } from '@/lib/orders/notify'
 import { writeOrderJsonExport } from '@/lib/orders/orderExport'
 import { buildOrderJson } from '@/lib/orders/orderJson'
 import { buildOrderPdf } from '@/lib/orders/pdf'
@@ -177,26 +177,40 @@ export async function POST(request: Request) {
   // tests/int/order-promo-burn.int.spec.ts.
   after(() => writeOrderJsonExport(order, buildOrderJson(order)))
 
-  // Печатная версия заявки — вторым вложением к письму менеджеру. Падение
-  // генерации (нет шрифтов, сломанный документ) не должно ронять ни заявку,
-  // ни письмо: логируем и отправляем без PDF.
-  let pdf: Uint8Array | null = null
-  try {
-    const promoPhone = await resolveOrderPromoPhone(payload, order)
-    pdf = await buildOrderPdf(order, { promoPhone })
-  } catch (error) {
-    payload.logger.error(
-      `[order ${order.orderNumber}] pdf failed: ${error instanceof Error ? error.message : error}`,
-    )
-  }
+  // Печатная версия заявки + все уведомления (менеджеру, клиенту, Telegram)
+  // — тоже в after() (2026-11-17, см. GOTCHAS.md): ретраи внутри email.ts/
+  // telegram.ts (3 попытки, пауза 1с/3с на канал) в худшем случае добавляют
+  // секунды на канал, а клиенту, оформляющему заказ, их ждать незачем —
+  // ответ ниже не использует ни PDF, ни результат отправки. Падение
+  // генерации PDF (нет шрифтов, сломанный документ) не должно ронять письмо:
+  // логируем и отправляем без PDF. Свой try/catch обязателен — исключению
+  // внутри after() уже некуда всплыть (GOTCHAS.md).
+  after(async () => {
+    let pdf: Uint8Array | null = null
+    try {
+      const promoPhone = await resolveOrderPromoPhone(payload, order)
+      pdf = await buildOrderPdf(order, { promoPhone })
+    } catch (error) {
+      payload.logger.error(
+        `[order ${order.orderNumber}] pdf failed: ${error instanceof Error ? error.message : error}`,
+      )
+    }
 
-  const report = await notifyOrder(order, csv, pdf)
-  logNotifyReport(payload.logger, order, report)
+    try {
+      const report = await notifyOrder(order, csv, pdf)
+      logNotifyReport(payload.logger, order, report)
+      await recordNotifyStatus(payload, order.id, report)
+    } catch (error) {
+      payload.logger.error(
+        `[order ${order.orderNumber}] notify failed: ${error instanceof Error ? error.message : error}`,
+      )
+    }
+  })
 
   return NextResponse.json({
     ok: true,
     orderNumber: order.orderNumber,
-    dryRun: report.dryRun,
+    dryRun: isDryRun(),
   })
 }
 

@@ -7,6 +7,7 @@ import { orderCsvFilename } from './csv'
 import { orderPdfFilename } from './pdf'
 // Подписи способов получения и оплаты — общий источник с печатным PDF
 // (src/lib/orders/summary.ts), чтобы письмо и вложение не разъехались.
+import { fetchWithRetry } from './retry'
 import { DELIVERY_METHOD_LABEL, PAYMENT_METHOD_LABEL } from './summary'
 import type { NotifyResult } from './telegram'
 
@@ -120,6 +121,19 @@ function buildCustomerHtml(order: Order): string {
  * `pdf` необязателен намеренно: если генерация печатной версии упала,
  * письмо уходит с одним лишь CSV, а ошибка остаётся в логе — терять заявку
  * из-за оформления вложения нельзя (см. api/order-request/route.ts).
+ *
+ * Ретраи (2026-11-17): 3 попытки, пауза 1с/3с, таймаут на запрос — только на
+ * сетевой сбой и 429/5xx, НЕ на прочий 4xx (`fetchWithRetry`, общий с
+ * `telegram.ts`). Вызвано реальной потерей письма в проде (MF-261115-6ZLS):
+ * `fetch failed` без единого повтора хоронил заявку безвозвратно.
+ *
+ * Идемпотентность: `Idempotency-Key` — стабильный на заказ+канал (не на
+ * попытку), поэтому все повторы ОДНОЙ отправки, а позже и ручная пересылка
+ * из `/admin` (см. `notify.ts::resendFailedNotifications`) переиспользуют
+ * тот же ключ. Resend хранит ключ 24 часа и дедуплицирует запрос с тем же
+ * телом — ровно тот случай, когда `fetch failed` на самом деле означает
+ * «письмо ушло, потерялся только ответ»: без ключа повтор удвоил бы письмо
+ * клиенту/менеджеру, с ключом Resend просто не отправит второе.
  */
 export async function sendEmail(
   order: Order,
@@ -133,45 +147,51 @@ export async function sendEmail(
   if (isPlaceholder(apiKey)) return { ok: false, skipped: 'email skipped (no key)' }
   if (isPlaceholder(to)) return { ok: false, skipped: 'email skipped (no recipient)' }
 
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from,
-        to: [to],
-        subject: `Новая заявка ${order.orderNumber ?? ''} — ${order.total} MDL${
-          order.checkoutMode === 'noCall' ? ' — БЕЗ ЗВОНКА' : ''
-        }`,
-        html: buildHtml(order, Boolean(pdf && pdf.length)),
-        attachments: [
-          {
-            filename: orderCsvFilename(order),
-            content: Buffer.from(csv, 'utf8').toString('base64'),
-          },
-          ...(pdf && pdf.length
-            ? [
-                {
-                  filename: orderPdfFilename(order),
-                  content: Buffer.from(pdf).toString('base64'),
-                },
-              ]
-            : []),
-        ],
-      }),
-    })
+  const outcome = await fetchWithRetry('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': `order-email-manager/${order.id}`,
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      subject: `Новая заявка ${order.orderNumber ?? ''} — ${order.total} MDL${
+        order.checkoutMode === 'noCall' ? ' — БЕЗ ЗВОНКА' : ''
+      }`,
+      html: buildHtml(order, Boolean(pdf && pdf.length)),
+      attachments: [
+        {
+          filename: orderCsvFilename(order),
+          content: Buffer.from(csv, 'utf8').toString('base64'),
+        },
+        ...(pdf && pdf.length
+          ? [
+              {
+                filename: orderPdfFilename(order),
+                content: Buffer.from(pdf).toString('base64'),
+              },
+            ]
+          : []),
+      ],
+    }),
+  })
 
-    if (!response.ok) {
-      const body = await response.text()
-      return { ok: false, error: `resend ${response.status}: ${body.slice(0, 200)}` }
+  if (outcome.kind === 'network-error') {
+    return {
+      ok: false,
+      error: `resend: ${outcome.error instanceof Error ? outcome.error.message : outcome.error}`,
+      attempts: outcome.attempts,
     }
-    return { ok: true }
-  } catch (error) {
-    return { ok: false, error: `resend: ${error instanceof Error ? error.message : error}` }
   }
+
+  const { response, attempts } = outcome
+  if (!response.ok) {
+    const body = await response.text()
+    return { ok: false, error: `resend ${response.status}: ${body.slice(0, 200)}`, attempts }
+  }
+  return { ok: true, attempts }
 }
 
 /**
@@ -179,6 +199,11 @@ export async function sendEmail(
  * ссылка на страницу статуса. Уходит только если у заявки есть
  * `customer.email` — иначе тихий пропуск, как и остальные каналы без данных.
  * Без вложения (CSV — только менеджеру).
+ *
+ * Ретраи и идемпотентность — см. `sendEmail` выше, тот же механизм, свой
+ * ключ (`order-email-customer/<id>`) и независимый исход: сбой этого письма
+ * не должен ни блокировать, ни помечать неудачным письмо менеджеру, и
+ * наоборот (`notify.ts::notifyOrder` зовёт оба через `Promise.all`).
  */
 export async function sendCustomerEmail(order: Order): Promise<NotifyResult> {
   const apiKey = process.env.RESEND_API_KEY
@@ -197,32 +222,39 @@ export async function sendCustomerEmail(order: Order): Promise<NotifyResult> {
     namespace: 'OrderEmailCustomer',
   })
 
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from,
-        to: [to],
-        subject: t('subject', { orderNumber: order.orderNumber ?? '' }),
-        html: buildCustomerHtml(order),
-      }),
-    })
+  const outcome = await fetchWithRetry('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': `order-email-customer/${order.id}`,
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      subject: t('subject', { orderNumber: order.orderNumber ?? '' }),
+      html: buildCustomerHtml(order),
+    }),
+  })
 
-    if (!response.ok) {
-      const body = await response.text()
-      return { ok: false, error: `resend (customer) ${response.status}: ${body.slice(0, 200)}` }
-    }
-    return { ok: true }
-  } catch (error) {
+  if (outcome.kind === 'network-error') {
     return {
       ok: false,
-      error: `resend (customer): ${error instanceof Error ? error.message : error}`,
+      error: `resend (customer): ${outcome.error instanceof Error ? outcome.error.message : outcome.error}`,
+      attempts: outcome.attempts,
     }
   }
+
+  const { response, attempts } = outcome
+  if (!response.ok) {
+    const body = await response.text()
+    return {
+      ok: false,
+      error: `resend (customer) ${response.status}: ${body.slice(0, 200)}`,
+      attempts,
+    }
+  }
+  return { ok: true, attempts }
 }
 
 /**

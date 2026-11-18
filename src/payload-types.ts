@@ -610,6 +610,41 @@ export interface Order {
    * Не считая подарочных сертификатов/Gift box — скидка на них не действует.
    */
   promoDiscountAmount?: number | null;
+  notifyStatus?: {
+    emailManager?: {
+      status?: ('sent' | 'failed' | 'skipped') | null;
+      /**
+       * Попыток.
+       */
+      attempts?: number | null;
+      /**
+       * Текст последней ошибки, если была.
+       */
+      lastError?: string | null;
+    };
+    emailCustomer?: {
+      status?: ('sent' | 'failed' | 'skipped') | null;
+      /**
+       * Попыток.
+       */
+      attempts?: number | null;
+      /**
+       * Текст последней ошибки, если была.
+       */
+      lastError?: string | null;
+    };
+    telegram?: {
+      status?: ('sent' | 'failed' | 'skipped') | null;
+      /**
+       * Попыток.
+       */
+      attempts?: number | null;
+      /**
+       * Текст последней ошибки, если была.
+       */
+      lastError?: string | null;
+    };
+  };
   /**
    * CSV заявки для Excel (UTF-8 с BOM, разделитель «;»).
    */
@@ -1164,6 +1199,31 @@ export interface OrdersSelect<T extends boolean = true> {
   promoCode?: T;
   promoDiscountPercent?: T;
   promoDiscountAmount?: T;
+  notifyStatus?:
+    | T
+    | {
+        emailManager?:
+          | T
+          | {
+              status?: T;
+              attempts?: T;
+              lastError?: T;
+            };
+        emailCustomer?:
+          | T
+          | {
+              status?: T;
+              attempts?: T;
+              lastError?: T;
+            };
+        telegram?:
+          | T
+          | {
+              status?: T;
+              attempts?: T;
+              lastError?: T;
+            };
+      };
   exportCsv?: T;
   updatedAt?: T;
   createdAt?: T;
