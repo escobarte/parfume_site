@@ -65,36 +65,69 @@ type CartState = {
 export const cartItemKey = (kind: 'product' | 'gift', productId: number | string, sku: string) =>
   `${kind}:${productId}:${sku}`
 
+/** Ключ корзины в localStorage — общий для всех вкладок одного браузера. */
+export const CART_STORAGE_KEY = 'mf-cart'
+
+/**
+ * Позиции корзины прямо из localStorage, минуя память вкладки.
+ *
+ * Зачем (баг 2026-11-23, «корзина теряет товары в нескольких вкладках»):
+ * каждая вкладка держит свою копию стора, а persist при ЛЮБОЙ записи
+ * сохраняет в localStorage то, что лежит в памяти. Вкладка, не знавшая о
+ * товаре из соседней, затирала его — в том числе молча, ревалидацией цен
+ * при открытии /cart. Поэтому каждая мутация берёт за основу актуальное
+ * содержимое хранилища, а память — только запасной вариант (SSR, пустое
+ * или битое хранилище).
+ */
+export function readStoredCartItems(): CartItem[] | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(CART_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { state?: { items?: unknown } } | null
+    const items = parsed?.state?.items
+    return Array.isArray(items) ? (items as CartItem[]) : null
+  } catch {
+    return null
+  }
+}
+
 export const useCart = create<CartState>()(
   persist(
-    (set) => ({
-      items: [],
-      add: (item, qty = 1) =>
-        set((state) => {
+    (set, get) => {
+      /** База для мутации: localStorage, если он доступен, иначе память. */
+      const latest = (): CartItem[] => readStoredCartItems() ?? get().items
+
+      return {
+        items: [],
+        add: (item, qty = 1) => {
+          const items = latest()
           const key = cartItemKey(item.kind ?? 'product', item.productId, item.sku)
-          const existing = state.items.find((candidate) => candidate.key === key)
-          return {
+          const existing = items.find((candidate) => candidate.key === key)
+          set({
             items: existing
-              ? state.items.map((candidate) =>
+              ? items.map((candidate) =>
                   candidate.key === key ? { ...candidate, qty: candidate.qty + qty } : candidate,
                 )
-              : [...state.items, { ...item, key, qty }],
-          }
-        }),
-      remove: (key) => set((state) => ({ items: state.items.filter((item) => item.key !== key) })),
-      setQty: (key, qty) =>
-        set((state) => ({
-          items: state.items.map((item) =>
-            item.key === key ? { ...item, qty: Math.max(1, qty) } : item,
-          ),
-        })),
-      sync: (updates) => {
-        const changed: string[] = []
-        set((state) => ({
-          items: state.items.flatMap((item) => {
+              : [...items, { ...item, key, qty }],
+          })
+        },
+        remove: (key) => set({ items: latest().filter((item) => item.key !== key) }),
+        setQty: (key, qty) =>
+          set({
+            items: latest().map((item) =>
+              item.key === key ? { ...item, qty: Math.max(1, qty) } : item,
+            ),
+          }),
+        sync: (updates) => {
+          const changed: string[] = []
+          // Цены обновляются только у позиций, которые РЕАЛЬНО лежат в
+          // хранилище сейчас: удалённое в соседней вкладке не воскресает,
+          // добавленное там же не теряется.
+          const items = latest().flatMap((item) => {
             const fresh = updates.find((candidate) => candidate.key === item.key)
-            // Позиции нет в ответе — сервер её не проверял (например, ответ
-            // частичный): оставляем как есть, молча ничего не выдумываем.
+            // Позиции нет в ответе — сервер её не проверял (например, её
+            // добавили в другой вкладке уже после запроса): оставляем как есть.
             if (!fresh) return [item]
             if (fresh.gone) {
               changed.push(item.key)
@@ -105,15 +138,50 @@ export const useCart = create<CartState>()(
               changed.push(item.key)
             }
             return [{ ...item, price: fresh.price, oldPrice: fresh.oldPrice }]
-          }),
-        }))
-        return changed
-      },
-      clear: () => set({ items: [] }),
-    }),
-    { name: 'mf-cart' },
+          })
+          // Ничего не изменилось — не пишем вовсе: лишняя запись будит
+          // storage-событие во всех остальных вкладках.
+          if (changed.length > 0) set({ items })
+          return changed
+        },
+        clear: () => set({ items: [] }),
+      }
+    },
+    { name: CART_STORAGE_KEY },
   ),
 )
+
+/**
+ * Синхронизация между вкладками: соседняя вкладка записала корзину —
+ * перечитываем её из localStorage (`storage` срабатывает только в ДРУГИХ
+ * вкладках). При возврате на вкладку перечитываем тоже — на случай
+ * пропущенного события. `rehydrate()` в хранилище не пишет (только при
+ * миграции версии), поэтому цикла «rehydrate → запись → storage» нет.
+ */
+function subscribeCrossTabSync() {
+  if (typeof window === 'undefined') return
+  const scope = window as unknown as { __mfCartCrossTabCleanup?: () => void }
+  // HMR в dev переисполняет модуль с НОВЫМ стором — снимаем слушатели
+  // прежнего экземпляра, иначе они продолжат обновлять устаревший стор.
+  scope.__mfCartCrossTabCleanup?.()
+
+  const onStorage = (event: StorageEvent) => {
+    // key === null — localStorage.clear() в другой вкладке.
+    if (event.key !== CART_STORAGE_KEY && event.key !== null) return
+    void useCart.persist.rehydrate()
+  }
+  const onVisible = () => {
+    if (document.visibilityState === 'visible') void useCart.persist.rehydrate()
+  }
+  window.addEventListener('storage', onStorage)
+  document.addEventListener('visibilitychange', onVisible)
+  scope.__mfCartCrossTabCleanup = () => {
+    window.removeEventListener('storage', onStorage)
+    document.removeEventListener('visibilitychange', onVisible)
+  }
+}
+
+subscribeCrossTabSync()
 
 export const selectCount = (state: CartState) =>
   state.items.reduce((sum, item) => sum + item.qty, 0)

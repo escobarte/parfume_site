@@ -41,10 +41,14 @@ export function CartView() {
   useEffect(() => {
     if (!hydrated || revalidated.current) return
     revalidated.current = true
-    const snapshot = useCart.getState().items
-    if (snapshot.length === 0) return
 
     const run = async () => {
+      // Сначала — актуальная корзина из localStorage: при клиентском переходе
+      // на /cart память вкладки могла отстать от соседней вкладки (баг
+      // 2026-11-23). Спрашиваем цены именно по ней.
+      await useCart.persist.rehydrate()
+      const snapshot = useCart.getState().items
+      if (snapshot.length === 0) return
       try {
         const response = await fetch('/api/cart-revalidate', {
           method: 'POST',
@@ -66,10 +70,12 @@ export function CartView() {
           return
         }
 
-        const before = useCart.getState().items.length
+        // `sync` сам работает поверх localStorage и трогает только позиции,
+        // что там есть сейчас, — пропавшее считаем по его же ответу.
         const changed = sync(data.items)
         setRepriced(changed)
-        setRemovedSome(useCart.getState().items.length < before)
+        const goneKeys = new Set(data.items.filter((item) => item.gone).map((item) => item.key))
+        setRemovedSome(changed.some((key) => goneKeys.has(key)))
       } catch (error) {
         // Показываем то, что есть: цена и уценка кладутся в позицию ещё при
         // добавлении (BuyBlock), поэтому сбой ревалидации оставляет данные
